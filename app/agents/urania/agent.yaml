@@ -1,0 +1,49 @@
+id: urania
+legacy_code: astro
+name: Урания
+emoji: 🌌
+title: Астролог
+tagline: Натальная карта, транзиты, синастрия и выбор дат
+accent: '#7fb4e8'
+uses_persona: false
+greeting: Спроси о любой планете, аспекте или дате — объясню, как она работает в твоей
+  жизни 🌌
+suggestions:
+- Что показывает мой Асцендент?
+- Когда лучше начать новое дело?
+- Что показывает мой натальный Юпитер?
+tier: main
+max_tokens: 1500
+history_limit: 14
+tools:
+- activate_skill
+- get_chart
+- get_placement
+- get_all_placements
+- get_life_path
+- get_chinese_zodiac
+- get_transits
+- get_moon_week
+- get_career_windows
+- get_compatibility
+- list_partners
+- save_memory
+- recall_memory
+- get_vedic_chart
+- get_nakshatra
+- get_vimshottari_dasha
+- get_panchang
+- get_rahu_kaal
+- get_varga_chart
+- get_guna_milan
+- get_vedic_transits
+- get_graha_strengths
+- get_muhurta
+skills_max_active: 3
+limits:
+  max_turns: 6
+  max_tool_calls: 8
+  timeout_s: 35
+memory: opt_in
+risk_level: medium
+output_contract: agent_response.v1

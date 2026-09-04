@@ -1,0 +1,1 @@
+{"record_id":"replace-with-consented-record","quality_state":"usable","status":"complete","view_type":"open_palm","observations":[{"topic":"palm_region","visibility":"unclear","evidence_state":"unknown","confidence":0.0}],"processing_metrics":{"precheck_ms":0.0,"cv_ms":0.0,"vision_ms":0.0,"total_ms":0.0}}

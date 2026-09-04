@@ -1,0 +1,262 @@
+agent: lilith
+legacy_code: oracle
+manifest_version: 1.0.0
+skills_count: 31
+skills:
+- name: answer-structure
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/answer-structure/SKILL.md
+- name: anti-barnum-protocol
+  version: 1.0.0
+  depends_on: []
+  requires_tools:
+  - recall_memory
+  - recall_diary
+  tags: []
+  path: app/agents/lilith/skills/anti-barnum-protocol/SKILL.md
+- name: boundary-design
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - recall_memory
+  - recall_diary
+  tags:
+  - boundaries
+  - relationships
+  path: app/agents/lilith/skills/boundary-design/SKILL.md
+- name: career-reflection
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/career-reflection/SKILL.md
+- name: chart-overview
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/chart-overview/SKILL.md
+- name: cognitive-reframe
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - recall_memory
+  - recall_diary
+  tags:
+  - thoughts
+  - reframe
+  path: app/agents/lilith/skills/cognitive-reframe/SKILL.md
+- name: conversation-rehearsal
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - recall_memory
+  - recall_diary
+  tags:
+  - communication
+  - rehearsal
+  path: app/agents/lilith/skills/conversation-rehearsal/SKILL.md
+- name: cross-agent-routing
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/cross-agent-routing/SKILL.md
+- name: daily-ritual
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/daily-ritual/SKILL.md
+- name: decision-journal
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - recall_memory
+  - recall_diary
+  tags:
+  - decision
+  - experiment
+  path: app/agents/lilith/skills/decision-journal/SKILL.md
+- name: decision-journaling
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/decision-journaling/SKILL.md
+- name: diary-dynamics
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/diary-dynamics/SKILL.md
+- name: emotion-naming
+  version: 2.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - recall_memory
+  - recall_diary
+  tags:
+  - emotion
+  - feeling
+  - name_what_i_feel
+  - после_разговора
+  - conversation_debrief
+  - reflection
+  path: app/agents/lilith/skills/emotion-naming/SKILL.md
+- name: emotional-reflection
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/emotional-reflection/SKILL.md
+- name: grief-reflection
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - recall_memory
+  - recall_diary
+  tags:
+  - grief
+  - care
+  path: app/agents/lilith/skills/grief-reflection/SKILL.md
+- name: habit-loop
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - recall_memory
+  - recall_diary
+  tags:
+  - habits
+  - behavior
+  path: app/agents/lilith/skills/habit-loop/SKILL.md
+- name: matrix-compatibility
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/matrix-compatibility/SKILL.md
+- name: matrix-lines
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/matrix-lines/SKILL.md
+- name: matrix-reading
+  version: 2.0.0
+  depends_on: []
+  requires_tools:
+  - get_matrix
+  - suggest_practice
+  tags:
+  - matrix
+  - arcana
+  - destiny
+  - position
+  - reflective_choice
+  path: app/agents/lilith/skills/matrix-reading/SKILL.md
+- name: memory-recall
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/memory-recall/SKILL.md
+- name: memory-save-decision
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/memory-save-decision/SKILL.md
+- name: monthly-review
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - recall_memory
+  - recall_diary
+  tags:
+  - review
+  - memory
+  path: app/agents/lilith/skills/monthly-review/SKILL.md
+- name: oracle-safety
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/oracle-safety/SKILL.md
+- name: pattern-mapping
+  version: 1.0.0
+  depends_on: []
+  requires_tools:
+  - recall_diary
+  - recall_memory
+  tags: []
+  path: app/agents/lilith/skills/pattern-mapping/SKILL.md
+- name: placement-translation
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/placement-translation/SKILL.md
+- name: practice-follow-through
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/practice-follow-through/SKILL.md
+- name: practice-selection
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/practice-selection/SKILL.md
+- name: question-framing
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/question-framing/SKILL.md
+- name: relationship-reflection
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lilith/skills/relationship-reflection/SKILL.md
+- name: self-compassion
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - recall_memory
+  - recall_diary
+  tags:
+  - self-compassion
+  - reflection
+  path: app/agents/lilith/skills/self-compassion/SKILL.md
+- name: values-conflict
+  version: 2.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - recall_memory
+  - recall_diary
+  tags:
+  - values
+  - decision
+  - choice
+  - stability
+  - exciting_project
+  - trade_off
+  - option_a_vs_b
+  - выбор
+  path: app/agents/lilith/skills/values-conflict/SKILL.md

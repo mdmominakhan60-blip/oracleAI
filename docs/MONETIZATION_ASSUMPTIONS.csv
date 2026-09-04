@@ -1,0 +1,49 @@
+version,scenario,metric,value,unit,source,as_of,status,notes
+2026-08-13.v2,cash_constrained,target_paid_arppu,3000,RUB_per_30d,approved_plan,2026-08-13,hypothesis,Target floor; not observed revenue
+2026-08-13.v2,validated_growth,target_paid_arppu,4000,RUB_per_30d,approved_plan,2026-08-13,hypothesis,Core target hypothesis
+2026-08-13.v2,large_team,target_paid_arppu,5000,RUB_per_30d,approved_plan,2026-08-13,hypothesis,Upper target hypothesis
+2026-08-13.v2,cash_constrained,core_pack_price,1490,RUB_gross,market_research_recommendation,2026-08-13,hypothesis,First deep step; low-friction paid validation pack
+2026-08-13.v2,validated_growth,core_pack_price,4990,RUB_gross,market_research_recommendation,2026-08-13,hypothesis,Recommended core pack; anchors 3-5k paid ARPPU without subscription
+2026-08-13.v2,large_team,core_pack_price,9990,RUB_gross,market_research_recommendation,2026-08-13,hypothesis,High-intent bundle/anchor; must not be the only offer
+2026-08-13.v2,cash_constrained,effective_platform_realization,,percent,settlement_export,TBD,required_input,Net Stars/Paddle realization after provider/platform deductions by channel/region/device
+2026-08-13.v2,validated_growth,effective_platform_realization,,percent,settlement_export,TBD,required_input,Net Stars/Paddle realization after provider/platform deductions by channel/region/device
+2026-08-13.v2,large_team,effective_platform_realization,,percent,settlement_export,TBD,required_input,Net Stars/Paddle realization after provider/platform deductions by channel/region/device
+2026-08-13.v2,cash_constrained,tax_and_withholding_rate,,percent,tax_review,TBD,required_input,Jurisdiction/entity-specific; do not infer from public payment pages
+2026-08-13.v2,validated_growth,tax_and_withholding_rate,,percent,tax_review,TBD,required_input,Jurisdiction/entity-specific; do not infer from public payment pages
+2026-08-13.v2,large_team,tax_and_withholding_rate,,percent,tax_review,TBD,required_input,Jurisdiction/entity-specific; do not infer from public payment pages
+2026-08-13.v2,cash_constrained,refund_rate,,percent,settlement_export,TBD,required_input,Observed refunds/chargebacks by SKU and channel
+2026-08-13.v2,validated_growth,refund_rate,,percent,settlement_export,TBD,required_input,Observed refunds/chargebacks by SKU and channel
+2026-08-13.v2,large_team,refund_rate,,percent,settlement_export,TBD,required_input,Observed refunds/chargebacks by SKU and channel
+2026-08-13.v2,cash_constrained,variable_llm_cogs_per_payer,75,RUB_per_30d,openai_anthropic_public_pricing_model,2026-08-13,estimated,Illustrative Haiku/Luna-class routed token budget: 0.40M input + 0.10M output; not observed production COGS
+2026-08-13.v2,validated_growth,variable_llm_cogs_per_payer,194,RUB_per_30d,openai_anthropic_public_pricing_model,2026-08-13,estimated,Illustrative mixed routing weighted token budget: 0.90M input + 0.18M output at 82.9977 RUB/USD; validate from llm_usage
+2026-08-13.v2,large_team,variable_llm_cogs_per_payer,498,RUB_per_30d,openai_anthropic_public_pricing_model,2026-08-13,estimated,Illustrative premium/Sonnet-class token budget: 1.50M input + 0.30M output; not a provider settlement
+2026-08-13.v2,cash_constrained,variable_voice_tool_cogs_per_payer,60,RUB_per_30d,internal_cost_scenario,TBD,estimated,Planning buffer for voice/tools/retries; replace with provider usage statements
+2026-08-13.v2,validated_growth,variable_voice_tool_cogs_per_payer,100,RUB_per_30d,internal_cost_scenario,TBD,estimated,Planning buffer for voice/tools/retries; replace with provider usage statements
+2026-08-13.v2,large_team,variable_voice_tool_cogs_per_payer,180,RUB_per_30d,internal_cost_scenario,TBD,estimated,Planning buffer for voice/tools/retries; replace with provider usage statements
+2026-08-13.v2,cash_constrained,support_referral_cogs_per_payer,120,RUB_per_30d,internal_cost_scenario,TBD,estimated,Variable support/referral/creator reserve; no paid acquisition assumed
+2026-08-13.v2,validated_growth,support_referral_cogs_per_payer,250,RUB_per_30d,internal_cost_scenario,TBD,estimated,Variable support/referral/creator reserve; capped acquisition only
+2026-08-13.v2,large_team,support_referral_cogs_per_payer,500,RUB_per_30d,internal_cost_scenario,TBD,estimated,Variable support/referral/creator reserve; scale only after CAC gate
+2026-08-13.v2,cash_constrained,variable_total_cogs_per_payer,255,RUB_per_30d,scenario_model,2026-08-13,estimated,LLM plus voice/tool plus support/referral; derived from rows above
+2026-08-13.v2,validated_growth,variable_total_cogs_per_payer,544,RUB_per_30d,scenario_model,2026-08-13,estimated,LLM plus voice/tool plus support/referral; derived from rows above
+2026-08-13.v2,large_team,variable_total_cogs_per_payer,1178,RUB_per_30d,scenario_model,2026-08-13,estimated,LLM plus voice/tool plus support/referral; derived from rows above
+2026-08-13.v2,cash_constrained,fixed_opex_monthly,360000,RUB_per_month,habr_salary_anchored_scenario_model,2026-08-13,estimated,Founder plus critical contractors/cloud/legal/admin; full-loaded planning estimate, not a payroll quote
+2026-08-13.v2,validated_growth,fixed_opex_monthly,1612500,RUB_per_month,habr_salary_anchored_scenario_model,2026-08-13,estimated,Five-person operating team plus cloud/legal/admin; full-loaded planning estimate, not a payroll quote
+2026-08-13.v2,large_team,fixed_opex_monthly,4550000,RUB_per_month,habr_salary_anchored_scenario_model,2026-08-13,estimated,Fifteen-person team plus cloud/legal/admin; full-loaded planning estimate, not a payroll quote
+2026-08-13.v2,cash_constrained,paid_marketing_monthly,0,RUB_per_month,internal_growth_scenario,2026-08-13,estimated,Zero until organic contribution and delivery gates pass
+2026-08-13.v2,validated_growth,paid_marketing_monthly,500000,RUB_per_month,internal_growth_scenario,2026-08-13,estimated,Capped test budget only after 50-100 successful payers and positive contribution
+2026-08-13.v2,large_team,paid_marketing_monthly,3000000,RUB_per_month,internal_growth_scenario,2026-08-13,estimated,Scale budget stress test; never a launch commitment
+2026-08-13.v2,cash_constrained,full_loaded_hire_monthly,360000,RUB_per_person_month,habr_salary_anchored_scenario_model,2026-08-13,estimated,Average planning cost for one critical hire; role/country/employment model must replace it
+2026-08-13.v2,validated_growth,full_loaded_hire_monthly,322500,RUB_per_person_month,habr_salary_anchored_scenario_model,2026-08-13,estimated,Average five-person full-loaded planning cost; role-specific offers required
+2026-08-13.v2,large_team,full_loaded_hire_monthly,303333,RUB_per_person_month,habr_salary_anchored_scenario_model,2026-08-13,estimated,Average fifteen-person full-loaded planning cost; role-specific offers required
+2026-08-13.v2,cash_constrained,illustrative_net_cash_factor,0.8,ratio,scenario_model,2026-08-13,estimated,Illustration only; sensitivity is 0.70/0.80/0.90 until settlement/tax/refund inputs are reviewed
+2026-08-13.v2,validated_growth,illustrative_net_cash_factor,0.8,ratio,scenario_model,2026-08-13,estimated,Illustration only; sensitivity is 0.70/0.80/0.90 until settlement/tax/refund inputs are reviewed
+2026-08-13.v2,large_team,illustrative_net_cash_factor,0.8,ratio,scenario_model,2026-08-13,estimated,Illustration only; sensitivity is 0.70/0.80/0.90 until settlement/tax/refund inputs are reviewed
+2026-08-13.v2,cash_constrained,planned_llm_input_mtokens_per_payer,0.40,MTok_per_30d,openai_anthropic_public_pricing_model,2026-08-13,estimated,Illustrative token budget for routed low-cost path
+2026-08-13.v2,validated_growth,planned_llm_input_mtokens_per_payer,0.90,MTok_per_30d,openai_anthropic_public_pricing_model,2026-08-13,estimated,Illustrative token budget for mixed route
+2026-08-13.v2,large_team,planned_llm_input_mtokens_per_payer,1.50,MTok_per_30d,openai_anthropic_public_pricing_model,2026-08-13,estimated,Illustrative token budget for premium route
+2026-08-13.v2,cash_constrained,planned_llm_output_mtokens_per_payer,0.10,MTok_per_30d,openai_anthropic_public_pricing_model,2026-08-13,estimated,Illustrative token budget for routed low-cost path
+2026-08-13.v2,validated_growth,planned_llm_output_mtokens_per_payer,0.18,MTok_per_30d,openai_anthropic_public_pricing_model,2026-08-13,estimated,Illustrative token budget for mixed route
+2026-08-13.v2,large_team,planned_llm_output_mtokens_per_payer,0.30,MTok_per_30d,openai_anthropic_public_pricing_model,2026-08-13,estimated,Illustrative token budget for premium route
+2026-08-13.v2,cash_constrained,monthly_paying_users,,users,product_analytics,TBD,observed_input,Unique successful payers in rolling 30d
+2026-08-13.v2,validated_growth,monthly_paying_users,,users,product_analytics,TBD,observed_input,Unique successful payers in rolling 30d
+2026-08-13.v2,large_team,monthly_paying_users,,users,product_analytics,TBD,observed_input,Unique successful payers in rolling 30d

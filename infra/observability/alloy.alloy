@@ -1,0 +1,59 @@
+// Grafana Alloy collects logs and container metrics for the OracleAI Compose stack.
+// The Docker socket is mounted read-only by the Compose service.
+
+discovery.docker "oracleai" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "oracleai_logs" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "(.+)"
+    target_label  = "compose_service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    regex         = "(.+)"
+    target_label  = "compose_project"
+  }
+}
+
+loki.source.docker "oracleai" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.oracleai.targets
+  labels        = {stack = "oracleai", source = "docker"}
+  relabel_rules = discovery.relabel.oracleai_logs.rules
+  forward_to    = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+prometheus.exporter.cadvisor "docker" {
+  docker_host      = "unix:///var/run/docker.sock"
+  storage_duration = "5m"
+}
+
+prometheus.scrape "cadvisor" {
+  targets         = prometheus.exporter.cadvisor.docker.targets
+  forward_to      = [prometheus.remote_write.local.receiver]
+  scrape_interval = "15s"
+}
+
+prometheus.remote_write "local" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}

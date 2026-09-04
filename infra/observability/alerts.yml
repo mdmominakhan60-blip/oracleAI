@@ -1,0 +1,42 @@
+groups:
+  - name: oracleai-availability
+    rules:
+      - alert: OracleAIObservabilityTargetDown
+        expr: up{job=~"prometheus|cadvisor|alloy|oracleai-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          stack: oracleai
+        annotations:
+          summary: "Observability target is down"
+          description: "Prometheus target {{ $labels.job }} has been down for more than 2 minutes."
+
+      - alert: OracleAIContainerRestarting
+        expr: changes(container_start_time_seconds{name=~"infra-.*"}[10m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+          stack: oracleai
+        annotations:
+          summary: "OracleAI container is restarting"
+          description: "Container {{ $labels.name }} restarted repeatedly during the last 10 minutes."
+
+      - alert: OracleAIContainerMemoryHigh
+        expr: (container_memory_working_set_bytes{name=~"infra-.*"} / container_spec_memory_limit_bytes{name=~"infra-.*"}) > 0.90 and container_spec_memory_limit_bytes{name=~"infra-.*"} > 0
+        for: 10m
+        labels:
+          severity: warning
+          stack: oracleai
+        annotations:
+          summary: "OracleAI container memory is high"
+          description: "Container {{ $labels.name }} uses more than 90% of its memory limit."
+
+      - alert: OracleAIDiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.15
+        for: 10m
+        labels:
+          severity: warning
+          stack: oracleai
+        annotations:
+          summary: "VPS disk space is low"
+          description: "Less than 15% of root filesystem space remains."

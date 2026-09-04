@@ -1,0 +1,37 @@
+/* ══════ Панель Оракула ══════
+   Тёмная тема того же семейства, что и Mini App: фиолетовая база, золотой акцент.
+   Плотная сетка — рабочий инструмент, а не витрина: цифры важнее воздуха. */
+
+:root {
+  --bg: #0c0a1a;
+  --bg-soft: #141024;
+  --panel: #17132b;
+  --panel-2: #1d1836;
+  --line: rgba(255, 255, 255, .09);
+  --line-strong: rgba(255, 255, 255, .16);
+  --ink: #eee9fb;
+  --muted: #9c94bd;
+  --gold: #e8c56b;
+  --gold-dim: rgba(232, 197, 107, .18);
+  --blue: #7fb4e8;
+  --green: #7fd8a8;
+  --red: #e88f8f;
+  --violet: #b78be8;
+  --radius: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.5 -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+  min-height: 100vh;
+}
+
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+h1 { font-size: 22px; }
+h2 { font-size: 19px; font-weight: 600; }
+h3 { font-size: 14px; font-weight: 600; letter-spacing: .2px; }

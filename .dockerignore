@@ -1,0 +1,28 @@
+# Runtime secrets and local database files never enter the image. The tracked
+# evaluation corpus and *.example environment contracts are non-secret test assets;
+# a real .env is still supplied at runtime through env_file.
+.env
+.env.*
+!.env.example
+!.env.production.example
+*.db
+*.db-wal
+*.db-shm
+
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+.git/
+.gitignore
+.codegraph/
+.omc/
+.claude/
+tests/
+# High-resolution design masters are kept for provenance, not runtime serving.
+design/sources/
+README.md
+requirements-dev.txt

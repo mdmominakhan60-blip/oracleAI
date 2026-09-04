@@ -1,0 +1,20 @@
+# PACK E — Лилит второй вариант (тёплый, с золотой аурой, более дружелюбный и эффектный)
+
+## GLOBAL STYLE TOKENS
+ultra-high definition, 8K, elegant mystical goddess portrait, young woman with long flowing hair in warm golden-violet glow, soft warm golden aura surrounding her figure like a gentle light, serene and confident expression, dark elegant flowing robe with golden details, deep dark celestial background with subtle warm stars and gentle purple mist, warm premium lighting with golden highlights, ethereal and welcoming atmosphere, refined fantasy portrait, cinematic glow, no harsh shadows, luxurious mystical warmth
+
+## NEGATIVE PROMPT
+text, watermark, logo, deformed hands, distorted face, harsh lighting, bright white background, modern streetwear, casual clothes, cluttered background, plastic texture, cold or harsh atmosphere, no golden aura, dull colors, overexposed, broken hair texture
+
+## SHARED LOCK
+- Subject: elegant mystical young goddess woman, side profile with gentle forward gaze
+- Hair: very long flowing hair with warm golden-violet highlights, dissolving into stardust
+- Aura: warm golden light gently surrounding her body like a soft glowing mist, not overwhelming
+- Robe: long dark flowing robe with delicate golden embroidery or details at shoulders and edges
+- Lighting: warm premium cinematic lighting, soft golden-violet rim light
+- Background: very dark deep celestial night with very faint warm stars
+- Mood: serene, welcoming, wise, mysterious but warm and approachable
+- No facial detail needed (pure ethereal silhouette style for consistency with PACK A)
+
+## SHOT 1 — Full portrait with warm golden aura
+GLOBAL STYLE TOKENS, elegant young mystical goddess standing in profile with serene expression, very long hair with warm golden-violet highlights flowing behind her, warm soft golden glow aura gently surrounding her figure like gentle mist, long dark elegant robe with delicate golden details, deep dark celestial night background with faint warm stars, refined fantasy portrait, warm luxury lighting, premium quality. NEGATIVE PROMPT.

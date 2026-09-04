@@ -1,0 +1,18 @@
+# PACK B — Карта Таро лицевая (open/revealed card, для .tarot-card .front, .tarot-card-big .tb-front)
+
+## GLOBAL STYLE TOKENS
+ultra-high definition, 8K, ornate ornate gold gilded baroque card frame, deep midnight-blue and violet background with gold stars scattered, a large glowing crescent moon profile elegantly embedded in the central decorative gold circle, delicate gold filigree borders with celestial motifs, mystical luxury aesthetic, dark fantasy premium game-art card design, elegant and mysterious atmosphere
+
+## NEGATIVE PROMPT
+text, watermark, logo, messy borders, broken symmetry, modern elements, bright white background, blank empty card, cluttered frame, plastic texture, low-contrast gold, dull colors, no decorative crescent or moon profile in center
+
+## SHARED LOCK
+- Aspect: portrait 1024x1536, vertical card
+- Palette: deep indigo (#0f0d2b) to violet (#241845), antique gold (#d6af4e) to bright gold (#ffe080)
+- Frame: ornate gold baroque border, inner gold double line, decorative corner scrollwork
+- Central decorative element: elegant golden crescent moon profile embedded in the decorative gold circle (this is the card's mystical identity — visible over any overlay content)
+- Background: dark celestial with scattered gold stars around the decorative elements
+- Style: premium dark fantasy mystical luxury card
+
+## SHOT 1 — Card face revealed (ornate design with crescent moon in gold circle)
+GLOBAL STYLE TOKENS, ornate gilded card face revealed, deep dark-blue celestial background with gold stars, large decorative gold circle in center with an elegant glowing crescent moon profile inside, ornate gold baroque frame with filigree borders, rich gold and violet palette, mystical luxury aesthetic, elegant decorative celestial card art, vertical portrait card 3:5 ratio. NEGATIVE PROMPT.

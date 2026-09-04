@@ -1,0 +1,99 @@
+{
+  "case": {
+    "id": "kazan_1990_planets",
+    "date": "1990-06-21",
+    "time": "14:30",
+    "tz": "Europe/Moscow",
+    "lat": 55.79,
+    "lon": 49.12
+  },
+  "utc": "1990-06-21T10:30:00+00:00",
+  "source": "NASA/JPL Horizons observer quantity 31, apparent ecliptic-of-date longitude, Earth geocentric center 500@399",
+  "comparisons": [
+    {
+      "body": "Солнце",
+      "jpl_command": "10",
+      "oracleai_abs_deg_exact": 89.7992639867815,
+      "jpl_obs_ecliptic_longitude_deg": 89.7992408,
+      "delta_deg": 2.3186781504591636e-05
+    },
+    {
+      "body": "Луна",
+      "jpl_command": "301",
+      "oracleai_abs_deg_exact": 70.82459748834837,
+      "jpl_obs_ecliptic_longitude_deg": 70.8243153,
+      "delta_deg": 0.000282188348364798
+    },
+    {
+      "body": "Меркурий",
+      "jpl_command": "199",
+      "oracleai_abs_deg_exact": 76.65874185419216,
+      "jpl_obs_ecliptic_longitude_deg": 76.6587229,
+      "delta_deg": 1.895419217134986e-05
+    },
+    {
+      "body": "Венера",
+      "jpl_command": "299",
+      "oracleai_abs_deg_exact": 55.77571815316156,
+      "jpl_obs_ecliptic_longitude_deg": 55.7756887,
+      "delta_deg": 2.945316157365596e-05
+    },
+    {
+      "body": "Марс",
+      "jpl_command": "499",
+      "oracleai_abs_deg_exact": 15.288864187216264,
+      "jpl_obs_ecliptic_longitude_deg": 15.2888471,
+      "delta_deg": 1.7087216264144445e-05
+    },
+    {
+      "body": "Юпитер",
+      "jpl_command": "599",
+      "oracleai_abs_deg_exact": 107.18512398306216,
+      "jpl_obs_ecliptic_longitude_deg": 107.1851588,
+      "delta_deg": 3.481693784124218e-05
+    },
+    {
+      "body": "Сатурн",
+      "jpl_command": "699",
+      "oracleai_abs_deg_exact": 293.6670384361628,
+      "jpl_obs_ecliptic_longitude_deg": 293.6669862,
+      "delta_deg": 5.223616278726695e-05
+    },
+    {
+      "body": "Уран",
+      "jpl_command": "799",
+      "oracleai_abs_deg_exact": 277.93058167470303,
+      "jpl_obs_ecliptic_longitude_deg": 277.9305388,
+      "delta_deg": 4.2874703012785176e-05
+    },
+    {
+      "body": "Нептун",
+      "jpl_command": "899",
+      "oracleai_abs_deg_exact": 283.5653929795891,
+      "jpl_obs_ecliptic_longitude_deg": 283.5653601,
+      "delta_deg": 3.287958907094435e-05
+    },
+    {
+      "body": "Плутон",
+      "jpl_command": "999",
+      "oracleai_abs_deg_exact": 225.2888727288684,
+      "jpl_obs_ecliptic_longitude_deg": 225.288802,
+      "delta_deg": 7.072886839409875e-05
+    }
+  ],
+  "max_delta_deg": 0.000282188348364798,
+  "query_window": {
+    "start": "1990-06-21T10:30",
+    "stop": "1990-06-21T10:31",
+    "step": "1m"
+  },
+  "non_comparable": [
+    "ASC",
+    "MC",
+    "Placidus houses",
+    "true lunar nodes",
+    "True Lilith",
+    "retrograde flag"
+  ],
+  "note": "JPL Horizons is an independent ephemeris/reference implementation. Quantity 31 is apparent observer-centered ecliptic-of-date longitude; OracleAI uses its documented Kerykeion/Swiss Ephemeris contract. The comparison records deltas and does not silently relabel JPL fields as the OracleAI contract."
+}

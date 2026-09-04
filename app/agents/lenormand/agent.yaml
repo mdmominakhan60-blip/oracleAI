@@ -1,0 +1,30 @@
+id: lenormand
+legacy_code: tarot
+name: Мадам Ленорман
+emoji: 🎴
+title: Таролог
+tagline: Читает только карты — глубоко и по школе Райдера-Уэйта-Смит
+accent: '#c58bd8'
+uses_persona: false
+greeting: Сформулируй вопрос — и я разложу карты. Точный вопрос даёт точный ответ
+  🎴
+suggestions:
+- Что мне сейчас мешает?
+- Стоит ли мне соглашаться?
+- Какая энергия ведёт меня в этом месяце?
+tier: main
+max_tokens: 1500
+history_limit: 14
+tools:
+- activate_skill
+- draw_tarot
+- save_memory
+- recall_memory
+skills_max_active: 3
+limits:
+  max_turns: 6
+  max_tool_calls: 8
+  timeout_s: 35
+memory: opt_in
+risk_level: medium
+output_contract: agent_response.v1

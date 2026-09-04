@@ -1,0 +1,279 @@
+agent: mira
+legacy_code: chiromant
+manifest_version: 1.0.0
+skills_count: 34
+skills:
+- name: anti-barnum-protocol
+  version: 1.0.0
+  depends_on: []
+  requires_tools:
+  - palm_scanner
+  - palm_photo_guide
+  tags: []
+  path: app/agents/mira/skills/anti-barnum-protocol/SKILL.md
+- name: bracelets-and-wrist
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/mira/skills/bracelets-and-wrist/SKILL.md
+- name: capture-rectification
+  version: 1.0.0
+  depends_on: []
+  requires_tools:
+  - palm_scanner
+  - palm_photo_guide
+  tags: []
+  path: app/agents/mira/skills/capture-rectification/SKILL.md
+- name: comparative-reading
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/mira/skills/comparative-reading/SKILL.md
+- name: evidence-confidence
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/mira/skills/evidence-confidence/SKILL.md
+- name: fate-line
+  version: 1.1.0
+  depends_on: []
+  requires_tools:
+  - palm_scanner
+  tags:
+  - fate-line
+  path: app/agents/mira/skills/fate-line/SKILL.md
+- name: fate-line-context
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - palm_scanner
+  - palm_photo_guide
+  tags:
+  - fate-line
+  - agency
+  path: app/agents/mira/skills/fate-line-context/SKILL.md
+- name: finger-proportions
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/mira/skills/finger-proportions/SKILL.md
+- name: hand-shape-elements
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/mira/skills/hand-shape-elements/SKILL.md
+- name: hand-side-context
+  version: 1.1.0
+  depends_on: []
+  requires_tools:
+  - palm_scanner
+  tags: []
+  path: app/agents/mira/skills/hand-side-context/SKILL.md
+- name: head-line
+  version: 1.1.0
+  depends_on: []
+  requires_tools:
+  - palm_scanner
+  tags:
+  - head-line
+  path: app/agents/mira/skills/head-line/SKILL.md
+- name: head-line-depth
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - palm_scanner
+  - palm_photo_guide
+  tags:
+  - head-line
+  - lines
+  path: app/agents/mira/skills/head-line-depth/SKILL.md
+- name: heart-line
+  version: 1.1.0
+  depends_on: []
+  requires_tools:
+  - palm_scanner
+  tags:
+  - heart-line
+  path: app/agents/mira/skills/heart-line/SKILL.md
+- name: heart-line-depth
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - palm_scanner
+  - palm_photo_guide
+  tags:
+  - heart-line
+  - relationships
+  path: app/agents/mira/skills/heart-line-depth/SKILL.md
+- name: image-quality-protocol
+  version: 1.1.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - palm_scanner
+  - palm_photo_guide
+  tags:
+  - image
+  - quality
+  path: app/agents/mira/skills/image-quality-protocol/SKILL.md
+- name: life-line
+  version: 1.1.0
+  depends_on: []
+  requires_tools:
+  - palm_scanner
+  tags:
+  - life-line
+  path: app/agents/mira/skills/life-line/SKILL.md
+- name: life-line-continuity
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - palm_scanner
+  - palm_photo_guide
+  tags:
+  - life-line
+  - safety
+  path: app/agents/mira/skills/life-line-continuity/SKILL.md
+- name: markings-and-signs
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/mira/skills/markings-and-signs/SKILL.md
+- name: mercury-line
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/mira/skills/mercury-line/SKILL.md
+- name: mounts
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/mira/skills/mounts/SKILL.md
+- name: mounts-topography
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - palm_scanner
+  - palm_photo_guide
+  tags:
+  - mounts
+  - topography
+  path: app/agents/mira/skills/mounts-topography/SKILL.md
+- name: palm-angle-classification
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/mira/skills/palm-angle-classification/SKILL.md
+- name: palm-evidence-reading
+  version: 1.0.0
+  depends_on: []
+  requires_tools:
+  - palm_scanner
+  tags: []
+  path: app/agents/mira/skills/palm-evidence-reading/SKILL.md
+- name: palm-line-topology
+  version: 1.0.0
+  depends_on: []
+  requires_tools:
+  - palm_scanner
+  tags: []
+  path: app/agents/mira/skills/palm-line-topology/SKILL.md
+- name: palm-photo-quality
+  version: 2.0.0
+  depends_on: []
+  requires_tools:
+  - palm_scanner
+  - palm_photo_guide
+  tags:
+  - photo_quality
+  - focus
+  - lighting
+  - framing
+  - confidence
+  - reshoot
+  path: app/agents/mira/skills/palm-photo-quality/SKILL.md
+- name: palm-safety
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/mira/skills/palm-safety/SKILL.md
+- name: palm-technique-triangulation
+  version: 1.0.0
+  depends_on: []
+  requires_tools:
+  - palm_scanner
+  tags: []
+  path: app/agents/mira/skills/palm-technique-triangulation/SKILL.md
+- name: photo-comparison
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - palm_scanner
+  - palm_photo_guide
+  tags:
+  - comparison
+  - image
+  path: app/agents/mira/skills/photo-comparison/SKILL.md
+- name: relationship-lines
+  version: 1.1.0
+  depends_on: []
+  requires_tools:
+  - palm_scanner
+  - palm_photo_guide
+  tags:
+  - relationship
+  - edge_view
+  path: app/agents/mira/skills/relationship-lines/SKILL.md
+- name: sun-line
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/mira/skills/sun-line/SKILL.md
+- name: thumb-analysis
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/mira/skills/thumb-analysis/SKILL.md
+- name: thumb-mechanics
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - palm_scanner
+  - palm_photo_guide
+  tags:
+  - thumb
+  - observation
+  path: app/agents/mira/skills/thumb-mechanics/SKILL.md
+- name: travel-lines
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/mira/skills/travel-lines/SKILL.md
+- name: visual-evidence-protocol
+  version: 1.0.0
+  depends_on: []
+  requires_tools:
+  - palm_scanner
+  - palm_photo_guide
+  tags: []
+  path: app/agents/mira/skills/visual-evidence-protocol/SKILL.md

@@ -1,0 +1,17 @@
+# PACK A — Рубашка карты Таро (card back, для .tarot-card .back)
+
+## GLOBAL STYLE TOKENS
+ultra-high definition, 8K, ornate ornate gold gilded baroque frame, deep midnight-blue and violet background with scattered gold stars, large empty central circle ready for overlay content, celestial crescent moons in each corner, delicate gold filigree borders, antique mystical luxury, dark fantasy aesthetic, rich gold and violet palette, premium game-art card design, no text inside the central circle, clean content-ready space
+
+## NEGATIVE PROMPT
+text, watermark, logo, messy borders, broken symmetry, modern elements, bright white background, blank empty card, cluttered frame, plastic texture, low-contrast gold, dull colors
+
+## SHARED LOCK
+- Aspect: portrait 1024x1536, vertical card
+- Palette: deep indigo (#0f0d2b) to violet (#241845), antique gold (#d6af4e) to bright gold (#ffe080)
+- Frame style: ornate gold baroque border, inner double gold line, decorative corner scrollwork
+- Central space: large circular dark area (~65% of card) for overlay, no text
+- No face/card number/content inside; pure decorative back
+
+## SHOT 1 — Card back (full ornate design)
+GLOBAL STYLE TOKENS, ornate gilded baroque card back, deep dark-blue background with scattered gold stars, large central empty dark circle enclosed by a thin gold ring, decorative gold filigree borders with crescent moon motifs at top and bottom, rich gold and violet palette, premium dark fantasy aesthetic, vertical portrait 3:5 ratio. NEGATIVE PROMPT.

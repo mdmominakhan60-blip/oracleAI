@@ -1,0 +1,11 @@
+-r requirements.txt
+
+# Все версии совпадают с локальной средой (прогоняется pytest). pytest-timeout
+# режет повесившийся тест вместо ожидания лишних минут (G27).
+pytest==9.1.1
+pytest-asyncio==1.4.0
+pytest-timeout>=2.3
+httpx==0.28.1
+ruff==0.6.9
+pip-audit==2.9.0
+prometheus-client>=0.22.0

@@ -1,0 +1,206 @@
+/* =============================================
+   ОРАКУЛ · модуль 06-composer-chat — строки 841–1028 styles.css
+   Дословный перенос, каскад сохранён (порядок = @import).
+   ============================================= */
+
+/* ============================================================================
+   Полировка v2.2: премиум чат + главная
+   ============================================================================ */
+
+/* ── композер как в лучших чатах: капсульный инпут + круглая кнопка ── */
+.composer {
+  flex: none; padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(10,9,22,0) 0%, rgba(10,9,22,.85) 40%);
+}
+.composer-top {
+  display: flex; align-items: flex-end; gap: 10px;
+  background: var(--glass-strong);
+  border: 1px solid var(--border); border-radius: 26px;
+  padding: 6px 6px 6px 18px;
+  box-shadow: 0 10px 30px -10px rgba(0,0,0,.6);
+  transition: border-color .25s var(--ease), box-shadow .25s var(--ease);
+}
+.composer-top:focus-within {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow), 0 10px 30px -10px rgba(0,0,0,.6);
+}
+#chat-input {
+  flex: 1; background: none; border: none; outline: none; color: var(--text);
+  font: inherit; font-size: 14.5px; padding: 9px 0; min-height: 22px;
+}
+#chat-input::placeholder { color: var(--text-faint); }
+.send-btn {
+  border: none; border-radius: 50%; cursor: pointer; flex: none;
+  width: 40px; height: 40px; padding: 0; display: grid; place-items: center;
+  font-size: 16px; color: #1c1430;
+  background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
+  box-shadow: 0 6px 18px -6px rgba(230,193,120,.6);
+  transition: .2s var(--ease);
+}
+.send-btn:hover { transform: scale(1.06); }
+.send-btn:active { transform: scale(.96); }
+.tool-btn {
+  border: none; border-radius: 50%; cursor: pointer; flex: none;
+  width: 40px; height: 40px; padding: 0; display: grid; place-items: center;
+  font-size: 17px; color: var(--gold-bright);
+  background: rgba(230,193,120,.12); border: 1px solid rgba(230,193,120,.4);
+  transition: .2s var(--ease);
+}
+.tool-btn:hover { background: rgba(230,193,120,.22); transform: scale(1.06); }
+.tool-btn:active { transform: scale(.94); }
+.suggest-chips { display: flex; gap: 6px; overflow-x: auto; padding: 9px 4px 0; }
+.suggest-chips .chip { flex: none; }
+
+/* ── пузыри: мягче, чище ── */
+.chat-messages { padding: 20px 16px 8px; gap: 14px; }
+.msg { max-width: 82%; line-height: 1.6; }
+.msg.user {
+  background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold-deep) 100%);
+  color: #241830; font-weight: 500; font-size: 14px;
+  padding: 12px 16px; border-radius: 20px 20px 6px 20px;
+}
+.msg.assistant {
+  background: transparent; border: none; padding: 2px 4px;
+  color: var(--text); font-size: 14.5px; line-height: 1.7;
+  border-radius: 0; max-width: 100%;
+}
+.msg.assistant b { color: var(--gold-bright); }
+
+/* аватар агента у первого сообщения в блоке не нужен — шапка уже даёт контекст */
+
+/* ── виджеты в чате: единая премиум-карточка ── */
+.chat-widget {
+  margin-top: 14px; background: var(--glass); border: 1px solid var(--border);
+  border-radius: var(--r-m); padding: 16px; box-shadow: var(--sh-card);
+}
+.chat-widget .w-title {
+  font-family: var(--font-serif); color: var(--gold); font-size: 13.5px;
+  margin-bottom: 12px; font-weight: 600; letter-spacing: .4px;
+  display: flex; align-items: center; gap: 8px;
+}
+.chat-widget .w-sub {
+  font-size: 13px; color: var(--text-dim); line-height: 1.55;
+  margin: -5px 0 12px;
+}
+.chat-widget .w-sub b { color: var(--gold-bright); }
+
+/* таро-карты — выразительнее */
+
+
+
+
+
+/* ── Главная: меньше «коробок», больше атмосферы ── */
+.hero-orb {
+  height: 224px; min-height: 224px; border: none; border-radius: var(--r-l);
+  box-shadow: inset 0 0 60px rgba(167,139,250,.12);
+}
+.hero-body { max-width: 100%; }
+.glass.flat { border: none; background: rgba(255,255,255,.03); box-shadow: none; }
+
+/* луна на главной — крупнее и с мягким свечением */
+.moon-orb { width: 76px; height: 76px; box-shadow: 0 0 26px -6px var(--violet-glow), inset 0 0 12px rgba(0,0,0,.5); }
+
+@media (max-width: 380px) {
+  .dock-grid { gap: 9px; }
+  .dock-item .dock-orb { width: 68px; height: 68px; }
+  .moon-slot { padding: 12px 14px; gap: 12px; }
+  .ms-ico { width: 46px; height: 46px; }
+}
+
+/* ── главная: большая луна справа (абс. от .hero-orb), дата/имя слева ── */
+.hero-moon-orb {
+  position: absolute; right: 14px; top: 14px;
+  z-index: 2; width: 92px; height: 92px; display: grid; place-items: center;
+  filter: drop-shadow(0 0 20px rgba(255,214,140,.5));
+}
+.hero-moon-orb svg { width: 100%; height: 100%; }
+.hero-moon-txt {
+  font-size: 12px; color: var(--text-dim); max-width: 230px;
+  margin-top: 7px; line-height: 1.45; padding-right: 4px;
+}
+.hero-moon-txt em { color: var(--gold-bright); font-style: normal; }
+
+/* лунный календарь на главной: просторный вертикальный список с премиум-карточками-днями */
+/* Лунный календарь — компакт: «кратко о сегодня» + раскрытие недели по кнопке */
+.moon-section { display: flex; flex-direction: column; }
+.moon-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.moon-toggle {
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  font-family: var(--font-sans); font-size: 12.5px; font-weight: 600; color: var(--gold-bright);
+  padding: 7px 13px; border-radius: 99px;
+  background: rgba(230,193,120,.1); border: 1px solid rgba(230,193,120,.35);
+  transition: .2s var(--ease); white-space: nowrap;
+}
+.moon-toggle:hover { background: rgba(230,193,120,.18); border-color: var(--gold); }
+.moon-toggle .mo-chev { transition: transform .25s var(--ease); }
+.moon-toggle.open .mo-chev { transform: rotate(180deg); }
+.moon-today {
+  display: flex; align-items: center; gap: 14px; margin-top: 12px; padding: 13px 16px; cursor: pointer;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(230,193,120,.12), rgba(230,193,120,.04));
+  border: 1px solid rgba(230,193,120,.5); box-shadow: 0 0 22px var(--gold-glow);
+  transition: .25s var(--ease);
+}
+.moon-today:hover { border-color: var(--gold); transform: translateY(-1px); }
+.mc-ico-sm { width: 50px; height: 50px; flex: none; filter: drop-shadow(0 0 12px rgba(255,214,140,.55)); }
+.mc-ico-sm svg { width: 100%; height: 100%; }
+.mt-main { flex: 1; min-width: 0; }
+.mt-name { font-family: var(--font-serif); font-size: 15.5px; font-weight: 700; color: var(--text); margin-bottom: 3px; letter-spacing: .3px; }
+.mt-adv { font-size: 13px; color: var(--text-dim); line-height: 1.55;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mt-cta { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+  color: var(--gold-bright); white-space: nowrap; }
+.mt-cta .mo-chev { font-size: 14px; transition: transform .25s var(--ease); }
+.moon-today.open .mt-cta .mo-chev { transform: rotate(90deg); }
+.moon-week { display: none; }
+.moon-week.show { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; animation: meltIn .3s var(--ease); }
+@keyframes meltIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.mc-day { border-radius: 16px; border: 1.5px solid var(--border); background: rgba(255,255,255,.04);
+  transition: .25s var(--ease); }
+.mc-day:hover { border-color: rgba(230,193,120,.6); background: rgba(230,193,120,.07); }
+.mc-day.today { background: rgba(230,193,120,.12); border-color: var(--gold); box-shadow: 0 0 16px var(--gold-glow); }
+.mc-row { display: flex; align-items: center; gap: 14px; padding: 11px 15px; cursor: pointer; }
+.mc-ico { width: 44px; height: 44px; flex: none; filter: drop-shadow(0 0 10px rgba(255,214,140,.45)); }
+.mc-ico svg { width: 100%; height: 100%; }
+.mc-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.mc-wd { font-variant-numeric: tabular-nums; font-size: 13.5px; font-weight: 700; color: var(--text); letter-spacing: .3px; line-height: 1.2; }
+.mc-wd b { color: var(--gold-bright); font-weight: 800; }
+.mc-nm { font-size: 13px; color: var(--text-dim); font-family: var(--font-serif); line-height: 1.3; }
+.mc-ln { font-style: normal; color: var(--gold-deep); font-size: 12.5px; margin-left: 3px; }
+.mc-chev { flex: none; color: var(--text-faint); font-size: 18px; transition: transform .2s var(--ease); }
+.mc-day:hover .mc-chev, .mc-day.open .mc-chev { color: var(--gold-bright); transform: rotate(90deg); }
+.mc-day.open { border-color: rgba(230,193,120,.7); }
+.mc-detail { padding: 2px 15px 13px 73px; font-size: 14px; line-height: 1.7; color: var(--text-dim);
+  border-top: 1px dashed rgba(230,193,120,.25); }
+.mc-detail .mc-adv em { color: var(--gold-bright); font-style: normal; font-weight: 600; }
+.moon-note { margin-top: 10px; padding: 13px 16px; font-size: 13.5px; color: var(--gold-bright);
+  background: rgba(255,255,255,.045); border-radius: var(--r-s); border: 1px dashed rgba(230,193,120,.38); line-height: 1.55; }
+.moon-note b { font-weight: 700; color: var(--gold-bright); }
+.sec-hint { font-family: var(--font-sans); font-size: 12px; font-weight: 500; color: var(--text-faint); letter-spacing: .2px; opacity: .9; }
+
+/* детальный лунный календарь в модале */
+.moon-detail { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.md-row {
+  display: flex; align-items: flex-start; gap: 13px; padding: 12px 14px;
+  border-radius: 16px; background: rgba(255,255,255,.03); border: 1px solid var(--border);
+}
+.md-row.today { background: rgba(230,193,120,.1); border-color: var(--gold); box-shadow: 0 0 14px var(--gold-glow); }
+.md-ico { width: 46px; height: 46px; flex: none; margin-top: 2px; filter: drop-shadow(0 0 8px rgba(255,214,140,.35)); }
+.md-ico svg { width: 100%; height: 100%; }
+.md-main { flex: 1; min-width: 0; }
+.md-wd { font-size: 11px; color: var(--text-faint); letter-spacing: .6px; text-transform: uppercase; }
+.md-wd em { color: var(--gold-bright); font-style: normal; }
+.md-name { font-size: 14px; color: var(--text); margin-top: 2px; }
+.md-name b { color: var(--gold-bright); }
+.md-adv { font-size: 12.5px; color: var(--text-dim); margin-top: 3px; line-height: 1.5; }
+
+.forecast-flow {
+  font-size: 15px; line-height: 1.8; color: var(--text);
+  padding: 2px 2px 0; letter-spacing: .1px;
+  text-shadow: 0 1px 2px rgba(0,0,0,.3);
+}
+.forecast-flow::first-letter {
+  font-family: var(--font-serif); font-size: 30px; color: var(--gold);
+  float: left; line-height: 1; padding: 2px 6px 0 0;
+}

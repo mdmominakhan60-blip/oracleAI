@@ -1,0 +1,237 @@
+/* =============================================================================
+   ORACLEAI · PREMIUM SHELL — desktop/tablet frame + navigation v2
+   Только надстройка: мобильный Telegram-first контракт не меняется,
+   на широких экранах frame становится «парящим устройством» с боковой рамкой.
+   ============================================================================= */
+
+/* ── 1. Премиальная навигация: плавающая капсула + скользящий индикатор ──── */
+
+.app-nav {
+  padding: 6px 14px calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent, rgba(10, 9, 32, .55) 30%);
+  pointer-events: none; /* сигнал проходит к капсуле; область вокруг прозрачна */
+}
+.main-nav {
+  pointer-events: auto;
+  position: relative;
+  padding: 5px;
+  border-radius: 22px;
+  border: 1px solid rgba(230, 219, 255, .16);
+  background: linear-gradient(180deg, rgba(34, 28, 68, .9), rgba(22, 18, 48, .92));
+  box-shadow:
+    0 18px 40px -20px rgba(0, 0, 0, .85),
+    inset 0 1px 0 rgba(255, 255, 255, .07);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+/* Скользящий золотой индикатор: двигается за активной вкладкой.
+   JS задаёт --nav-index (0..N-1) и --nav-count (число вкладок).
+   Геометрия повторяет grid: сегмент = (W − отступы − (N−1)·gap)/N,
+   позиция = index · (ширина сегмента + gap). */
+.main-nav::before,
+.main-nav::after {
+  content: "";
+  position: absolute;
+  top: 5px; bottom: 5px;
+  left: 5px;
+  width: calc((100% - 10px - (var(--nav-count, 4) - 1) * 4px) / var(--nav-count, 4));
+  transform: translateX(calc(var(--nav-index, 0) * (100% + 4px)));
+  transition: transform var(--motion-base) var(--ease);
+  z-index: 0;
+}
+.main-nav::before {
+  border-radius: 17px;
+  background: linear-gradient(135deg, var(--color-accent-strong), var(--color-accent-deep));
+  box-shadow:
+    0 10px 22px -10px rgba(245, 212, 139, .75),
+    inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+/* мягкое свечение под индикатором */
+.main-nav::after {
+  border-radius: 17px;
+  background: radial-gradient(80% 120% at 50% 0%, rgba(245, 212, 139, .35), transparent 70%);
+  pointer-events: none;
+}
+.nav-btn {
+  position: relative;
+  z-index: 1;
+  color: var(--color-text-muted);
+  transition: color .25s var(--ease), transform .18s var(--ease);
+  will-change: transform;
+}
+.nav-btn .nav-ico {
+  transition: transform .28s var(--ease), color .25s var(--ease);
+}
+.nav-btn:hover:not(.active) { color: var(--color-text-secondary); }
+.nav-btn:hover:not(.active) .nav-ico { transform: translateY(-1.5px) scale(1.08); }
+.nav-btn:active { transform: scale(.95); }
+.nav-btn.active {
+  color: var(--color-on-accent);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+/* прячем «точку-активатор» из базового слоя: индикатором служит золотая капсула */
+.nav-btn.active::after { content: none; }
+.nav-btn.active .nav-ico {
+  color: var(--color-on-accent);
+  transform: translateY(-1px) scale(1.06);
+  filter: drop-shadow(0 1px 2px rgba(37, 29, 57, .35));
+}
+.nav-btn.active .nav-copy small { opacity: .7; }
+.nav-btn:focus-visible {
+  outline: 2px solid var(--color-accent-strong);
+  outline-offset: 2px;
+}
+
+/* шапка: чуть глубже стекло и мягкое разделение */
+.app-header {
+  background: linear-gradient(180deg, rgba(16, 14, 41, .72), rgba(10, 9, 32, .45));
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+.bell { transition: transform .25s var(--ease), border-color .25s var(--ease), box-shadow .25s var(--ease); }
+.bell:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: 0 0 18px -4px var(--gold-glow);
+  transform: translateY(-1.5px);
+}
+.bell:active { transform: scale(.94); }
+.bell:focus-visible, .user-pill:focus-visible {
+  outline: 2px solid var(--color-accent-strong);
+  outline-offset: 2px;
+}
+
+/* колокольчик без непрочитанного: точка скрыта (JS снимает .has-unread) */
+.bell-dot {
+  transform-origin: center;
+  transform: scale(0);
+  transition: transform .3s var(--ease);
+}
+.bell.has-unread .bell-dot {
+  transform: scale(1);
+  animation: bellPulse 2.6s ease-in-out infinite;
+}
+@keyframes bellPulse {
+  0%, 100% { box-shadow: 0 0 6px var(--gold-glow); }
+  50% { box-shadow: 0 0 14px 2px var(--gold-glow); }
+}
+
+/* переходы между экранами — мягче и премиальнее */
+#app-main { position: relative; }
+#app-main.screen-swipe-next,
+#app-main.screen-swipe-prev { animation-duration: .3s; }
+
+/* ── 2. Планшет и ПК: frame как парящее «устройство» ────────────────────── */
+
+@media (min-width: 601px) {
+  body {
+    display: grid;
+    place-items: center;
+    padding: 28px 20px;
+  }
+  /* атмосфера на всём вьюпорте остаётся, frame получает собственную сцену */
+  #app-root {
+    height: min(920px, calc(100dvh - 56px));
+    max-height: 920px;
+    width: 100%;
+    max-width: 460px;
+    border-radius: 34px;
+    border: 1px solid rgba(230, 219, 255, .18);
+    background:
+      radial-gradient(130% 60% at 50% -10%, rgba(25, 21, 58, .9), transparent 60%),
+      linear-gradient(180deg, rgba(13, 11, 31, .82), rgba(8, 7, 20, .9));
+    box-shadow:
+      0 60px 120px -40px rgba(0, 0, 0, .9),
+      0 24px 60px -30px rgba(120, 90, 220, .35),
+      inset 0 1px 0 rgba(255, 255, 255, .08);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    overflow: hidden;
+  }
+  /* внутри frame — свой локальный космос, чтобы «устройство» читалось целостно */
+  #app-root::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+      radial-gradient(90% 45% at 80% -5%, rgba(245, 212, 139, .08), transparent 60%),
+      radial-gradient(80% 50% at 5% 105%, rgba(185, 166, 255, .1), transparent 65%);
+  }
+  #app-root > * { position: relative; z-index: 1; }
+  .app-header { border-radius: 34px 34px 0 0; padding-top: 18px; padding-bottom: 12px; }
+  .app-nav { border-radius: 0 0 34px 34px; }
+  /* нижняя навигация на ПК — та же капсула, но с воздухом вокруг */
+  .app-nav { padding: 8px 18px calc(16px + env(safe-area-inset-bottom)); }
+  .main-nav { max-width: 420px; margin: 0 auto; }
+
+  /* Оверлеи на body затемняют весь вьюпорт, но контейнеры центрируются
+     в пределах парящего frame, а не растягиваются на широкий экран.
+     (Полная привязка оверлеев к frame — задача фазы 3 плана: рендер в #app-root.) */
+  .modal-overlay { padding: 0; }
+  .modal-overlay .modal,
+  #chat-guide .cg-card {
+    width: min(420px, calc(100vw - 48px));
+    box-shadow: 0 40px 90px -30px rgba(0, 0, 0, .85);
+  }
+  #intro .intro-start, #intro .intro-skip, #intro .intro-dots {
+    max-width: 460px; margin-left: auto; margin-right: auto; width: calc(100% - 64px);
+  }
+  /* sheet инструментов живёт внутри chat-shell (внутри frame) */
+  .tool-expand { border-radius: 0 0 34px 34px; overflow: hidden; }
+  .tool-expand .te-mask { border-radius: 34px; }
+  .te-sheet { border-radius: 28px 28px 0 0; }
+
+  /* чат на широком frame: пузыри читаются комфортнее */
+  .msg { max-width: 88%; }
+}
+
+@media (min-width: 1024px) {
+  #app-root { max-width: 480px; height: min(960px, calc(100dvh - 64px)); }
+  body { padding: 32px 24px; }
+}
+
+/* ультра-широкие экраны: добавляем боковые «сигнатуры» бренда, чтобы пустота
+   не выглядела брошенной (декоративно, не кликабельно, не мешает скринридеру) */
+@media (min-width: 1440px) {
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    top: 50%;
+    width: 380px;
+    height: 380px;
+    transform: translateY(-50%);
+    border-radius: 50%;
+    filter: blur(90px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::before {
+    left: 6vw;
+    background: radial-gradient(circle, rgba(185, 166, 255, .14), transparent 65%);
+  }
+  body::after {
+    right: 6vw;
+    background: radial-gradient(circle, rgba(245, 212, 139, .1), transparent 65%);
+  }
+}
+
+/* ── 3. Мобильные мелочи: безопасная зона капсулы и тактильность ────────── */
+
+@media (max-width: 600px) {
+  .app-nav { padding: 4px 10px calc(8px + env(safe-area-inset-bottom)); }
+  .main-nav { max-width: 420px; margin: 0 auto; }
+}
+
+/* reduced motion: индикатор не «едет», а мгновенно встаёт на место */
+@media (prefers-reduced-motion: reduce) {
+  .main-nav::before,
+  .main-nav::after,
+  .nav-btn,
+  .nav-btn .nav-ico { transition: none !important; }
+  .bell.has-unread .bell-dot { animation: none; }
+}

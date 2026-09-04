@@ -1,0 +1,3 @@
+[lint.per-file-ignores]
+"app/bot/features.py" = ["F541"]
+"app/core/agents/runtime.py" = ["E701"]

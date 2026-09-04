@@ -1,0 +1,39 @@
+# BUS-86: временный публичный edge для Cloudflare quick-tunnel.
+# Отличие от основного Caddyfile только в site-адресе: туннель приходит по HTTP
+# внутри oracle_internal, TLS терминируется на edge Cloudflare. Защиты те же,
+# что на основном edge: /metrics закрыт, лимиты тела, security-заголовки.
+:8080 {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	# Prometheus скрейпит api:8080/metrics по oracle_internal; наружу не отдаём.
+	handle /metrics {
+		respond 404
+	}
+
+	# Paddle-подписи покрывают сырое тело запроса; проксируем без перезаписи.
+	handle /api/webhooks/* {
+		request_body {
+			max_size 512KB
+		}
+		reverse_proxy api:8080
+	}
+
+	handle {
+		# Должно совпадать с app/core/palm.py MAX_IMAGE_BYTES (8 MB).
+		request_body {
+			max_size 8MB
+		}
+		reverse_proxy api:8080 {
+			health_uri /api/health
+			health_interval 30s
+		}
+	}
+}

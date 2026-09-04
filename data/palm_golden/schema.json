@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oracleai.local/schemas/palm-golden-record-v1.json",
+  "title": "OracleAI Palm Golden Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["record_id", "image_path", "image_sha256", "source", "consent", "split", "capture", "regions", "expected_claims", "prohibited_claims", "adjudication"],
+  "properties": {
+    "record_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,95}$"},
+    "image_path": {"type": "string", "pattern": "^(?!/)(?!.*\\.\\.)[^\\n]+\\.(?:jpe?g|png|webp)$"},
+    "image_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "license_or_permission", "collected_at"],
+      "properties": {
+        "kind": {"type": "string", "enum": ["consented_user", "synthetic_contract", "public_permitted", "internal_fixture"]},
+        "license_or_permission": {"type": "string", "minLength": 3},
+        "collected_at": {"type": "string", "minLength": 10},
+        "provenance_note": {"type": "string"}
+      }
+    },
+    "consent": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "raw_image_retention", "review_use"],
+      "properties": {
+        "status": {"type": "string", "enum": ["granted", "synthetic_no_person", "not_applicable"]},
+        "raw_image_retention": {"type": "string", "enum": ["annotation_only", "deleted_after_annotation", "synthetic"]},
+        "review_use": {"type": "boolean"},
+        "consent_reference": {"type": "string"}
+      }
+    },
+    "split": {"type": "string", "enum": ["train", "dev", "test", "challenge"]},
+    "capture": {
+      "type": "object", "additionalProperties": false,
+      "required": ["quality_state", "view_type", "hand_count", "hand_side", "expected_user_action"],
+      "properties": {
+        "quality_state": {"type": "string", "enum": ["usable", "reshoot_recommended", "invalid_image"]},
+        "view_type": {"type": "string", "enum": ["open_palm", "folded_edge", "unclear", "not_applicable"]},
+        "hand_count": {"type": "integer", "minimum": 0, "maximum": 2},
+        "hand_side": {"type": "string", "enum": ["left", "right", "unknown", "not_applicable"]},
+        "expected_user_action": {"type": "string", "enum": ["analyze", "reshoot", "reject"]},
+        "quality_rationale": {"type": "string", "minLength": 3}
+      }
+    },
+    "regions": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["region_id", "topic", "visibility", "evidence_state", "expected_confidence_band", "annotator_refs"],
+        "properties": {
+          "region_id": {"type": "string", "pattern": "^[a-z0-9._-]+$"},
+          "topic": {"type": "string", "enum": ["life_line", "head_line", "heart_line", "fate_line", "sun_line", "mercury_line", "relationship_lines", "children_lines", "travel_lines", "girdle_of_venus", "ring_of_solomon", "ring_of_apollo", "via_lasciva", "mars_lines", "influence_lines", "bracelets", "mounts", "fingers", "markings", "palm_region"]},
+          "visibility": {"type": "string", "enum": ["clear", "partial", "unclear", "not_visible"]},
+          "evidence_state": {"type": "string", "enum": ["observed", "inferred", "unknown", "not_supported"]},
+          "expected_confidence_band": {"type": "string", "enum": ["zero", "low", "medium", "high"]},
+          "bbox_norm": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "number", "minimum": 0, "maximum": 1}},
+          "polygon_norm": {"type": "array", "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number", "minimum": 0, "maximum": 1}}},
+          "annotation_note": {"type": "string"},
+          "annotator_refs": {"type": "array", "minItems": 2, "items": {"type": "string", "pattern": "^[a-z0-9._-]+$"}}
+        }
+      }
+    },
+    "expected_claims": {
+      "type": "array", "items": {"type": "object", "additionalProperties": false,
+        "required": ["claim_id", "topic", "allowed_state", "must_be_grounded_in_region"],
+        "properties": {
+          "claim_id": {"type": "string"}, "topic": {"type": "string"},
+          "allowed_state": {"type": "string", "enum": ["observed", "inferred", "unknown", "not_supported"]},
+          "must_be_grounded_in_region": {"type": "string"}, "note": {"type": "string"}
+        }
+      }
+    },
+    "prohibited_claims": {"type": "array", "items": {"type": "string"}},
+    "adjudication": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "annotators", "domain_reviewer_required"],
+      "properties": {
+        "status": {"type": "string", "enum": ["pending", "independently_labeled", "adjudicated", "rejected"]},
+        "annotators": {"type": "array", "minItems": 2, "items": {"type": "string", "pattern": "^[a-z0-9._-]+$"}},
+        "domain_reviewer_required": {"type": "boolean"},
+        "domain_reviewer": {"type": "string"},
+        "agreement": {"type": "number", "minimum": 0, "maximum": 1},
+        "disagreements": {"type": "array", "items": {"type": "string"}},
+        "decision_note": {"type": "string"}
+      }
+    }
+  }
+}

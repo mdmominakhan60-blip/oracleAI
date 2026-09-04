@@ -1,0 +1,81 @@
+/* =============================================
+   ОРАКУЛ · модуль 09-chart-panels — строки 1194–1269 styles.css
+   Дословный перенос, каскад сохранён (порядок = @import).
+   ============================================= */
+
+/* ── полная натальная карта: таблицы ── */
+.fc-grid { margin-bottom: 4px; }
+.fc-big { display: flex; align-items: center; gap: 14px; padding: 6px 0 10px; }
+.fc-ico-xl { font-size: 40px; filter: drop-shadow(0 0 10px var(--gold-glow)); }
+.fc-section {
+  font-family: var(--font-serif); color: var(--gold); font-size: 13px;
+  letter-spacing: .5px; margin: 14px 0 4px; font-weight: 600;
+  border-bottom: 1px solid var(--border); padding-bottom: 4px;
+}
+.fc-row { display: flex; align-items: center; gap: 10px; padding: 7px 2px; border-bottom: 1px solid rgba(190,170,255,.06); font-size: 13px; }
+.fc-row:last-child { border-bottom: none; }
+.fc-ico { width: 26px; text-align: center; font-size: 15px; color: var(--gold-bright); flex: none; }
+.fc-name { flex: 1; color: var(--text); }
+.fc-val { color: var(--text-dim); font-size: 12.5px; }
+
+/* ── масштаб интерфейса вверх (читаемость) ── */
+body { font-size: 16px; }
+.msg.assistant { font-size: 15.5px; }
+.msg.user { font-size: 15px; }
+.forecast-flow { font-size: 16px; line-height: 1.85; }
+.section-title { font-size: 16px; }
+.hub-head p { font-size: 13.5px; }
+.nav-btn { font-size: 12px; }
+.chat-input, #chat-input { font-size: 15px; }
+
+/* ═══ Сессии-чаты (как ChatGPT: список, новый, удалить, до 5) ═══ */
+.sess-panel {
+  border-bottom: 1px solid rgba(230,193,120,.12);
+  background: rgba(9,8,20,.82); backdrop-filter: blur(12px);
+  max-height: 42vh; overflow-y: auto; position: relative; z-index: 5;
+}
+.sess-panel::-webkit-scrollbar { width: 4px; }
+.sess-panel::-webkit-scrollbar-thumb { background: rgba(230,193,120,.4); border-radius: 99px; }
+.sess-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 14px; font-size: 12.5px; color: var(--text-dim);
+  border-bottom: 1px dashed rgba(230,193,120,.16);
+  position: sticky; top: 0; background: rgba(10,9,22,.9);
+}
+.sess-row {
+  display: flex; align-items: center; gap: 9px; padding: 9px 14px;
+  cursor: pointer; border-bottom: 1px solid rgba(255,255,255,.045);
+  transition: background .15s var(--ease);
+}
+.sess-row:hover { background: rgba(230,193,120,.07); }
+.sess-row.active { background: rgba(230,193,120,.10); }
+.sess-row:active { background: rgba(230,193,120,.16); }
+.sess-t { font-size: 13.5px; color: var(--text); flex: none; max-width: 46%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sess-prev { font-size: 12px; color: var(--text-faint); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sess-del {
+  flex: none; width: 24px; height: 24px; border: 0; border-radius: 50%;
+  background: transparent; color: var(--text-faint); font-size: 12px; cursor: pointer;
+  transition: .15s var(--ease);
+}
+.sess-del:hover { background: rgba(230,193,120,.16); color: var(--gold-bright); }
+
+.toast {
+  position: fixed; left: 50%; bottom: 98px; transform: translateX(-50%);
+  z-index: 120; background: #1b1533; border: 1px solid rgba(230,193,120,.35);
+  color: var(--text); padding: 10px 18px; border-radius: var(--r-s);
+  font-size: 13px; box-shadow: 0 10px 28px -8px rgba(0,0,0,.8);
+  max-width: 86%; text-align: center;
+}
+
+/* ── эффект свечения для выбранных элементов ── */
+.glow { box-shadow: 0 0 0 1px rgba(230,193,120,.35), 0 0 20px -8px rgba(230,193,120,.45); transition: box-shadow .3s var(--ease); }
+.agent-card:hover, .spread-cell:hover { box-shadow: 0 0 0 1px rgba(230,193,120,.25), 0 0 15px -6px rgba(230,193,120,.3); }
+
+/* ── параллакс звёздного неба при скролле ── */
+.starfield { will-change: transform; }
+
+/* ── эффект свечения (glow) для выбранных элементов ── */
+.agent-card:hover, .agent-card.active, .agent-card.glow { box-shadow: 0 0 0 1px rgba(230,193,120,.35), 0 18px 50px -22px rgba(230,193,120,.18); transition: box-shadow .3s var(--ease); }
+.spread-cell { transition: transform .15s var(--ease), border-color .15s var(--ease), box-shadow .3s var(--ease); }
+.spread-cell.sel { box-shadow: 0 0 0 1px var(--gold), 0 0 12px -4px var(--gold-glow); transition: box-shadow .3s var(--ease); }
+.agent-avatar.active, .online-dot.active { animation: pulseDot 2s ease-in-out infinite; }

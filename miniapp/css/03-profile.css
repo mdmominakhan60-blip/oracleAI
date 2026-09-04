@@ -1,0 +1,368 @@
+/* =============================================
+   ОРАКУЛ · модуль 03-profile — строки 306–668 styles.css
+   Дословный перенос, каскад сохранён (порядок = @import).
+   ============================================= */
+
+/* ── профиль в табах ── */
+.ptab-bar { display: flex; gap: 6px; margin: 0 0 16px; border-bottom: 1px solid var(--border); }
+.ptab {
+  flex: 1; padding: 10px 4px 12px; background: none; border: 0; cursor: pointer;
+  color: var(--text-faint); font: 600 13px/1 var(--font-sans); letter-spacing: .3px;
+  border-bottom: 2px solid transparent; transition: .2s var(--ease);
+}
+.ptab:hover { color: var(--text-dim); }
+.ptab.active { color: var(--gold-bright); border-bottom-color: var(--gold); }
+.ptab-pane { display: none; animation: paneFade .25s var(--ease); }
+.ptab-pane.active { display: block; }
+@keyframes paneFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+.agent-list { display: flex; flex-direction: column; gap: 12px; }
+.agent-card {
+  background: var(--glass); border: 1px solid var(--border); border-radius: var(--r-m);
+  padding: 15px 16px; cursor: pointer; position: relative; overflow: hidden;
+  transition: .3s var(--ease);
+}
+.agent-card::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ac, var(--gold)), transparent);
+  opacity: .55;
+}
+.agent-card::after {
+  content: ""; position: absolute; right: -40px; top: -40px; width: 120px; height: 120px;
+  border-radius: 50%; background: radial-gradient(circle, var(--ac, rgba(230,193,120,.22)), transparent 70%);
+  opacity: 0; transition: .4s var(--ease);
+}
+.agent-card:hover { transform: translateY(-2px); border-color: var(--ac, var(--gold)); }
+.agent-card:hover::after { opacity: 1; }
+.agent-card .ac-top { display: flex; gap: 13px; align-items: center; position: relative; z-index: 1; }
+.agent-avatar {
+  width: 60px; height: 60px; border-radius: 18px; flex: none; position: relative;
+  display: grid; place-items: center; font-size: 25px;
+  background: radial-gradient(circle at 34% 28%, #3a2f6b, #141130);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 8px 20px -8px rgba(0,0,0,.6);
+}
+.agent-avatar::before {
+  content: ""; position: absolute; inset: -2px; border-radius: 18px; pointer-events: none;
+  padding: 1.5px;
+  background: linear-gradient(150deg, var(--ac, var(--gold)), transparent 60%, var(--ac, var(--gold)));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.agent-title { font-family: var(--font-serif); color: var(--text); font-size: 17.5px; font-weight: 600; letter-spacing: .2px; }
+.agent-role { color: var(--ac, var(--gold)); font-size: 12px; font-weight: 600; letter-spacing: .6px; }
+.agent-last { color: var(--text-dim); font-size: 12.5px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Анимированный персонаж агента: мордочка мигает, дышит, держит проп-атрибут,
+   реагирует на наведение и радуется ответу. Без color-mix (старые WebView). */
+.agent-sprite {
+  position: relative; width: 88%; height: 88%; display: block;
+  animation: as-bob 3.6s ease-in-out infinite;
+  z-index: 2;
+}
+.agent-face {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  border-radius: 50%; object-fit: cover;
+  border: 2px solid var(--ac, var(--gold));
+  box-shadow: 0 0 0 2px rgba(255,255,255,.06), 0 6px 16px -8px rgba(0,0,0,.8), 0 0 18px var(--gold-glow);
+}
+.as-prop { position: absolute; top: -22%; right: -14%; font-size: 22px; line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.55)); animation: as-float 3s ease-in-out infinite; }
+@keyframes as-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes as-float { 0%,100% { transform: rotate(0) translateY(0); } 50% { transform: rotate(-7deg) translateY(-2px); } }
+.agent-sprite.cheer .agent-face { animation: as-cheer .7s cubic-bezier(.34,1.56,.64,1); }
+@keyframes as-cheer {
+  0% { transform: scale(1) rotate(0); }
+  35% { transform: scale(1.18) rotate(-7deg); }
+  70% { transform: scale(1.05) rotate(4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.agent-card .agent-sprite:hover .as-prop, .chat-head .agent-sprite:hover .as-prop { animation: as-wave .55s ease; }
+/* мелкий аватар в шапке чата: проп не должен нахлёстываться на соседний текст */
+.chat-head .as-prop { font-size: 15px; top: -16%; right: -6%; }
+@keyframes as-wave { 0% { transform: rotate(0); } 40% { transform: rotate(-16deg); } 70% { transform: rotate(10deg); } 100% { transform: rotate(0); } }
+
+/* Горизонтальный скролл рядов чипсов: длинная фраза не прячет остальные —
+   ряд листается пальцем/колесом, тонкий золотой скроллбар виден как намёк. */
+.suggest-chips, .chat-features, .agent-chips, .agent-ask-chips {
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity; scrollbar-width: thin;
+  scrollbar-color: rgba(230,193,120,.4) transparent;
+}
+.suggest-chips::-webkit-scrollbar, .chat-features::-webkit-scrollbar,
+.agent-chips::-webkit-scrollbar, .agent-ask-chips::-webkit-scrollbar { height: 4px; }
+.suggest-chips::-webkit-scrollbar-thumb, .chat-features::-webkit-scrollbar-thumb,
+.agent-chips::-webkit-scrollbar-thumb, .agent-ask-chips::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, rgba(230,193,120,.55), rgba(167,139,250,.55));
+  border-radius: 99px;
+}
+.suggest-chips::-webkit-scrollbar-track, .chat-features::-webkit-scrollbar-track,
+.agent-chips::-webkit-scrollbar-track, .agent-ask-chips::-webkit-scrollbar-track { background: transparent; }
+.suggest-chips > *, .chat-features > *, .agent-chips > *, .agent-ask-chips > * { scroll-snap-align: start; }
+
+.agent-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; position: relative; z-index: 1; }
+
+/* feature-чиксы */
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12.5px; font-weight: 600; letter-spacing: .2px;
+  color: var(--text-dim); background: rgba(255,255,255,.04);
+  border: 1px solid var(--border); border-radius: 99px; padding: 6px 12px;
+  cursor: pointer; transition: .2s var(--ease);
+  white-space: nowrap; flex: 0 0 auto;
+}
+.chip:hover { color: var(--ac2, var(--gold-bright)); border-color: var(--ac2, var(--gold)); transform: translateY(-1px); }
+.chip .c-emoji { font-size: 12px; }
+
+/* инструмент-функция: аккуратная карточка «иконка + название + подпись»,
+   как отдельный «проект», а не копеечный чип. */
+.tool {
+  display: flex; align-items: center; gap: 11px;
+  padding: 12px 14px; border-radius: var(--r-s); text-align: left;
+  background: rgba(255,255,255,.035); border: 1px solid var(--border);
+  cursor: pointer; transition: .2s var(--ease); position: relative;
+}
+.tool:hover {
+  border-color: var(--ac2, var(--gold)); background: rgba(230,193,120,.06);
+  transform: translateY(-1px);
+}
+.tool:active { transform: translateY(0); }
+.tool::after {
+  content: "›"; margin-left: auto; color: var(--text-faint); font-size: 19px;
+  flex: none; opacity: .8; transition: .2s var(--ease);
+}
+.tool:hover::after { color: var(--gold-bright); transform: translateX(2px); }
+.tool-ico {
+  flex: none; width: 42px; height: 42px; border-radius: var(--r-s); display: grid; place-items: center;
+  font-size: 20px;
+  background: radial-gradient(circle at 35% 28%, rgba(230,193,120,.3), rgba(167,139,250,.12));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+.tool-txt { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.tool-t { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: .1px; line-height: 1.25; }
+.tool-d { font-size: 12.5px; color: var(--text-dim); line-height: 1.4; }
+/* в хабе — сетка в 2 колонки (не тесный скролл) */
+.agent-chips .tool { flex: 1 1 46%; min-width: 148px; }
+/* в чате — широкие карточки горизонтальным свайпом */
+.chat-features .tool { flex: 0 0 auto; min-width: 230px; max-width: 300px; }
+
+/* ═══ ЧАТ ═══ */
+.chat-shell { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.chat-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; position: sticky; top: 0; z-index: 40;
+  background: rgba(10, 9, 22, 0.72); backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+.chat-head .back { background: none; border: none; cursor: pointer; color: var(--text-dim); font-size: 20px; padding: 2px 6px; border-radius: 8px; }
+.chat-head .back:hover { color: var(--gold); background: rgba(255,255,255,.05); }
+.chat-head .agent-avatar { width: 40px; height: 40px; font-size: 19px; border-radius: 12px; }
+.chat-head .cname { font-family: var(--font-serif); font-size: 15.5px; font-weight: 600; }
+.chat-head .tsub { color: var(--text-dim); font-size: 11px; }
+
+.chat-features { display: flex; gap: 7px; overflow-x: auto; padding: 8px 14px; }
+
+/* первый экран чата: портрет агента + кто он */
+.agent-intro {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 14px 16px 4px; margin: 4px 0 14px;
+}
+.agent-intro .ai-face { width: 84px; height: 84px; position: relative; }
+.agent-intro .ai-face .agent-sprite { width: 100%; height: 100%; }
+.agent-intro .ai-face .as-prop { font-size: 26px; top: -12%; right: -10%; }
+.agent-intro .ai-name { font-family: var(--font-serif); font-size: 21px; font-weight: 700; color: var(--gold-bright); margin-top: 10px; letter-spacing: .3px; }
+.agent-intro .ai-role { color: var(--ac, var(--gold)); font-size: 13px; font-weight: 600; letter-spacing: .5px; margin-top: 2px; }
+.agent-intro .ai-tag { color: var(--text-dim); font-size: 13px; line-height: 1.55; margin-top: 8px; max-width: 300px; }
+
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 18px 14px; display: flex; flex-direction: column;
+  gap: 12px; min-height: 0;
+}
+.msg { max-width: 86%; font-variant-numeric: tabular-nums; animation: msgIn .35s var(--ease); white-space: pre-wrap; word-break: break-word; }
+.msg.user {
+  align-self: flex-end;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-deep) 100%);
+  color: #1c1430; font-weight: 600; font-size: 13.5px;
+  padding: 11px 14px; border-radius: 18px 18px 5px 18px;
+  box-shadow: 0 6px 20px -8px rgba(230,193,120,.5);
+}
+.msg.assistant {
+  align-self: flex-start; position: relative;
+  background: var(--glass-strong); border: 1px solid var(--border);
+  color: var(--text); font-size: 13.8px; padding: 13px 15px;
+  border-radius: 18px 18px 18px 5px;
+}
+.msg.assistant b { color: var(--gold-bright); font-weight: 700; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: none; } }
+@keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* системный виджет внутри чата */
+.chat-widget {
+  margin-top: 12px; background: var(--glass); border: 1px solid var(--border);
+  border-radius: var(--r-m); padding: 14px;
+  /* родитель .msg наследует white-space:pre-wrap — ломает раскладку HTML-шаблонов
+     (переводы строк в разметке превращаются в огромные зазоры) */
+  white-space: normal;
+}
+.chat-widget .w-title { font-family: var(--font-serif); color: var(--gold); font-size: 13px; margin-bottom: 10px; font-weight: 600; }
+
+/* выбиратель раскладов */
+.spread-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.spread-cell {
+  border: 1px solid var(--border); background: rgba(255,255,255,.03);
+  border-radius: 12px; padding: 10px 6px; text-align: center; cursor: pointer;
+  transition: .2s var(--ease); position: relative;
+}
+.spread-cell .se { font-size: 20px; display: block; margin-bottom: 5px; }
+.spread-cell .sn { font-size: 12.5px; color: var(--text); font-weight: 600; line-height: 1.3; display: block; margin-top: 4px; }
+.spread-cell .s-desc { font-size: 11px; color: var(--text-dim); line-height: 1.35; margin-top: 3px; display: block; }
+.spread-cell.premium .sn { color: var(--gold); }
+.spread-cell .lock { position: absolute; top: 5px; right: 7px; font-size: 9px; }
+.spread-cell:hover { border-color: var(--gold); transform: translateY(-1px); }
+.spread-cell.sel { border-color: var(--gold); background: rgba(230,193,120,.1); box-shadow: 0 0 0 1px var(--gold); }
+
+/* визуальная мини-схема расклада — объясняет структуру без текста */
+
+
+
+
+
+
+
+
+
+
+
+/* схемы под конкретные расклады — CSS-only */
+
+
+
+
+
+/* простые схемы для премиум-раскладов — визуальный намёк */
+
+
+
+/* инпуты и кнопки */
+.ipt, select.ipt {
+  width: 100%; background: rgba(10,9,22,.6); border: 1px solid var(--border);
+  border-radius: var(--r-s); color: var(--text); padding: 12px 14px; font-size: 14px; outline: none;
+  transition: border-color .2s;
+}
+.ipt:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+.ipt::placeholder { color: var(--text-faint); }
+.btn {
+  border: none; border-radius: var(--r-s); cursor: pointer; font-weight: 700; font-size: 14px;
+  padding: 12px 16px; text-align: center; transition: .2s var(--ease); letter-spacing: .2px;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
+  color: #1c1430; width: 100%;
+  box-shadow: 0 10px 24px -10px rgba(230,193,120,.6);
+}
+.btn-primary:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: .6; cursor: default; transform: none; }
+.btn-ghost { background: rgba(255,255,255,.05); color: var(--text); border: 1px solid var(--border); }
+.btn-ghost:hover { border-color: var(--gold); color: var(--gold-bright); }
+
+.aspect-line { fill: none; stroke-width: 1.2; opacity: .85; }
+.aspect-line.conjunction { stroke: var(--gold); stroke-width: 2; opacity: .9; }
+.aspect-line.opposition { stroke: #ff6b6b; stroke-dasharray: 4 3; opacity: .7; }
+.aspect-line.trine { stroke: var(--gold); stroke-dasharray: 2 2; opacity: .8; }
+.aspect-line.square { stroke: var(--violet); stroke-width: 1.5; opacity: .8; }
+.aspect-line.sextile { stroke: var(--gold); stroke-dasharray: 6 2; opacity: .75; }
+
+/* таро-карты — 3D переворот */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* типинг-индикатор */
+.typing { display: inline-flex; gap: 5px; padding: 6px 2px; }
+.typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); animation: bounce 1.2s infinite; }
+.typing span:nth-child(2) { animation-delay: .15s; }
+.typing span:nth-child(3) { animation-delay: .3s; }
+@keyframes bounce { 0%,60%,100% { transform: translateY(0); opacity:.5; } 30% { transform: translateY(-5px); opacity:1; } }
+
+/* поле ввода */
+.composer { padding: 10px 14px calc(12px + env(safe-area-inset-bottom)); background: rgba(10,9,22,.6); border-top: 1px solid var(--border); }
+.composer-top { display: flex; gap: 8px; }
+.send-btn {
+  border: none; border-radius: 14px; cursor: pointer; flex: none; padding: 0; width: 46px;
+  display: grid; place-items: center; font-size: 18px; color: #150f2c;
+  background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
+  box-shadow: 0 8px 20px -8px rgba(230,193,120,.5); transition: .2s var(--ease);
+}
+.send-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.send-btn:disabled { opacity: .5; }
+.suggest-chips { display: flex; gap: 6px; overflow-x: auto; padding-top: 8px; }
+
+/* ═══ ПРОФИЛЬ ═══ */
+.stat-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.stat {
+  background: var(--glass); border: 1px solid var(--border); border-radius: var(--r-s);
+  padding: 14px; text-align: center;
+}
+.stat .sv { font-family: var(--font-serif); font-size: 24px; color: var(--gold-bright); }
+.stat .sl { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+.chart-wheel {
+  aspect-ratio: 1; border-radius: 50%; position: relative;
+  background: radial-gradient(circle, #0e0c22 0%, #151238 100%);
+  border: 1px solid var(--border-strong);
+  box-shadow: inset 0 0 40px rgba(0,0,0,.5), 0 0 0 8px rgba(255,255,255,.02);
+  display: grid; place-items: center;
+}
+.chart-wheel::before {
+  content: ""; position: absolute; inset: 12%; border-radius: 50%;
+  border: 1px dashed rgba(230,193,120,.25);
+}
+.wheel-center { text-align: center; z-index: 2; }
+.wheel-center .wc-s { font-size: 38px; }
+.wheel-center .wc-t { font-family: var(--font-serif); color: var(--text); font-size: 13px; }
+.wheel-sun { position: absolute; font-size: 22px; filter: drop-shadow(0 0 8px var(--gold-glow)); }
+
+.planet-line { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.planet-line:last-child { border-bottom: none; }
+.planet-line .p-ico { width: 30px; text-align: center; font-size: 16px; }
+.planet-line .p-name { color: var(--text); flex: 1; }
+.planet-line .p-val { color: var(--gold-bright); font-weight: 600; }
+
+/* история раскладов / отчёты */
+.result-card { background: var(--glass); border: 1px solid var(--border); border-radius: var(--r-m); padding: 14px 16px; cursor: pointer; transition: .2s var(--ease); }
+.result-card:hover { border-color: var(--gold); transform: translateX(2px); }
+.result-card .rc-top { display: flex; align-items: center; gap: 10px; }
+.result-card .rc-title { font-family: var(--font-serif); color: var(--text); font-size: 14px; font-weight: 600; }
+.result-card .rc-meta { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+.result-card .rc-open { margin-left: auto; color: var(--gold); }
+
+/* модал */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 90; display: grid; place-items: center;
+  background: rgba(5,4,12,.72); backdrop-filter: blur(6px); padding: 20px;
+  animation: fadeIn .2s var(--ease);
+}
+.modal {
+  width: 100%; max-width: 430px; max-height: 84vh; overflow-y: auto;
+  background: var(--bg-2); border: 1px solid var(--border-strong); border-radius: var(--r-l);
+  padding: 22px; box-shadow: var(--sh-card);
+  animation: popIn .3s var(--ease);
+}
+.modal h3 { font-family: var(--font-serif); color: var(--gold); font-size: 17px; margin-bottom: 6px; }
+.modal .m-close { float: right; border: none; background: none; color: var(--text-dim); font-size: 18px; cursor: pointer; }
+@keyframes popIn { from { opacity:0; transform: translateY(14px) scale(.97);} to { opacity:1; transform:none; } }
+
+/* точка уведомления */
+.badge-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold-glow); display: inline-block; }
+
+.loader-ring { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--gold); animation: spin 1s linear infinite; margin: 0 auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.center-block { display: grid; place-items: center; padding: 40px 0; }

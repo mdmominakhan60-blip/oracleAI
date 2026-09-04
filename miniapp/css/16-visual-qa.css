@@ -1,0 +1,425 @@
+/* =============================================================================
+   ORACLEAI · VISUAL QA FINAL LAYER
+   Single place for cross-screen invariants discovered in the final polish pass.
+   ============================================================================= */
+
+html, body {
+  min-width: 0;
+  overflow-x: hidden;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+/* Decorative atmosphere may bleed visually, but must never create page scroll. */
+.starfield,
+.starfield::before,
+.starfield::after,
+.constellations,
+.lilith-sil,
+.nebula,
+.galaxy,
+.meteor,
+.twinkle {
+  max-width: 100vw;
+}
+
+/* Type scale: display faces for meaning, sans for action and reading. */
+body {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body-lg);
+  line-height: var(--line-height-body);
+}
+
+h1, h2, h3, h4, h5, h6,
+.hero-title,
+.hub-head h1,
+.profile-name,
+.section-title,
+.cd-name,
+.na-title,
+.agent-title,
+.te-title,
+.w-title,
+.cname,
+.ai-name {
+  font-family: var(--font-family-display);
+  line-height: var(--line-height-display);
+  letter-spacing: var(--tracking-display);
+  text-wrap: balance;
+}
+
+h1, .hub-head h1 { font-size: var(--font-size-h1); }
+h2, .section-title { font-size: var(--font-size-h2); }
+h3, .cd-name, .na-title, .te-title { font-size: var(--font-size-h3); }
+h4, .agent-title, .cname { font-size: var(--font-size-h4); }
+
+p, li, .hero-moon-txt, .forecast-flow, .msg, .profile-copy,
+.profile-empty-copy, .na-text, .cd-note, .tool-d, .agent-last {
+  max-width: 68ch;
+}
+
+.section-kicker,
+.section-title,
+.hero-date,
+.profile-kicker,
+.agent-role,
+.result-kicker,
+.memory-eyebrow,
+.nav-copy small {
+  letter-spacing: var(--tracking-label);
+}
+
+/* Shared layout rhythm on the app shell. */
+.screen {
+  padding: var(--space-4) var(--space-4) calc(112px + env(safe-area-inset-bottom));
+  gap: 0;
+}
+.screen > * + * { margin-top: var(--space-6); }
+.screen .section-title + * { margin-top: var(--space-3); }
+.spacer { height: var(--space-6); }
+
+/* One component contract for controls. */
+button, .btn, input, textarea, select, [role="button"] {
+  font-family: var(--font-family-body);
+}
+button, .btn, .nav-btn, .chip, .ask-chip, .tool, .dock-item,
+.moon-toggle, .moon-today, .ptab, .atab, .rel-chip, .history-item {
+  min-height: var(--touch-target);
+}
+
+.btn {
+  min-height: var(--touch-target);
+  border-radius: var(--radius-control);
+  font-size: var(--font-size-button);
+  font-weight: 800;
+  line-height: 1.2;
+  transition: transform var(--motion-focus) var(--ease),
+    background-color var(--motion-focus) var(--ease),
+    border-color var(--motion-focus) var(--ease),
+    box-shadow var(--motion-focus) var(--ease),
+    color var(--motion-focus) var(--ease);
+}
+.btn:disabled,
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: .48;
+  transform: none !important;
+}
+.btn-primary {
+  color: var(--color-on-accent);
+  background: linear-gradient(135deg, var(--color-accent-strong), var(--color-accent-deep));
+}
+.btn-ghost {
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+  background: rgba(255, 255, 255, .045);
+}
+.btn:hover:not(:disabled),
+.btn:focus-visible:not(:disabled) {
+  box-shadow: var(--focus-ring);
+}
+.btn:active:not(:disabled),
+.nav-btn:active:not(:disabled),
+.chip:active:not(:disabled),
+.tool:active:not(:disabled) {
+  transform: scale(.985);
+}
+
+.ipt, input, textarea, select {
+  min-height: var(--touch-target);
+  border-radius: var(--radius-control);
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, .055);
+  border: 1px solid var(--color-border);
+}
+.ipt::placeholder, input::placeholder, textarea::placeholder { color: var(--color-text-muted); }
+.ipt:focus, input:focus, textarea:focus, select:focus {
+  border-color: var(--color-border-strong);
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Cards and sheets share elevation, border, and radius language. */
+.glass, .agent-card, .card-day-big, .na-card, .profile-hero,
+.compat-flow, .compat-result, .memory-hero, .history-item, .soft-empty {
+  border-radius: var(--radius-card);
+  border-color: var(--color-border);
+}
+.modal, .te-sheet, .cg-card { border-radius: var(--radius-sheet); }
+.modal-overlay, .age-overlay, .intro-overlay {
+  background: rgba(5, 4, 16, .72);
+  backdrop-filter: blur(12px);
+}
+
+/* Status semantics: color is paired with text/icon and kept consistent. */
+[data-state="success"], .success, .status-success { color: var(--color-success); }
+[data-state="warning"], .warning, .status-warning { color: var(--color-warning); }
+[data-state="error"], .error, .status-error, .chart-form-error { color: var(--color-error); }
+[data-state="info"], .info, .status-info { color: var(--color-info); }
+.toast { max-width: min(420px, calc(100vw - 32px)); }
+
+/* Accessible motion defaults: no decorative motion is essential to task completion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* Tablet and desktop keep the app frame centered, while all content remains bounded. */
+@media (min-width: 768px) {
+  #app-root { max-width: 480px; }
+  .screen { padding-left: var(--space-5); padding-right: var(--space-5); }
+}
+
+@media (max-width: 380px) {
+  .screen { padding-left: var(--space-3); padding-right: var(--space-3); }
+  .brand-title { font-size: var(--font-size-h5); }
+  .user-pill { max-width: 118px; }
+  .nav-copy b { font-size: var(--font-size-label); }
+  .nav-copy small { font-size: 9px; }
+}
+
+@media (min-width: 1440px) {
+  .starfield { overflow: hidden; }
+}
+
+/* Desktop polish: the navigation is a shell element, so the scrollable content
+   must always have enough clearance to reveal its final card/section. */
+@media (min-width: 768px) {
+  #app-root {
+    border-left: 1px solid rgba(230, 219, 255, .10);
+    border-right: 1px solid rgba(230, 219, 255, .10);
+    background: linear-gradient(180deg, rgba(10, 9, 32, .20), rgba(10, 9, 32, .42));
+    box-shadow: 0 0 70px rgba(5, 4, 16, .38);
+  }
+  #app-main { background: linear-gradient(180deg, rgba(10, 9, 32, .05), rgba(10, 9, 32, .16)); }
+  .screen { padding-bottom: calc(144px + env(safe-area-inset-bottom)); scrollbar-gutter: stable; }
+  .app-nav { border-top: 1px solid rgba(230, 219, 255, .16); }
+}
+
+@media (min-width: 1440px) {
+  #app-root { border-color: rgba(245, 212, 139, .16); box-shadow: 0 0 90px rgba(5, 4, 16, .46); }
+}
+
+/* Compact feature overrides must not undercut the mobile interaction contract. */
+button,
+summary,
+[role="button"] { min-height: var(--touch-target); }
+
+.agent-card .btn-ghost,
+.cg-btns .btn,
+.diary-mood,
+.diary-send,
+.diary-summary-action,
+.memory-switch,
+.memory-add .send-btn,
+.sess-create,
+.te-agent-switch,
+.te-more > summary,
+.te-sheet .te-close,
+.palm-quick-upload,
+.palm-preview__clear,
+.placement-result-card__actions .btn,
+.mem-del,
+.memory-open { min-height: var(--touch-target); }
+
+.chat-head .back,
+.chat-reset,
+.te-close,
+.tool-btn,
+.send-btn,
+.diary-send,
+.memory-add .send-btn,
+.mem-del { width: var(--touch-target); min-width: var(--touch-target); height: var(--touch-target); }
+
+/* A focus indicator is a visible shape, not only a color change. */
+button:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[data-act]:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-accent-strong);
+  outline-offset: 3px;
+  box-shadow: var(--focus-ring);
+}
+
+.soft-empty__action .btn { min-height: var(--touch-target); }
+
+/* Lighthouse QA mode freezes decorative motion so performance metrics are reproducible. */
+html[data-qa="1"] *,
+html[data-qa="1"] *::before,
+html[data-qa="1"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* Final polish: interactive chips must resolve inside the bounded frame. */
+.agent-ask-chips,
+.suggest-chips {
+  min-width: 0;
+  overflow: hidden;
+  flex-wrap: wrap;
+}
+.agent-ask-chips .ask-chip,
+.suggest-chips .chip {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 calc(50% - var(--space-2) / 2);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+  line-height: 1.3;
+}
+
+/* Start page: one calm invitation before the secondary rhythm surfaces. */
+.hero-orb {
+  min-height: 304px;
+}
+.hero-body {
+  padding: 20px 20px 78px;
+}
+.hero-ritual-label {
+  margin-top: 12px;
+}
+.hero-moon-txt {
+  max-width: min(220px, calc(100% - 4px));
+  margin-top: 12px;
+  padding: 9px 11px;
+  line-height: 1.35;
+}
+.ritual-cta {
+  right: 16px;
+  bottom: 14px;
+  left: 16px;
+  min-height: var(--touch-target);
+}
+
+@media (max-width: 380px) {
+  .agent-ask-chips .ask-chip,
+  .suggest-chips .chip {
+    flex-basis: 100%;
+  }
+  .hero-orb {
+    min-height: 312px;
+  }
+  .hero-body {
+    padding: 18px 16px 74px;
+  }
+  .hero-ritual-label {
+    margin-top: 10px;
+  }
+  .hero-moon-txt {
+    max-width: calc(100% - 2px);
+    margin-top: 10px;
+  }
+}
+
+
+/* ── v104 · welcome card + compact chat workspace picker ─────────────────── */
+.welcome-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 264px;
+  padding: 18px 17px 16px;
+  border: 1px solid rgba(230, 219, 255, .16);
+  border-radius: 28px;
+  background:
+    radial-gradient(110% 120% at 100% 0%, rgba(185, 166, 255, .18), transparent 54%),
+    linear-gradient(145deg, rgba(37, 31, 72, .98), rgba(14, 12, 36, .98));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 24px 46px -34px rgba(0,0,0,.9);
+}
+.welcome-card::before { content: none; }
+.welcome-card::after {
+  position: absolute;
+  right: 26px;
+  top: 96px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--champagne-300);
+  content: '';
+  box-shadow: -38px -24px 0 rgba(245,212,139,.65), 42px 28px 0 rgba(185,166,255,.6), -58px 65px 0 rgba(255,255,255,.35);
+  opacity: .8;
+  pointer-events: none;
+}
+.welcome-card__top,
+.welcome-card__main,
+.welcome-card__prompt,
+.welcome-card .ritual-cta { position: relative; z-index: 1; }
+.welcome-card__top { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.welcome-card__kicker { color: var(--champagne-300); font-size: 9px; font-weight: 900; letter-spacing: .14em; }
+.welcome-card__date { color: var(--text-faint); font-size: 10px; text-align: right; }
+.welcome-card__main { display: flex; gap: 14px; align-items: flex-start; margin-top: 32px; }
+.welcome-card__signal { position: relative; flex: 0 0 36px; width: 36px; height: 36px; margin-top: 3px; border: 1px solid rgba(245,212,139,.42); border-radius: 13px; background: rgba(245,212,139,.08); color: var(--champagne-200); }
+.welcome-card__signal::before { position: absolute; inset: 7px; border: 1px solid rgba(245,212,139,.38); border-radius: 50%; content: ''; }
+.welcome-card__signal span { position: absolute; right: 5px; top: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--champagne-300); box-shadow: 0 0 8px rgba(245,212,139,.9); }
+.welcome-card__signal i { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-style: normal; }
+.welcome-card__copy { min-width: 0; max-width: 285px; }
+.welcome-card__greeting { color: var(--text-soft); font-size: 11px; line-height: 1.3; }
+.welcome-card__copy h1 { max-width: 280px; margin: 7px 0 0; color: var(--text-main); font-family: var(--font-family-display); font-size: clamp(25px, 7vw, 32px); line-height: 1.02; letter-spacing: -.035em; }
+.welcome-card__copy p { max-width: 270px; margin: 12px 0 0; color: var(--text-soft); font-size: 12px; line-height: 1.5; }
+.welcome-card__prompt { display: flex; align-items: center; gap: 8px; margin: 22px 0 13px; color: var(--text-main); font-size: 11px; font-weight: 800; }
+.welcome-card__prompt-mark { display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid rgba(245,212,139,.32); border-radius: 8px; color: var(--champagne-200); background: rgba(245,212,139,.08); }
+.welcome-card__prompt-line { flex: 1; height: 1px; margin-left: 3px; background: linear-gradient(90deg, rgba(245,212,139,.35), transparent); }
+.welcome-card .ritual-cta { position: relative; right: auto; bottom: auto; left: auto; width: 100%; min-height: var(--touch-target); padding: 0 14px; border-color: rgba(245,212,139,.34); color: var(--color-text-primary); background: rgba(245,212,139,.1); }
+.welcome-card .ritual-cta:hover { border-color: rgba(245,212,139,.55); background: rgba(245,212,139,.15); }
+
+/* Quick commands stay available, but behave like a compact single-line rail. */
+.suggest-chips { display: flex; flex-wrap: nowrap !important; gap: 6px; max-width: 100%; padding: 5px 1px 2px; overflow-x: auto !important; overflow-y: hidden; scrollbar-width: none; }
+.suggest-chips::-webkit-scrollbar { display: none; }
+.suggest-chips .chip { flex: 0 0 auto !important; width: auto; max-width: min(210px, 72vw); min-height: 32px; padding: 7px 10px; border-radius: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10.5px; }
+
+/* ChatGPT/Claude-like workspace picker: compact trigger, clear list hierarchy. */
+.chat-space-picker { min-width: 122px; max-width: 142px; padding: 5px 8px; border-radius: 14px; }
+.chat-space-picker .chat-thread-toggle__icon { align-self: flex-start; margin-top: 2px; }
+.chat-space-picker .chat-thread-toggle__copy { gap: 2px; }
+.chat-space-picker .chat-thread-toggle__copy b { overflow: hidden; text-overflow: ellipsis; }
+.chat-space-picker .chat-thread-toggle__copy em { color: var(--text-faint); font-size: 9px; font-style: normal; line-height: 1.1; }
+.chat-space-picker .chat-thread-toggle__chevron { margin-left: auto; }
+.sess-panel { max-height: min(62vh, 500px); border: 1px solid rgba(230,219,255,.15); border-top: 0; border-radius: 0 0 18px 18px; background: rgba(17,14,42,.985); }
+.sess-head { padding: 10px 12px 9px; }
+.sess-head > div > span { font-size: 13px; }
+.sess-head > div > small { max-width: 190px; }
+.sess-create { min-height: 36px; padding-inline: 10px; border-radius: 11px; }
+.sess-list { max-height: min(42vh, 340px); padding: 6px 7px 8px; }
+.sess-row { min-height: 54px; margin: 1px 0; padding: 7px 7px; border-radius: 11px; }
+.sess-row[data-act="open-session"] { cursor: pointer; }
+.sess-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sess-prev { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sess-clear { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: calc(100% - 20px); min-height: var(--touch-target); margin: 0 10px 10px; padding: 9px 10px; border: 1px solid rgba(255,167,187,.2); border-radius: 11px; color: rgba(255,205,216,.9); background: rgba(255,145,168,.055); text-align: left; cursor: pointer; }
+.sess-clear span { font-size: 11px; font-weight: 850; }
+.sess-clear small { color: var(--text-muted); font-size: 9.5px; line-height: 1.25; }
+.sess-clear:hover { border-color: rgba(255,167,187,.38); background: rgba(255,145,168,.1); }
+@media (max-width: 380px) {
+  .welcome-card { min-height: 250px; padding: 16px 15px 14px; }
+  .welcome-card__main { margin-top: 26px; }
+  .welcome-card__copy h1 { font-size: 24px; }
+  .welcome-card__copy p { font-size: 11.5px; }
+  .chat-space-picker { min-width: 112px; max-width: 126px; }
+  .chat-new-session { min-width: 38px; padding-inline: 6px; }
+  .chat-new-session span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-card *, .sess-panel, .suggest-chips .chip { transition: none !important; animation: none !important; }
+}
+
+
+/* The seasonal signal belongs to the welcome narrative, not a separate competing card. */
+.welcome-card__season { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(230,219,255,.11); }
+.welcome-card__season-sigil { display: grid; place-items: center; flex: 0 0 26px; width: 26px; height: 26px; border: 1px solid rgba(245,212,139,.28); border-radius: 9px; color: var(--champagne-200); background: rgba(245,212,139,.07); font-size: 13px; }
+.welcome-card__season > div { display: grid; min-width: 0; gap: 2px; }
+.welcome-card__season > div > span { color: var(--champagne-300); font-size: 8px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.welcome-card__season b { overflow: hidden; color: var(--text-main); font: 700 12px/1.2 var(--font-family-display); text-overflow: ellipsis; white-space: nowrap; }
+.welcome-card__season p { overflow: hidden; max-width: 260px; margin: 0; color: var(--text-muted); font-size: 9.5px; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 380px) {
+  .welcome-card__season { margin-top: 12px; padding-top: 10px; }
+  .welcome-card__season p { max-width: 218px; }
+}

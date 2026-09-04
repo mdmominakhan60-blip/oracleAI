@@ -1,0 +1,18 @@
+# PACK D — Расклад Таро (spread / spread card art, для отображения карт расклада)
+
+## GLOBAL STYLE TOKENS
+ultra-high definition, 8K, ornate ornate mystical card art in a spread layout, each card in a small ornate frame with golden decorative border, dark celestial background with scattered gold stars, cards arranged in a clear spread formation, elegant mystical luxury aesthetic, dark fantasy premium game-art quality, each individual card has decorative golden details and celestial motifs, clean readable spread formation
+
+## NEGATIVE PROMPT
+text, watermark, logo, messy frames, bright white background, broken card frames, cluttered spread layout, modern design, dull colors, overexposed, plastic texture, no celestial motifs
+
+## SHARED LOCK
+- Format: spread display showing 3 cards in a row (small portrait cards 340x520 each, arranged horizontally in spread formation)
+- Each card: ornate gold decorative frame, dark celestial background, decorative crescent/moon or star motifs in frame, small card number/emblem in the decorative circle at top or center
+- Cards show different energy symbols inside the central decorative circle: Sun, Moon, Star, or mystical arcana symbols in gold
+- Background: very dark indigo-violet celestial with faint gold stars
+- Style: consistent with PACK B elegant ornate mystical luxury cards
+- Clean, premium, readable spread layout with clear card separation
+
+## SHOT 1 — Spread layout with 3 cards displayed (past / present / future style)
+GLOBAL STYLE TOKENS, three ornate mystical cards arranged side by side in a spread formation, each card with ornate gold decorative frame and dark celestial interior, decorative crescent/moon symbol visible in each card's decorative gold circle, small card emblem or energy symbol in gold within the decorative center, very dark celestial background with scattered gold stars behind, elegant mystical luxury card art display, premium dark fantasy aesthetic. NEGATIVE PROMPT.

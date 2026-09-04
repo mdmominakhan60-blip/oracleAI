@@ -1,0 +1,6 @@
+/* Stable compatibility entrypoint. Styles are organized by responsibility. */
+@import url("./styles/00-foundations.css");
+@import url("./styles/10-shell.css");
+@import url("./styles/20-components.css");
+@import url("./styles/30-feature-surfaces.css");
+@import url("./styles/40-responsive-accessibility.css");

@@ -1,0 +1,164 @@
+/*
+ * ORACLEAI · PIXEL PRECISION LAYER
+ * One final geometry layer for measurable responsive composition.
+ * Keep visual identity; make dimensions intentional and consistent.
+ */
+
+:root {
+  --precision-content-max: 520px;
+  --precision-mobile-gutter: 16px;
+  --precision-desktop-gutter: 24px;
+  --precision-section-gap: 20px;
+  --precision-card-gap: 12px;
+  --precision-nav-height: 82px;
+  --precision-control-height: 44px;
+  --precision-shadow: 0 22px 54px -30px rgba(0, 0, 0, .92), inset 0 1px 0 rgba(255, 255, 255, .07);
+}
+
+/* Content frame and vertical rhythm. */
+#app-root {
+  width: min(100%, var(--precision-content-max));
+  min-width: 0;
+}
+#app-main { min-width: 0; }
+.screen {
+  width: 100%;
+  max-width: var(--precision-content-max);
+  margin-inline: auto;
+  padding: 20px var(--precision-mobile-gutter) calc(var(--precision-nav-height) + 28px + env(safe-area-inset-bottom));
+}
+.screen > * { min-width: 0; }
+.spacer { height: var(--precision-section-gap); }
+.section-title { margin-bottom: 10px; }
+.section-kicker { margin-bottom: 6px; }
+
+/* Header: clear three-column balance, never let the name push the brand. */
+.app-header {
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: max(10px, env(safe-area-inset-top)) var(--precision-mobile-gutter) 10px;
+}
+.app-header .user-pill { justify-self: start; max-width: min(148px, 100%); }
+.app-header .brand-lockup { justify-self: center; min-width: 0; }
+.app-header .brand-title { white-space: nowrap; font-size: clamp(15px, 4.5vw, 18px); }
+.app-header .bell { justify-self: end; }
+
+/* Hero: one clear reading order, CTA aligned to the frame edges. */
+.hero-orb {
+  display: block;
+  height: 360px;
+  min-height: 360px;
+  border-radius: 26px;
+  box-shadow: var(--precision-shadow);
+}
+.hero-body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 24px 20px 72px;
+}
+.hero-date { font-size: 10px; letter-spacing: .11em; }
+.hero-ritual-label { margin-top: 14px; }
+.hero-title { max-width: min(260px, 74%); font-size: clamp(28px, 8.2vw, 34px); }
+.hero-moon-txt { max-width: min(242px, 72%); margin-top: 13px; }
+.hero-moon-orb { width: 96px; height: 96px; right: 12px; top: 16px; }
+.ritual-cta {
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  width: auto;
+  justify-content: space-between;
+  min-height: var(--precision-control-height);
+  padding-inline: 16px;
+}
+
+/* Cards: a predictable family instead of one universal oversized box. */
+.seasonal-moment,
+.daily-ritual,
+.moon-today,
+.forecast-flow,
+.card-day-big,
+.na-card,
+.agent-card,
+.vedic-surface {
+  box-shadow: var(--precision-shadow);
+}
+.seasonal-moment { gap: 12px; padding: 16px; border-radius: 20px; }
+.daily-ritual { padding: 16px; border-radius: 20px; }
+.daily-ritual-grid { gap: 8px; }
+.daily-step { min-height: 60px; padding: 10px 11px; border-radius: 14px; }
+.card-day-big, .na-card { gap: 14px; padding: 15px; border-radius: 20px; }
+
+/* Agent grid aligns to the same 12px rhythm as the rest of the app. */
+.dock-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--precision-card-gap); }
+.dock-item { min-height: 138px; padding: 14px 9px 12px; border-radius: 17px; }
+.dock-orb { width: 52px; height: 52px; }
+.dock-name { margin-top: 5px; }
+.dock-role { line-height: 1.25; }
+.home-agent-note { max-width: 42ch; margin-inline: auto; text-align: center; }
+
+/* Hub and chat: reduce accidental density while preserving 44px touch targets. */
+.agent-list { gap: var(--precision-card-gap); }
+.agent-card { padding: 15px; border-radius: 20px; }
+.agent-card .ac-top { gap: 10px; }
+.agent-avatar { width: 58px; height: 58px; border-radius: 18px; }
+.agent-chips { gap: 7px; }
+.tool { min-height: 58px; padding: 9px 10px; border-radius: 14px; }
+.chat-shell { min-height: 0; }
+.chat-head { min-height: 64px; }
+
+/* Navigation has a compact visual footprint but preserves touch ergonomics. */
+.app-nav {
+  min-height: var(--precision-nav-height);
+  padding: 6px var(--precision-mobile-gutter) calc(10px + env(safe-area-inset-bottom));
+}
+.main-nav { min-height: 70px; padding: 4px; border-radius: 20px; }
+.nav-btn { min-height: 60px; border-radius: 16px; }
+.nav-btn .nav-ico { width: 22px; height: 22px; }
+.nav-btn .nav-copy b { font-size: 10.5px; }
+.nav-btn .nav-copy small { font-size: 9px; }
+
+/* Keep long Russian labels readable without widening the frame. */
+.hub-head h1 { max-width: 14ch; margin-inline: auto; }
+.hub-head p { max-width: 34ch; margin-inline: auto; }
+.section-title, .cd-name, .na-title { overflow-wrap: anywhere; }
+
+@media (min-width: 601px) {
+  body { padding: 24px var(--precision-desktop-gutter); }
+  #app-root {
+    max-width: 520px;
+    height: min(960px, calc(100dvh - 48px));
+    max-height: 960px;
+    border-radius: 30px;
+  }
+  .app-header { padding-inline: 20px; }
+  .screen { padding-inline: 22px; }
+  .hero-orb { height: 360px; min-height: 360px; }
+  .app-nav { padding-inline: 20px; }
+  .main-nav { max-width: 456px; }
+}
+
+@media (min-width: 1024px) {
+  body { padding: 28px var(--precision-desktop-gutter); }
+  #app-root { max-width: 540px; height: min(980px, calc(100dvh - 56px)); }
+  .screen { padding-inline: 24px; }
+}
+
+@media (max-width: 360px) {
+  .app-header { gap: 8px; }
+  .app-header .user-pill { max-width: 124px; padding-right: 8px; }
+  .brand-title { letter-spacing: .08em; }
+  .hero-orb { height: 360px; min-height: 360px; }
+  .hero-body { padding-inline: 18px; }
+  .hero-title { font-size: 27px; }
+  .hero-moon-txt { font-size: 11.5px; }
+  .dock-item { min-height: 132px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-orb *, .starfield *, .main-nav::before, .main-nav::after { animation: none !important; transition: none !important; }
+}

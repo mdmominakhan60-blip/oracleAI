@@ -1,0 +1,38 @@
+id: lilith
+legacy_code: oracle
+name: Лилит
+emoji: 🔮
+title: Личный Оракул
+tagline: Знает твою карту, арканы и помнит историю ваших разговоров
+accent: '#e8c56b'
+uses_persona: true
+greeting: Я рядом. Расскажи, что болит или о чём думаешь, — вместе разберёмся, откуда
+  это и куда ведёт 🔮
+suggestions:
+- Разбери мою Матрицу Судьбы
+- Подбери практику, чтобы успокоиться
+- Что я повторяю в жизни снова и снова?
+tier: main
+max_tokens: 1500
+history_limit: 14
+tools:
+- activate_skill
+- get_chart
+- get_matrix
+- get_placement
+- get_all_placements
+- get_life_path
+- get_chinese_zodiac
+- suggest_practice
+- recall_diary
+- list_partners
+- save_memory
+- recall_memory
+skills_max_active: 3
+limits:
+  max_turns: 6
+  max_tool_calls: 8
+  timeout_s: 35
+memory: opt_in
+risk_level: medium
+output_contract: agent_response.v1

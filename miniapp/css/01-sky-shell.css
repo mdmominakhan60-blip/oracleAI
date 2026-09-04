@@ -1,0 +1,181 @@
+/* =============================================
+   ОРАКУЛ · модуль 01-sky-shell — строки 55–230 styles.css
+   Дословный перенос, каскад сохранён (порядок = @import).
+   ============================================= */
+
+/* ── звёздное небо ─────────────────────────────────────────────────────── */
+.starfield {
+  position: fixed; inset: 0; z-index: -2; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(10,9,22,.38) 0%, rgba(7,7,15,.8) 100%),
+    url("/static/img/bg-cosmos.jpg?v=107") center / cover no-repeat,
+    radial-gradient(120% 70% at 50% -10%, #1c1a3a 0%, transparent 55%),
+    radial-gradient(90% 60% at 85% 110%, #2a1440 0%, transparent 60%),
+    linear-gradient(180deg, #0a0916 0%, #07070f 100%);
+}
+.starfield::before, .starfield::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 60%;
+  background-image:
+    radial-gradient(1.5px 1.5px at 20px 30px, rgba(255,255,255,.9), transparent),
+    radial-gradient(1px 1px at 90px 80px, rgba(230,193,120,.9), transparent),
+    radial-gradient(1.5px 1.5px at 160px 40px, rgba(255,255,255,.7), transparent),
+    radial-gradient(1px 1px at 40px 120px, rgba(167,139,250,.9), transparent),
+    radial-gradient(1.5px 1.5px at 120px 160px, rgba(255,255,255,.85), transparent),
+    radial-gradient(1px 1px at 200px 100px, rgba(255,255,255,.6), transparent);
+  background-size: 240px 200px;
+  animation: starDrift 90s linear infinite;
+  opacity: .55;
+}
+.starfield::after { height: 80%; opacity: .3; animation-direction: reverse; animation-duration: 140s; }
+@keyframes starDrift { to { background-position: -240px 200px; } }
+
+/* дальние галактики: мягкие светящиеся эллипсы, медленно пульсируют */
+.galaxy { position: absolute; border-radius: 50%; filter: blur(42px);
+  mix-blend-mode: screen; pointer-events: none; animation: gPulse 14s ease-in-out infinite; }
+.galaxy.g1 { width: 360px; height: 240px; top: 7%; right: -90px;
+  background: radial-gradient(ellipse at 45% 40%, rgba(147,197,253,.38), rgba(88,80,236,.12) 55%, transparent 76%);
+  transform: rotate(-24deg); }
+.galaxy.g2 { width: 300px; height: 210px; bottom: 14%; left: -80px;
+  background: radial-gradient(ellipse at 50% 45%, rgba(230,193,120,.24), rgba(167,139,250,.14) 55%, transparent 78%);
+  transform: rotate(18deg); animation-delay: -5s; }
+.galaxy.g3 { width: 210px; height: 150px; top: 44%; right: 4%;
+  background: radial-gradient(circle at 50% 50%, rgba(250,204,138,.2), rgba(167,139,250,.1) 55%, transparent 72%);
+  animation-delay: -9s; }
+@keyframes gPulse { 0%,100% { opacity: .32; } 50% { opacity: .62; } }
+
+/* созвездия: астеризмы из точек-звёзд и линий, деликатно мерцают */
+.constellations { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .55; }
+.constellations path { stroke: rgba(255,255,255,.15); fill: none; stroke-width: .8; stroke-dasharray: 2 3; }
+.constellations circle { fill: rgba(255,255,255,.5); filter: drop-shadow(0 0 3px rgba(255,255,255,.5)); }
+.constellations .cst { animation: cstBlink 6s ease-in-out infinite; }
+.constellations .cst:nth-child(odd) { animation-delay: -3s; }
+@keyframes cstBlink { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
+
+/* силуэт Лилит: одна эфирная богиня из PNG с мягкой прозрачностью,
+   деликатно в нижнем правом углу, не перекрывает контент. */
+.lilith-sil {
+  position: absolute; bottom: -10px; right: -26px; width: 38%; max-width: 220px;
+  height: auto; opacity: .55; pointer-events: none;
+  filter: drop-shadow(0 0 22px rgba(167,139,250,.3));
+  transform-origin: bottom center; animation: lilBreathe 16s ease-in-out infinite;
+}
+@keyframes lilBreathe { 0%,100% { opacity: .5; transform: scale(1); } 50% { opacity: .62; transform: scale(1.012); } }
+@media (max-width: 420px) {
+  .lilith-sil { width: 34%; max-width: 150px; right: -18px; bottom: -8px; opacity: .48; }
+}
+
+/* ── каркас: жёсткий app-shell, вся высота вьюпорта, скролл внутри экрана ── */
+#app-root {
+  display: flex; flex-direction: column;
+  height: 100dvh; max-width: 480px; margin: 0 auto;
+  position: relative; overflow: hidden;
+}
+#app-main { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+
+.screen {
+  flex: 1; display: flex; flex-direction: column; min-height: 0;
+  padding: 20px 18px 28px; overflow-y: auto;
+  scroll-behavior: smooth;
+}
+/* блоки экрана не должны сжиматься flex'ом: иначе при нехватке высоты
+   герой схлопывается в «узкую полоску». Скроллится сам .screen. */
+.screen > * { flex: none; }
+.screen::-webkit-scrollbar { width: 5px; }
+.screen::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+/* ═══ Шапка ═══ */
+.app-header {
+  flex: none;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  background: rgba(10, 9, 22, 0.55);
+  backdrop-filter: blur(18px) saturate(140%);
+  border-bottom: 1px solid var(--border);
+  position: relative; z-index: 60;
+}
+.brand-title {
+  font-family: var(--font-serif);
+  font-size: 21px; letter-spacing: 4px; font-weight: 600;
+  background: linear-gradient(100deg, #ffdf9e 0%, var(--gold) 38%, var(--violet) 120%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: 0 0 22px var(--gold-glow);
+}
+.brand-title small { font-size: 10px; letter-spacing: 2px; vertical-align: super; opacity: .75; }
+.user-pill {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; color: var(--text-dim);
+  border: 1px solid var(--border); border-radius: 99px;
+  padding: 6px 12px; background: var(--glass);
+}
+.user-pill .avatar {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 12px;
+  background: radial-gradient(circle at 35% 30%, #3a2f6b, #17142e);
+  box-shadow: 0 0 10px var(--violet-glow);
+}
+
+/* ═══ Нижняя навигация — в потоке, внизу app-shell ═══ */
+.app-nav {
+  flex: none; z-index: 70;
+  padding: 8px 16px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(10, 9, 22, 0.82);
+  backdrop-filter: blur(20px) saturate(140%);
+  border-top: 1px solid var(--border);
+}
+.main-nav { display: flex; justify-content: space-around; gap: 4px; }
+.nav-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  background: none; border: none; cursor: pointer; flex: 1; max-width: 110px;
+  color: var(--text-faint); font: 600 11px/1 var(--font-sans); font-variant-numeric: tabular-nums;
+  letter-spacing: .3px; padding: 6px 4px; border-radius: 18px;
+  transition: color .25s var(--ease);
+}
+.nav-btn .nav-ico {
+  font-size: 20px; width: 42px; height: 42px; border-radius: 50%;
+  display: grid; place-items: center;
+  filter: grayscale(1) opacity(.7); transition: .3s var(--ease);
+}
+.nav-btn:hover { color: var(--text-dim); }
+.nav-btn.active { color: var(--gold-bright); }
+.nav-btn.active .nav-ico {
+  filter: none;
+  background: radial-gradient(circle at 35% 30%, rgba(230,193,120,.35), rgba(167,139,250,.18));
+  box-shadow: 0 0 0 1px rgba(230,193,120,.3), 0 0 20px rgba(230,193,120,.35);
+  transform: translateY(-2px);
+}
+
+/* колокольчик уведомлений */
+.bell {
+  position: relative; background: var(--glass); border: 1px solid var(--border);
+  border-radius: 50%; width: 40px; height: 40px; font-size: 16px; cursor: pointer;
+  display: grid; place-items: center; transition: .25s var(--ease); color: var(--text);
+}
+.bell:hover { border-color: var(--gold); transform: translateY(-1px); }
+.bell-dot {
+  position: absolute; top: 8px; right: 9px; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--gold); box-shadow: 0 0 8px var(--gold-glow);
+}
+
+/* ═══ Общие карточки ═══ */
+.glass {
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: var(--r-m); box-shadow: var(--sh-card);
+  backdrop-filter: blur(10px);
+  background-image: linear-gradient(180deg, rgba(255,255,255,.04), transparent 40%);
+}
+.glow-border { position: relative; }
+.glow-border::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit;
+  padding: 1px; pointer-events: none;
+  background: linear-gradient(140deg, rgba(230,193,120,.4), transparent 35%, rgba(167,139,250,.35));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+
+.section-title {
+  font-family: var(--font-serif); font-size: 16.5px; letter-spacing: .5px;
+  color: var(--gold); margin-bottom: 12px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title svg, .section-title .spark { opacity: .9; }
+.spacer { height: 22px; }

@@ -1,0 +1,53 @@
+# BUS-86: временный публичный доступ через Cloudflare quick tunnel.
+# Включается только осознанно (docker compose -f ... -f docker-compose.tunnel.yml up -d).
+# Туннель живёт, пока жив этот процесс: URL выдаётся при старте в логи контейнера.
+#
+# Топология: cloudflared (edge Cloudflare, TLS) -> tunnel-edge (Caddy :8080,
+# те же защиты, что основной edge) -> api:8080 внутри oracle_internal.
+# Хост-порты не открываются.
+services:
+  tunnel-edge:
+    image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    # WEBAPP_URL указывает на домен Cloudflare, а API отдаёт мини-ап на / —
+    # потому base_path "/" и никакого host-аффинити в Caddyfile.
+    command: caddy run --config /etc/caddy/tunnel.Caddyfile
+    volumes:
+      - ./tunnel.Caddyfile:/etc/caddy/tunnel.Caddyfile:ro
+    networks:
+      - oracle_internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  tunnel-cloudflared:
+    image: cloudflare/cloudflared:2026.7.1@sha256:188bb03589a32affed3cf4d0590565ffe67b78866e6b5582574afab2b705bafe
+    # Quick tunnel: без аккаунта/токена, URL печатается в лог. Пишем логи
+    # в stdout, чтобы URL был виден через docker logs.
+    command: tunnel --no-autoupdate --url http://tunnel-edge:8080
+    networks:
+      - oracle_internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      tunnel-edge:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /static
+
+Sitemap: https://oracle-bot.example/sitemap.xml

@@ -1,0 +1,393 @@
+# Complete OracleAI stack.
+# From the repository root:
+#   cp .env.example .env
+#   docker compose -f infra/docker-compose.yml up -d --build
+#
+# Production-like default topology uses PostgreSQL + pgvector and Redis. The
+# application image is shared by API, bot, Celery worker and Beat so all LLM
+# agents and local CV/astrology engines are always on the same release.
+
+x-observability-logging: &observability-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-app-common: &app-common
+  build:
+    context: ..
+    dockerfile: infra/Dockerfile
+  env_file:
+    - ../.env
+  environment: &app-environment
+    APP_ENV: ${APP_ENV:?APP_ENV must be set explicitly}
+    DATA_DIR: /opt/oracle/data
+    DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set to a PostgreSQL URL}
+    REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    CELERY_ENABLED: ${CELERY_ENABLED:-1}
+    CELERY_TASK_ALWAYS_EAGER: ${CELERY_TASK_ALWAYS_EAGER:-0}
+    PGVECTOR_ENABLED: ${PGVECTOR_ENABLED:-1}
+  networks:
+    - oracle_internal
+  init: true
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging: *observability-logging
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-oracle}
+      POSTGRES_USER: ${POSTGRES_USER:-oracle}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/10-pgvector.sql:ro
+    networks:
+      - oracle_internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - oracle_internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  migrate:
+    <<: *app-common
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *app-common
+    command: ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]
+    volumes:
+      - oracle_logs:/opt/oracle/logs
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  bot:
+    <<: *app-common
+    command: ["python", "-m", "app.bot.main"]
+    volumes:
+      - oracle_logs:/opt/oracle/logs
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "python", "/opt/oracle/scripts/healthcheck.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  worker:
+    <<: *app-common
+    command: ["celery", "-A", "app.queue:celery_app", "worker", "--loglevel=INFO", "--queues=llm,maintenance", "--concurrency=2"]
+    environment:
+      <<: *app-environment
+      CELERY_ENABLED: "1"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.queue:celery_app inspect ping -d celery@$$HOSTNAME >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  beat:
+    <<: *app-common
+    command: ["celery", "-A", "app.queue:celery_app", "beat", "--loglevel=INFO"]
+    environment:
+      <<: *app-environment
+      CELERY_ENABLED: "1"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    stop_grace_period: 30s
+
+  caddy:
+    image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    env_file:
+      - ../.env
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - oracle_internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      api:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Observability is part of the default stack. Grafana is bound to loopback
+  # by default; use an SSH tunnel instead of exposing Prometheus/Loki publicly.
+  loki:
+    image: grafana/loki:3.7.0
+    command: ["-config.file=/etc/loki/config.yml"]
+    volumes:
+      - ./observability/loki-config.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+    networks:
+      - oracle_internal
+    restart: unless-stopped
+    logging: *observability-logging
+
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - oracle_internal
+    depends_on:
+      loki:
+        condition: service_started
+      cadvisor:
+        condition: service_started
+      node-exporter:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    logging: *observability-logging
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    command:
+      - "--docker_only=true"
+      - "--housekeeping_interval=15s"
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    networks:
+      - oracle_internal
+    restart: unless-stopped
+    logging: *observability-logging
+
+  node-exporter:
+    image: prom/node-exporter:v1.10.2
+    command:
+      - "--path.rootfs=/host"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      - oracle_internal
+    restart: unless-stopped
+    logging: *observability-logging
+
+  alloy:
+    image: grafana/alloy:v1.19.2
+    command:
+      - "run"
+      - "--server.http.listen-addr=0.0.0.0:12345"
+      - "--storage.path=/var/lib/alloy/data"
+      - "/etc/alloy/config.alloy"
+    volumes:
+      - ./observability/alloy.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy_data:/var/lib/alloy/data
+    networks:
+      - oracle_internal
+    depends_on:
+      loki:
+        condition: service_started
+      prometheus:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *observability-logging
+
+  grafana:
+    image: grafana/grafana:13.0.7
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    ports:
+      - "${GRAFANA_BIND_ADDRESS:-127.0.0.1}:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - oracle_internal
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+    logging: *observability-logging
+
+  # Optional local OpenAI-compatible LLM. It is deliberately not enabled by
+  # default: model downloads are large. Set CUSTOM_LLM_BASE_URL=http://ollama:11434/v1,
+  # CUSTOM_LLM_MODEL and CUSTOM_LLM_MODEL_LITE in .env before enabling this profile.
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["local-llm"]
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - oracle_internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "OLLAMA_HOST=127.0.0.1:11434 curl -fsS http://127.0.0.1:11434/api/tags >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    logging: *observability-logging
+
+  ollama-init:
+    image: ollama/ollama:latest
+    profiles: ["local-llm"]
+    environment:
+      OLLAMA_HOST: ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:8b}
+    command: ["/bin/sh", "-c", "ollama pull \"$$OLLAMA_MODEL\""]
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - oracle_internal
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+    logging: *observability-logging
+
+  # Encrypted PostgreSQL backups are opt-in so a local developer can start the
+  # application without first creating a host secret. Enable with:
+  #   docker compose --profile backup -f infra/docker-compose.yml up -d backup
+  backup:
+    build:
+      context: ..
+      dockerfile: infra/backup.Dockerfile
+    image: oracleai-backup:local
+    profiles: ["backup"]
+    env_file:
+      - ../.env
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-oracle}
+      PGUSER: ${POSTGRES_USER:-oracle}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      BACKUP_ENCRYPTION_KEY_FILE: /run/secrets/oracle-backup-key
+      BACKUP_REQUIRE_ENCRYPTION: ${BACKUP_REQUIRE_ENCRYPTION:-1}
+      BACKUP_REQUIRE_OFFSITE: ${BACKUP_REQUIRE_OFFSITE:-0}
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+      BACKUP_STATUS_FILE: /backups/backup-status.json
+    volumes:
+      - ${BACKUP_STORAGE_PATH:-./backups}:/backups
+      - ${BACKUP_ENCRYPTION_KEY_HOST_PATH:-/etc/oracle/backup.key}:/run/secrets/oracle-backup-key:ro
+      - ./backup-postgres.sh:/usr/local/bin/backup-postgres.sh:ro
+    networks:
+      - oracle_internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/usr/local/bin/backup-postgres.sh"]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging: *observability-logging
+
+volumes:
+  postgres_data:
+  redis_data:
+  oracle_backups:
+  oracle_logs:
+  caddy_data:
+  caddy_config:
+  ollama_data:
+  loki_data:
+  prometheus_data:
+  grafana_data:
+  alloy_data:
+
+networks:
+  oracle_internal:
+    driver: bridge

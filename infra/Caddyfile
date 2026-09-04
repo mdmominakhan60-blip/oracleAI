@@ -1,0 +1,41 @@
+# DOMAIN is supplied through ../.env. Caddy provisions the HTTPS certificate.
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+			# Prometheus scrapes api:8080/metrics over oracle_internal; never expose it
+		# through the public Caddy edge.
+		handle /metrics {
+			respond 404
+		}
+
+		# Paddle signatures cover the raw request body; proxy it without rewriting.
+
+	handle /api/webhooks/* {
+		request_body {
+			max_size 512KB
+		}
+		reverse_proxy api:8080
+	}
+
+	handle {
+		        # Must match app/core/palm.py MAX_IMAGE_BYTES (8 MB). The API
+        # still enforces decoded pixel and dimension limits independently.
+        request_body {
+            max_size 8MB
+        }
+        reverse_proxy api:8080 {
+
+			health_uri /api/health
+			health_interval 30s
+		}
+	}
+}

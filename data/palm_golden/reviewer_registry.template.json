@@ -1,0 +1,53 @@
+{
+  "registry_version": "palm-reviewers-v1",
+  "reviewers": [
+    {
+      "reviewer_id": "annotator_one",
+      "roles": ["annotator"],
+      "expertise_domains": ["visual annotation"],
+      "qualification_reference": "replace-with-qualification-record",
+      "active": true,
+      "independence": "independent",
+      "conflict_of_interest": "none",
+      "attestation": {
+        "policy_version": "palm-human-review-v1",
+        "accepted_at": "2026-08-27",
+        "signed": true,
+        "blinded_review": true,
+        "training_reference": "replace-with-training-record"
+      }
+    },
+    {
+      "reviewer_id": "annotator_two",
+      "roles": ["annotator"],
+      "expertise_domains": ["visual annotation"],
+      "qualification_reference": "replace-with-qualification-record",
+      "active": true,
+      "independence": "independent",
+      "conflict_of_interest": "none",
+      "attestation": {
+        "policy_version": "palm-human-review-v1",
+        "accepted_at": "2026-08-27",
+        "signed": true,
+        "blinded_review": true,
+        "training_reference": "replace-with-training-record"
+      }
+    },
+    {
+      "reviewer_id": "domain_reviewer",
+      "roles": ["domain_reviewer", "safety_reviewer"],
+      "expertise_domains": ["palmistry domain review", "safety review"],
+      "qualification_reference": "replace-with-qualification-record",
+      "active": true,
+      "independence": "independent",
+      "conflict_of_interest": "none",
+      "attestation": {
+        "policy_version": "palm-human-review-v1",
+        "accepted_at": "2026-08-27",
+        "signed": true,
+        "blinded_review": true,
+        "training_reference": "replace-with-training-record"
+      }
+    }
+  ]
+}

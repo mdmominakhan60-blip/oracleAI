@@ -1,0 +1,168 @@
+/* =============================================
+   ОРАКУЛ · модуль 00-tokens — строки 1–54 styles.css
+   Дословный перенос, каскад сохранён (порядок = @import).
+   ============================================= */
+
+/* ============================================================================
+   ОРАКУЛ — ASTRAL MIDNIGHT · chat-first design system
+   Глубокий космос + тёплое золото + аметист. Главный инструмент — чат,
+   поэтому интерфейс — это лёгкая рамка вокруг диалога с агентом.
+   ============================================================================ */
+
+:root {
+  --nav-h: 66px;
+
+  /* Semantic visual tokens — the single source of truth for the final QA pass. */
+  --color-bg-primary: #0a0920;
+  --color-bg-secondary: #100e29;
+  --color-bg-elevated: #19153a;
+  --color-bg-overlay: rgba(10, 9, 32, .92);
+  --color-accent: #f5d48b;
+  --color-accent-strong: #ffe9b4;
+  --color-accent-deep: #eabf68;
+  --color-accent-secondary: #b9a6ff;
+  --color-text-primary: #faf8ff;
+  --color-text-secondary: #d4cee7;
+  --color-text-muted: #a39bbd;
+  --color-text-subtle: #6f6890;
+  --color-border: rgba(230, 219, 255, .14);
+  --color-border-strong: rgba(245, 212, 139, .50);
+  --color-success: #7be0c5;
+  --color-warning: #f5d48b;
+  --color-error: #f5a9c7;
+  --color-info: #b9a6ff;
+  --color-on-accent: #251d39;
+  --focus-ring: 0 0 0 3px rgba(245, 212, 139, .24);
+  /* FE-018: hover/focus — токены уровня дизайн-системы, а не ad-hoc rgba
+     в каждом компоненте. Компоненты обязаны ссылаться на них. */
+  --hover-bg: rgba(245, 212, 139, .08);
+  --hover-border: rgba(245, 212, 139, .35);
+  --focus-outline: 2px solid var(--champagne-300);
+
+  /* 4px spacing scale: every layout value should be one of these steps. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+  --space-10: 64px;
+
+  /* Type scale: display, body, utility. */
+  --font-family-display: 'Cinzel', Georgia, serif;
+  --font-family-body: 'Plus Jakarta Sans', Arial, sans-serif;
+  --font-size-h1: 32px;
+  --font-size-h2: 24px;
+  --font-size-h3: 20px;
+  --font-size-h4: 18px;
+  --font-size-h5: 16px;
+  --font-size-h6: 14px;
+  --font-size-body: 14px;
+  --font-size-body-lg: 16px;
+  --font-size-caption: 12px;
+  --font-size-label: 11px;
+  --font-size-button: 13px;
+  --line-height-display: 1.08;
+  --line-height-body: 1.55;
+  --line-height-caption: 1.4;
+  --tracking-display: -.01em;
+  --tracking-label: .08em;
+
+  /* Shared geometry and motion. */
+  --radius-control: 14px;
+  --radius-card: 20px;
+  --radius-sheet: 24px;
+  --touch-target: 44px;
+  --motion-focus: 160ms;
+  --motion-enter: 320ms;
+  --motion-exit: 220ms;
+
+  /* палитра — ночь с золотом и аметистом */
+  --bg-0: var(--color-bg-primary);
+  --bg-1: var(--color-bg-secondary);
+  --bg-2: var(--color-bg-elevated);
+  --glass: rgba(24, 22, 48, 0.55);
+  --glass-strong: rgba(28, 26, 56, 0.72);
+  --gold: var(--color-accent);
+  --gold-bright: var(--color-accent-strong);
+  --gold-deep: var(--color-accent-deep);
+  --gold-glow: rgba(245, 212, 139, .35);
+  --violet: var(--color-accent-secondary);
+  --violet-glow: rgba(185, 166, 255, .35);
+  --text: var(--color-text-primary);
+  --text-dim: var(--color-text-secondary);
+  --text-faint: var(--color-text-subtle);
+  --border: var(--color-border);
+  --border-strong: var(--color-border-strong);
+
+  --font-serif: var(--font-family-display);
+  --font-body: var(--font-family-body);
+  --font-sans: var(--font-body);
+
+  --r-s: 14px;
+  --r-m: 20px;
+  --r-l: 28px;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Единый темп интерактивов: короткий отклик, основной переход, мягкое раскрытие. */
+  --motion-quick: 160ms;
+  --motion-base: 220ms;
+  --motion-slow: 420ms;
+  --motion-ritual: cubic-bezier(.22, .9, .24, 1);
+  --sh-card: 0 18px 50px -18px rgba(0, 0, 0, 0.85);
+  --sh-gold: 0 0 0 1px rgba(230,193,120,.06), 0 18px 50px -22px rgba(230,193,120,.18);
+
+  /* Legacy aliases retained for feature modules during the migration. */
+  --ink-950: var(--color-bg-primary);
+  --ink-900: var(--color-bg-secondary);
+  --ink-800: var(--color-bg-elevated);
+  --ink-700: #27204d;
+  --champagne-500: var(--color-accent-deep);
+  --champagne-400: var(--color-accent);
+  --champagne-300: var(--color-accent-strong);
+  --lilac-500: #917df0;
+  --lilac-400: var(--color-accent-secondary);
+  --blush-400: var(--color-error);
+  --mint-400: var(--color-success);
+  --text-main: var(--color-text-primary);
+  --text-soft: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
+  --surface-soft: rgba(255, 255, 255, .055);
+  --surface-raised: rgba(29, 24, 61, .78);
+  --line-soft: var(--color-border);
+  --line-bright: var(--color-border-strong);
+  --font-display: var(--font-family-display);
+  --ease-out: var(--ease);
+  --gold-light: var(--color-accent-strong);
+  --lilac-300: #d8ceff;
+  --champagne-200: #fff4d2;
+  --line: var(--color-border);
+  --ac-bright: var(--color-accent-strong);
+  --ac-glow: rgba(245, 212, 139, .34);
+  --ac-surface: rgba(245, 212, 139, .1);
+  --ac2: var(--color-accent-secondary);
+  --lc: var(--color-accent-secondary);
+  --mc: var(--color-success);
+  --sc: var(--color-accent);
+  --quality: var(--color-success);
+  --ritual-progress: var(--color-accent);
+  --tarot-progress: var(--color-accent-secondary);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--bg-0);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}

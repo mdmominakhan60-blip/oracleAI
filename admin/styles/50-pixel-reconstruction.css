@@ -1,0 +1,119 @@
+/* =============================================================================
+   ORACLEAI ADMIN · PIXEL RECONSTRUCTION
+   Operational dashboard geometry: clear scan paths, stable controls, responsive
+   stacking and a bounded canvas for wide monitors.
+   ============================================================================= */
+
+:root {
+  --admin-frame: 1480px;
+  --admin-gutter: clamp(16px, 2.4vw, 32px);
+  --admin-gap: 16px;
+  --admin-control: 44px;
+  --admin-radius: 14px;
+}
+
+body {
+  background:
+    radial-gradient(900px 520px at 88% -12%, rgba(183, 139, 232, .13), transparent 66%),
+    radial-gradient(760px 520px at -8% 100%, rgba(127, 180, 232, .08), transparent 65%),
+    var(--bg);
+}
+
+.shell {
+  grid-template-columns: 216px minmax(0, 1fr);
+  max-width: 1720px;
+  margin: 0 auto;
+}
+.sidebar {
+  padding: 20px 14px;
+  background: rgba(20, 16, 36, .86);
+  backdrop-filter: blur(18px);
+}
+.brand { padding: 4px 10px 22px; }
+.nav-item {
+  min-height: var(--admin-control);
+  padding: 10px 12px;
+  border-radius: 11px;
+}
+.main {
+  width: min(100%, var(--admin-frame));
+  margin: 0 auto;
+  padding: 28px var(--admin-gutter) 72px;
+}
+.topbar { margin-bottom: 22px; }
+.topbar h1 { font-size: 24px; letter-spacing: -.02em; }
+.topbar-actions { gap: 10px; }
+
+.card,
+.kpi,
+.health-stat,
+.u-stat {
+  border-radius: var(--admin-radius);
+}
+.card { padding: 16px 18px; margin-bottom: var(--admin-gap); }
+.kpi-grid { gap: var(--admin-gap); margin-bottom: 18px; }
+.kpi { min-height: 112px; padding: 16px 17px; }
+.kpi-value { font-size: 27px; }
+.row-2,
+.row-3 { gap: var(--admin-gap); }
+
+.btn,
+.input,
+select,
+button,
+.nav-item,
+.u-tab,
+.switch {
+  min-height: var(--admin-control);
+}
+.btn { border-radius: 10px; padding: 10px 16px; }
+.input { padding: 10px 12px; border-radius: 10px; }
+.btn.tiny,
+.btn-small { min-height: 36px; }
+
+.card-head { margin-bottom: 14px; }
+.table-wrap { border-radius: 10px; }
+th { padding: 10px 9px; }
+td { padding: 10px 9px; }
+
+@media (min-width: 1200px) {
+  .kpi-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .row-2.wide-left { grid-template-columns: minmax(300px, .42fr) minmax(0, 1fr); }
+}
+
+@media (max-width: 800px) {
+  .shell { display: block; }
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 10px 12px;
+    background: rgba(20, 16, 36, .94);
+  }
+  .brand { padding: 0 8px 0 4px; }
+  .nav-item { min-height: 44px; }
+  .main { padding: 20px 16px 56px; }
+  .topbar { align-items: flex-start; }
+  .topbar-actions { width: 100%; }
+  .topbar-actions > * { flex: 1 1 auto; }
+}
+
+@media (max-width: 520px) {
+  .main { padding-inline: 12px; }
+  .topbar h1 { font-size: 21px; }
+  .topbar-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .topbar-actions #refresh { grid-column: 1 / -1; }
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .kpi { min-height: 100px; padding: 13px; }
+  .kpi-value { font-size: 23px; }
+  .card { padding: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

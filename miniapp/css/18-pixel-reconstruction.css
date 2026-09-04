@@ -1,0 +1,256 @@
+/* =============================================================================
+   ORACLEAI · PIXEL RECONSTRUCTION LAYER
+   Measured geometry and optical rhythm for the final visual gauntlet.
+   This layer is intentionally small and token-driven: it refines the existing
+   product language instead of introducing a second visual identity.
+   ============================================================================= */
+
+:root {
+  --ui-frame-max: 480px;
+  --ui-gutter: clamp(16px, 4vw, 24px);
+  --ui-section-gap: 24px;
+  --ui-card-gap: 12px;
+  --ui-nav-clearance: 136px;
+  --ui-control-height: 48px;
+  --ui-reading-measure: 36rem;
+  --ui-hairline: rgba(230, 219, 255, .12);
+}
+
+/* A predictable frame is the primary desktop/mobile invariant. */
+#app-root {
+  width: min(100%, var(--ui-frame-max));
+  min-width: 0;
+}
+#app-main,
+.screen,
+.screen > * {
+  min-width: 0;
+}
+.screen {
+  width: 100%;
+  max-width: var(--ui-frame-max);
+  margin-inline: auto;
+  padding-inline: var(--ui-gutter);
+  padding-bottom: calc(var(--ui-nav-clearance) + env(safe-area-inset-bottom));
+}
+
+/* Reading content keeps a comfortable line length on wide frames. */
+.screen p,
+.screen li,
+.forecast-flow,
+.msg,
+.profile-copy,
+.profile-empty-copy,
+.na-text,
+.cd-note,
+.tool-d,
+.agent-last,
+.compat-result-copy,
+.pay-note,
+.pay-footer-note,
+.diary-entry__body,
+.memory-hero__foot {
+  max-width: var(--ui-reading-measure);
+}
+.screen p,
+.screen li { text-wrap: pretty; }
+
+/* Section rhythm: explicit vertical cadence, with compact internals left alone. */
+.screen > .section-title,
+.screen > .hub-head,
+.screen > .pay-section,
+.screen > .diary-archive__head,
+.screen > .memory-archive-head {
+  margin-bottom: calc(var(--ui-card-gap) * -1);
+}
+.screen > .hero-orb + *,
+.screen > .daily-ritual + *,
+.screen > .seasonal-moment + *,
+.screen > .moon-section + *,
+.screen > .card-day-big + *,
+.screen > .na-card + *,
+.screen > .compat-flow + *,
+.screen > .compat-result + *,
+.screen > .profile-hero + *,
+.screen > .ptab-bar + * {
+  margin-top: var(--ui-section-gap);
+}
+
+/* Header geometry is stable even when the user name is long. */
+.app-header {
+  min-height: 72px;
+  padding-inline: var(--ui-gutter);
+}
+.user-pill {
+  max-width: min(38vw, 156px);
+  min-width: 0;
+}
+.brand-lockup,
+.brand-title,
+.user-pill .user-name { min-width: 0; }
+.brand-title { overflow: hidden; text-overflow: ellipsis; }
+
+/* Card families: feature cards lead, utility cards stay compact. */
+.hero-orb,
+.profile-hero,
+.pay-hero,
+.compat-flow,
+.compat-result {
+  border-radius: 26px;
+}
+.seasonal-moment,
+.daily-ritual,
+.moon-today,
+.card-day-big,
+.na-card,
+.agent-card,
+.history-item,
+.memory-hero,
+.diary-hero,
+.pay-balance,
+.pay-order,
+.pay-plan,
+.pay-product {
+  border-radius: var(--radius-card);
+}
+.seasonal-moment,
+.daily-ritual,
+.card-day-big,
+.na-card,
+.agent-card,
+.history-item,
+.pay-balance,
+.pay-order,
+.pay-plan,
+.pay-product {
+  box-shadow: 0 16px 36px -28px rgba(0, 0, 0, .9);
+}
+.seasonal-moment,
+.daily-ritual,
+.moon-today,
+.card-day-big,
+.na-card,
+.agent-card,
+.history-item,
+.memory-hero,
+.diary-hero,
+.pay-balance,
+.pay-order,
+.pay-plan,
+.pay-product { overflow: hidden; }
+
+/* Controls share a comfortable optical target, not only a nominal minimum. */
+.btn,
+.btn-primary,
+.btn-ghost,
+.agent-card .btn-ghost,
+.ritual-cta,
+.compat-submit,
+.pay-cta,
+.pay-product__button,
+.diary-send,
+.diary-summary-action,
+.memory-open,
+.palm-quick-upload {
+  min-height: var(--ui-control-height);
+}
+.icon-btn,
+.bell,
+.chat-head .back,
+.chat-reset,
+.tool-btn,
+.send-btn,
+.te-close,
+.mem-del,
+.memory-add .send-btn {
+  min-width: var(--ui-control-height);
+  width: var(--ui-control-height);
+  min-height: var(--ui-control-height);
+  height: var(--ui-control-height);
+}
+
+/* Home feature card: measured headline column, CTA clearance and stable orb. */
+.hero-orb { isolation: isolate; }
+.hero-body { max-width: 100%; padding: 24px 22px 20px; }
+.hero-title { max-width: min(15ch, 248px); }
+.hero-moon-txt { max-width: min(29ch, 230px); }
+.ritual-cta { left: 22px; right: 22px; width: auto; justify-content: space-between; }
+
+/* Agent hub: keep the featured card readable and the list discoverable above nav. */
+.hub-head { max-width: var(--ui-reading-measure); margin-inline: auto; }
+.hub-head p { max-width: 34rem; margin-inline: auto; }
+.agent-list,
+.agent-chips,
+.dock-grid,
+.pay-plans,
+.pay-products,
+.history-list,
+.memory-list,
+.diary-archive { min-width: 0; }
+.agent-card .ac-top,
+.agent-card .ac-copy { min-width: 0; }
+.agent-title,
+.agent-last,
+.tool-t,
+.tool-d { overflow-wrap: anywhere; }
+
+/* Long-form surfaces reserve a real scroll inset below fixed chrome. */
+.pay-screen,
+.profile-screen,
+.diary-screen,
+.memory-screen {
+  padding-bottom: calc(var(--ui-nav-clearance) + env(safe-area-inset-bottom));
+}
+
+/* Bottom navigation is one measured object rather than four independent buttons. */
+.app-nav {
+  padding-inline: var(--ui-gutter);
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+}
+.main-nav {
+  width: 100%;
+  max-width: var(--ui-frame-max);
+  min-height: 72px;
+  padding: 6px;
+  gap: 6px;
+}
+.nav-btn {
+  min-height: 58px;
+  border-radius: 16px;
+}
+.nav-ico { flex: 0 0 20px; }
+
+/* Responsive optical corrections: compact phone, balanced tablet, bounded desktop. */
+@media (max-width: 380px) {
+  :root { --ui-gutter: 14px; --ui-section-gap: 20px; }
+  .app-header { min-height: 68px; }
+  .user-pill { max-width: 116px; }
+  .hero-body { padding-inline: 18px; }
+  .hero-title { max-width: 13ch; }
+  .ritual-cta { left: 18px; right: 18px; }
+  .main-nav { gap: 3px; padding: 5px; }
+  .nav-btn { min-height: 56px; }
+}
+
+@media (min-width: 768px) {
+  :root { --ui-gutter: 24px; --ui-section-gap: 28px; }
+  #app-root { width: min(100%, var(--ui-frame-max)); }
+  .screen { padding-top: 24px; }
+  .hero-orb { min-height: 312px; }
+  .hub-head { padding-top: 12px; }
+  .main-nav { min-height: 74px; }
+}
+
+@media (min-width: 1440px) {
+  :root { --ui-frame-max: 480px; }
+  body { letter-spacing: .006em; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ritual-cta,
+  .btn,
+  .nav-btn,
+  .agent-card,
+  .tool,
+  .history-item { transition: none !important; }
+}

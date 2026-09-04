@@ -1,0 +1,18 @@
+# PACK C — OG / Share Preview Card (горизонтальная, для шаринга бота / превью Telegram)
+
+## GLOBAL STYLE TOKENS
+ultra-high definition, 8K, dark celestial luxury branding card, wide panoramic horizontal format, ornate decorative border top and bottom in antique gold, deep midnight-blue to violet gradient background with soft scattered gold stars, large elegant mystical goddess silhouette in soft golden-violet glow on the right side, crystal orb and celestial symbols in the left area, premium dark fantasy aesthetic, elegant gold and violet palette, clean high-end branding layout
+
+## NEGATIVE PROMPT
+text, watermark, logo, messy borders, bright white background, modern streetwear, casual clothes, cluttered frame, broken proportions, harsh lighting, dull colors, overexposed, plastic texture, duplicated elements, no silhouette, no celestial symbols
+
+## SHARED LOCK
+- Aspect: landscape 1731x909 (horizontal), premium branding card format
+- Palette: deep indigo (#0f0d2b) to violet (#241845), antique gold (#d6af4e) to bright gold (#ffe080), soft lilac glow
+- Right side: elegant mystical goddess silhouette in gold-lit profile (no facial detail — pure ethereal form), long flowing hair dissolving into stardust
+- Left area: crystal orb symbol, celestial stars, elegant decorative border, space for text/logo (leave space clean)
+- Top/bottom borders: ornate gold filigree with crescent moon and star motifs
+- Clean premium dark fantasy luxury branding, elegant atmospheric glow, cinematic lighting
+
+## SHOT 1 — Full branding card
+GLOBAL STYLE TOKENS, wide horizontal premium branding card, ornate gold decorative borders at top and bottom, deep midnight-blue celestial background with soft gold stars scattered, elegant mystical goddess silhouette on the right side with golden-violet rim light, crystal orb symbol softly glowing on the left-center area, premium luxury dark fantasy aesthetic, clean elegant branding layout. NEGATIVE PROMPT.

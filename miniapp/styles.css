@@ -1,0 +1,30 @@
+/*
+   ОРАКУЛ — ASTRAL MIDNIGHT · chat-first design system
+   Глубокий космос + тёплое золото + аметист. Главный инструмент — чат,
+   поэтому интерфейс — это лёгкая рамка вокруг диалога с агентом.
+   ============================================================================
+   Агрегатор модулей. Весь код разнесён в miniapp/css/ (порядок @import
+   повторяет порядок секций исходного styles.css, каскад сохранён).
+   ============================================================================ */
+
+@import url('css/00-tokens.css?v=107');
+@import url('css/01-sky-shell.css?v=107');
+@import url('css/02-skeleton.css?v=107');
+@import url('css/03-profile.css?v=107');
+@import url('css/04-atmosphere.css?v=107');
+@import url('css/05-agents.css?v=107');
+@import url('css/06-composer-chat.css?v=107');
+@import url('css/07-home-bg.css?v=107');
+@import url('css/08-day-memory.css?v=107');
+@import url('css/09-chart-panels.css?v=107');
+@import url('css/10-tarot-carousel.css?v=107');
+@import url('css/11-misc.css?v=107');
+@import url('css/12-compat.css?v=107');
+@import url('css/13-toolbar-sheet.css?v=107');
+@import url('css/14-widgets.css?v=107');
+@import url('css/15-ritual-redesign.css?v=107');
+@import url('css/16-visual-qa.css?v=107');
+@import url('css/16-payments.css?v=107');
+@import url('css/17-premium-shell.css?v=107');
+@import url('css/18-pixel-reconstruction.css?v=107');
+@import url('css/18-pixel-precision.css?v=107');

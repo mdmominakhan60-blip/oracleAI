@@ -1,0 +1,225 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_ENV: dev
+      DEV_MODE: "1"
+      DEV_KEY: ci-dev-key
+      LLM_PROVIDER: off
+      DATABASE_URL: postgresql+asyncpg://oracle:oracle@127.0.0.1:5432/oracle
+      TEST_DATABASE_URL: postgresql+asyncpg://oracle:oracle@127.0.0.1:5432/oracle
+      PGVECTOR_ENABLED: "1"
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: oracle
+          POSTGRES_USER: oracle
+          POSTGRES_PASSWORD: oracle
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U oracle -d oracle"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.19.0"
+          cache: npm
+      - name: Frontend dependency audit and build required by API tests
+        run: |
+          npm ci --ignore-scripts
+          npm audit --audit-level=moderate
+          npm run build:frontend
+          python scripts/check_frontend_build.py
+          python scripts/check_frontend_provenance.py
+          python scripts/check_static_asset_references.py
+      - name: Системные библиотеки WeasyPrint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libcairo2 libpango-1.0-0 libgdk-pixbuf-2.0-0 libffi-dev
+      - name: Зависимости (закреплённые версии)
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      - name: Ruff
+        run: python -m ruff check app scripts tests
+      - name: Python syntax/import smoke
+        run: python -m compileall -q app scripts tests
+      - name: JavaScript syntax
+        shell: bash
+        run: find miniapp/js admin -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+      - name: PostgreSQL schema migration
+        run: alembic upgrade head
+      - name: Repository hygiene
+        run: python scripts/check_repository_hygiene.py
+      - name: Architecture lint (canonical implementations only)
+        run: python scripts/check_architecture.py
+      - name: SQL shim inventory (DB-001 checklist stays fresh)
+        run: |
+          python scripts/sql_shim_inventory.py > /dev/null
+          git --no-pager diff --exit-code docs/SQL_SHIM_INVENTORY.md || (echo "::error::SQL_SHIM_INVENTORY.md is stale — run scripts/sql_shim_inventory.py and commit."; exit 1)
+      - name: P0-004 backup/restore infrastructure gate
+        run: |
+          python scripts/check_p004_infrastructure.py
+          bash -n infra/backup-postgres.sh infra/restore-postgres.sh
+      - name: Standalone quality script smoke
+        run: |
+          python scripts/validate_skill_library.py
+          python scripts/check_agent_stability.py
+          python scripts/benchmark_vedic_routing.py >/tmp/vedic-routing.json
+          python scripts/benchmark_mira_lenormand.py >/tmp/mira-lenormand.json
+          python scripts/palm_accuracy_gauntlet.py >/tmp/palm-accuracy.json
+          python scripts/palm_independent_critic.py >/tmp/palm-critic.json
+      - name: Cache-busting policy
+        run: python scripts/check_cache_busting.py
+      - name: Design contract
+        run: python scripts/check_design_contract.py
+      - name: Palm evidence and safety gauntlet
+        run: |
+          mkdir -p artifacts
+          python scripts/palm_accuracy_gauntlet.py --output artifacts/palm-accuracy-matrix.json
+      - name: Palm golden corpus schema and critic readiness
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          mkdir -p artifacts
+          python scripts/validate_palm_reviewer_registry.py --registry data/palm_golden/reviewer_registry.template.json --require-domain
+          python scripts/validate_palm_corpus.py --manifest data/palm_golden/manifest.template.jsonl --schema-only
+          if [ -f data/palm_golden/manifest.jsonl ]; then
+            python scripts/validate_palm_reviewer_registry.py --registry data/palm_golden/reviewer_registry.json --require-domain
+            python scripts/check_palm_corpus_diff.py --manifest data/palm_golden/manifest.jsonl --reviewers data/palm_golden/reviewer_registry.json --base-ref "$BASE_REF" > artifacts/palm-corpus-ci.json
+            python scripts/validate_palm_corpus.py --manifest data/palm_golden/manifest.jsonl --reviewers data/palm_golden/reviewer_registry.json --require-adjudicated
+          else
+            printf '%s\n' '{"status":"SKIP","reason":"no tracked protected manifest; templates remain schema-only","changed_records":[]}' > artifacts/palm-corpus-ci.json
+          fi
+          python scripts/palm_independent_critic.py > artifacts/palm-independent-critic.json
+      - name: LLM golden-set evaluator smoke
+        run: |
+          mkdir -p artifacts
+          python scripts/generate_eval_set.py
+          python scripts/evaluate_llm.py --cases data/llm_eval/golden_cases.jsonl --responses data/llm_eval/sample_responses.jsonl --out artifacts/llm-eval-report.json --min-score 0.75
+      - name: SQL shim inventory report (TEST-001 artifact)
+        run: |
+          mkdir -p artifacts
+          python scripts/sql_shim_inventory.py
+          cp docs/SQL_SHIM_INVENTORY.md artifacts/SQL_SHIM_INVENTORY.md
+      - name: Migration-focused tests
+        run: python -m pytest tests/test_migrations.py tests/test_data.py -q -p no:cacheprovider --timeout=120
+      - name: Full tests
+        run: python -m pytest tests/ -q -p no:cacheprovider --timeout=120
+      - name: Dependency audit
+        run: python -m pip_audit -r requirements.txt
+      - name: Selfcheck
+        run: python scripts/selfcheck.py
+      - name: Production-readiness static gate
+        run: python scripts/release_gate.py
+      - name: Upload release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-${{ github.sha }}
+          path: |
+            artifacts/llm-eval-report.json
+            artifacts/palm-accuracy-matrix.json
+            artifacts/palm-independent-critic.json
+            artifacts/palm-corpus-ci.json
+            artifacts/SQL_SHIM_INVENTORY.md
+          if-no-files-found: ignore
+
+  frontend-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: oracle
+          POSTGRES_USER: oracle
+          POSTGRES_PASSWORD: oracle
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U oracle -d oracle"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.19.0"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Системные библиотеки API и Chromium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends chromium libcairo2 libpango-1.0-0 libgdk-pixbuf-2.0-0 libffi-dev
+      - name: Python-зависимости для QA-сервера
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      - name: Frontend dependencies and audit
+        run: |
+          npm ci --ignore-scripts
+          npm audit --audit-level=moderate
+      - name: Build and validate frontend
+        run: |
+          npm run build:frontend
+          python scripts/check_frontend_build.py
+          python scripts/check_frontend_provenance.py
+          python scripts/check_static_asset_references.py
+      - name: JavaScript syntax
+        shell: bash
+        run: find miniapp/js admin scripts -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+      - name: PostgreSQL schema migration
+        env:
+          DATABASE_URL: postgresql+asyncpg://oracle:oracle@localhost:5432/oracle
+        run: alembic upgrade head
+      - name: Seed isolated QA user and start server
+        env:
+          DATABASE_URL: postgresql+asyncpg://oracle:oracle@localhost:5432/oracle
+          DEV_KEY: ci-dev-key
+        run: |
+          python scripts/seed_visual_user.py
+          APP_ENV=dev DEV_MODE=1 DEV_KEY=ci-dev-key nohup python -m uvicorn app.api.main:app --host 127.0.0.1 --port 8080 >"${RUNNER_TEMP}/oracleai-api.log" 2>&1 &
+          for attempt in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:8080/api/health >/dev/null && exit 0
+            sleep 1
+          done
+          cat "${RUNNER_TEMP}/oracleai-api.log"
+          exit 1
+      - name: Full SPA axe and Lighthouse matrix
+        env:
+          LH_CATEGORIES: performance,accessibility,best-practices,seo
+        run: |
+          QA_OUT_DIR=ci-axe npm run test:axe
+          QA_OUT_DIR=ci-lighthouse-axe npm run test:lighthouse
+      - name: Upload frontend audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-quality-${{ github.sha }}
+          path: |
+            artifacts/ci-axe/
+            artifacts/ci-lighthouse-axe/
+            ${{ runner.temp }}/oracleai-api.log
+          if-no-files-found: warn

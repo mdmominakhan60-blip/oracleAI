@@ -1,0 +1,129 @@
+/* =============================================
+   ОРАКУЛ · модуль 11-misc — строки 1434–1516 styles.css
+   Дословный перенос, каскад сохранён (порядок = @import).
+   ============================================= */
+
+/* ============================================================================
+   v4.10: Viral — рефералка, «в сторис» расклада, «сбылось»
+   ============================================================================ */
+.ref-card {
+  display: flex; align-items: center; gap: 12px;
+  background: linear-gradient(135deg, rgba(230,193,120,.12), rgba(167,139,250,.08));
+  border: 1px solid rgba(230,193,120,.4); border-radius: 18px; padding: 14px;
+  box-shadow: 0 0 24px -8px var(--gold-glow);
+}
+.ref-ico { font-size: 26px; flex: none; filter: drop-shadow(0 0 10px var(--violet-glow)); }
+.ref-body { flex: 1; min-width: 0; }
+.ref-title { font-family: var(--font-serif); font-size: 14.5px; font-weight: 700; color: var(--gold-bright); line-height: 1.3; }
+.ref-desc { font-size: 11.5px; color: var(--text-dim); margin-top: 3px; line-height: 1.4; }
+.ref-btn { flex: none; width: auto; padding: 9px 14px; font-size: 12.5px; }
+
+.rc-strip-row { display: flex; gap: 8px; overflow-x: auto; margin: 10px 0; padding-bottom: 4px; }
+.rc-strip { flex: 0 0 62px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.rc-strip img { width: 52px; height: 78px; border-radius: 7px; border: 1px solid var(--border-strong); object-fit: cover; }
+.rc-strip span { font-size: 9px; color: var(--text-dim); text-align: center; line-height: 1.2; max-width: 62px; }
+
+.outcome-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(190,170,255,.16); }
+.outcome-q { font-size: 12px; color: var(--text-dim); margin-right: 2px; }
+.outcome-chip {
+  flex: none; font-size: 11.5px; font-weight: 600; color: var(--text-dim);
+  background: rgba(255,255,255,.04); border: 1px solid var(--border);
+  border-radius: 99px; padding: 5px 11px; cursor: pointer; transition: .2s var(--ease);
+}
+.outcome-chip:hover { color: var(--gold-bright); border-color: var(--gold); }
+
+/* ============================================================================
+   v4.11: Онбординг-интро (первый вход, 3 свайпаемых скрина)
+   ============================================================================ */
+#intro {
+  position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column;
+  background:
+    radial-gradient(120% 80% at 80% 0%, rgba(167,139,250,.22), transparent 55%),
+    radial-gradient(100% 70% at 10% 90%, rgba(230,193,120,.16), transparent 55%),
+    linear-gradient(180deg, #0d0b1e 0%, #08070f 100%);
+  animation: fadeIn .4s var(--ease);
+}
+.intro-track { flex: 1; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.intro-track::-webkit-scrollbar { display: none; }
+.intro-slide {
+  flex: 0 0 100%; scroll-snap-align: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 40px 32px;
+}
+.intro-emoji { font-size: 64px; filter: drop-shadow(0 0 24px var(--gold-glow)); animation: orbFloat 6s ease-in-out infinite; }
+.intro-title { font-family: var(--font-serif); font-size: 24px; font-weight: 700; color: var(--gold-bright); margin-top: 20px; letter-spacing: .4px; line-height: 1.3; }
+.intro-sub { font-size: 14.5px; color: var(--text-dim); margin-top: 12px; line-height: 1.65; max-width: 300px; }
+.intro-dots { display: flex; justify-content: center; gap: 7px; margin-bottom: 22px; }
+.intro-dots span { width: 8px; height: 8px; border-radius: 50%; background: rgba(230,193,120,.25); transition: .25s var(--ease); }
+.intro-dots span.active { background: var(--gold); box-shadow: 0 0 10px var(--gold-glow); width: 22px; border-radius: 99px; }
+.intro-start { margin: 0 32px; }
+.intro-skip { margin: 12px 0 calc(20px + env(safe-area-inset-bottom)); background: none; border: none; color: var(--text-faint); font-size: 12.5px; cursor: pointer; letter-spacing: .3px; }
+.intro-skip:hover { color: var(--text-dim); }
+
+/* ============================================================================
+   v4.12: натальная карта «собирается» (дома → планеты → узлы → аспекты)
+   ============================================================================ */
+.n-in { animation: nIn .42s var(--ease) both; transform-box: fill-box; transform-origin: center; }
+@keyframes nIn { from { opacity: 0; transform: scale(.55); } to { opacity: 1; transform: none; } }
+
+/* ============================================================================
+   v4.13: гигиена — глобальный prefers-reduced-motion
+   ============================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tcard.dealt { animation: fadeIn .25s ease both; }
+  .tcard-inner { transition: none; }
+  .tcard.open .tcard-inner { transform: rotateY(180deg); }
+}
+
+/* ============================================================================
+   v5: Спидометр любви (совместимость, scores) + интерактив натальной карты
+   ============================================================================ */
+
+/* v4.20 — canonical natal wheel: semantic layers, readable labels and aspect legend */
+.n-wheel-ring { fill: rgba(8, 7, 24, .34); stroke: rgba(230,193,120,.28); stroke-width: 1; }
+.n-zodiac-ring { fill: none; stroke: rgba(167,139,250,.24); stroke-width: 1; stroke-dasharray: 4 4; }
+.n-aspect-ring { fill: none; stroke: rgba(255,255,255,.07); stroke-width: 1; }
+.n-sign-glyph { fill: var(--champagne-300, #ffd98f); font: 15px Cinzel, Georgia, serif; }
+.n-sign-name { fill: var(--text-muted, #a49cc8); font: 6px Arial, sans-serif; }
+.n-house path { fill: none; stroke: rgba(167,139,250,.28); stroke-width: .9; }
+.n-house line { stroke: rgba(167,139,250,.14); stroke-width: .7; }
+.n-house-number { fill: var(--text-muted, #a49cc8); font: 7px Arial, sans-serif; }
+.n-planet-orb { fill: rgba(24,22,48,.92); stroke: var(--gold, #e6c178); stroke-width: 1.35; filter: url(#oracle-wheel-glow); }
+.n-planet-glyph { fill: var(--gold-bright, #ffd98f); font: 14px Cinzel, Georgia, serif; font-weight: 700; }
+.n-planet-label { fill: var(--text-muted, #a49cc8); font: 6px Arial, sans-serif; }
+.n-retro { fill: #ff7b86; font: 8px Arial, sans-serif; font-weight: 700; }
+.n-node circle { fill: rgba(24,22,48,.82); stroke: var(--violet, #a78bfa); stroke-width: 1.2; }
+.n-node text { fill: var(--violet, #a78bfa); font: 10px Cinzel, Georgia, serif; font-weight: 700; }
+.n-aspect { fill: none; opacity: .9; }
+.n-angle { fill: var(--violet, #a78bfa); font: 8px Arial, sans-serif; letter-spacing: 1px; }
+.n-sun-core { fill: rgba(230,193,120,.1); stroke: var(--gold, #e6c178); stroke-width: 1.5; }
+.n-sun-glyph { fill: var(--gold-bright, #ffd98f); font: 23px Cinzel, Georgia, serif; }
+.n-sun-sign { fill: var(--text-muted, #a49cc8); font: 10px Arial, sans-serif; }
+@media (prefers-reduced-motion: reduce) {
+  .n-wheel .n-in { animation: none !important; }
+}
+
+
+/* Explainable specialist handoff from the default Oracle chat. */
+.message-route {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 9px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(225,214,255,.11);
+  color: var(--champagne-300, #f5d48b);
+  font-size: 10px;
+  line-height: 1.25;
+  letter-spacing: .03em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .message-route { transition: none; }
+}

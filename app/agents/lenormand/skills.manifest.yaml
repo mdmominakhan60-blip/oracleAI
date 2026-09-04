@@ -1,0 +1,265 @@
+agent: lenormand
+legacy_code: tarot
+manifest_version: 1.0.0
+skills_count: 35
+skills:
+- name: anti-barnum
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/anti-barnum/SKILL.md
+- name: anti-barnum-protocol
+  version: 1.0.0
+  depends_on: []
+  requires_tools:
+  - draw_tarot
+  tags: []
+  path: app/agents/lenormand/skills/anti-barnum-protocol/SKILL.md
+- name: card-combinations
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/card-combinations/SKILL.md
+- name: card-ledger-evidence
+  version: 1.0.0
+  depends_on: []
+  requires_tools:
+  - draw_tarot
+  tags: []
+  path: app/agents/lenormand/skills/card-ledger-evidence/SKILL.md
+- name: card-position-semantics
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/card-position-semantics/SKILL.md
+- name: career-spread
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/career-spread/SKILL.md
+- name: choice-spread
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/choice-spread/SKILL.md
+- name: combination-synthesis
+  version: 1.0.0
+  depends_on: []
+  requires_tools:
+  - draw_tarot
+  tags: []
+  path: app/agents/lenormand/skills/combination-synthesis/SKILL.md
+- name: court-cards
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/court-cards/SKILL.md
+- name: cross-agent-routing
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/cross-agent-routing/SKILL.md
+- name: daily-draw
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - draw_tarot
+  tags:
+  - daily
+  - practice
+  path: app/agents/lenormand/skills/daily-draw/SKILL.md
+- name: decision-matrix
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - draw_tarot
+  tags:
+  - decision
+  - choice
+  path: app/agents/lenormand/skills/decision-matrix/SKILL.md
+- name: deck-variation
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - draw_tarot
+  tags:
+  - deck
+  - visual
+  path: app/agents/lenormand/skills/deck-variation/SKILL.md
+- name: elemental-dignities
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - draw_tarot
+  tags:
+  - elements
+  - tradition
+  path: app/agents/lenormand/skills/elemental-dignities/SKILL.md
+- name: major-arcana
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - draw_tarot
+  tags:
+  - major-arcana
+  - rws
+  path: app/agents/lenormand/skills/major-arcana/SKILL.md
+- name: major-arcana-journey
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/major-arcana-journey/SKILL.md
+- name: minor-arcana-numerology
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - draw_tarot
+  tags:
+  - minor-arcana
+  - numbers
+  path: app/agents/lenormand/skills/minor-arcana-numerology/SKILL.md
+- name: minor-arcana-suits
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/minor-arcana-suits/SKILL.md
+- name: narrative-three-act
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - draw_tarot
+  tags:
+  - narrative
+  - spread
+  path: app/agents/lenormand/skills/narrative-three-act/SKILL.md
+- name: question-clarity
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/question-clarity/SKILL.md
+- name: question-to-spread
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/question-to-spread/SKILL.md
+- name: reading-review
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - draw_tarot
+  tags:
+  - review
+  - calibration
+  path: app/agents/lenormand/skills/reading-review/SKILL.md
+- name: relationship-spread
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/relationship-spread/SKILL.md
+- name: reversed-cards
+  version: 2.0.0
+  depends_on: []
+  requires_tools:
+  - draw_tarot
+  tags:
+  - reversed
+  - orientation
+  - card_evidence
+  - uncertainty
+  path: app/agents/lenormand/skills/reversed-cards/SKILL.md
+- name: rws-deck-structure
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/rws-deck-structure/SKILL.md
+- name: rws-school
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/rws-school/SKILL.md
+- name: shadow-card
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - draw_tarot
+  tags:
+  - shadow
+  - reflection
+  path: app/agents/lenormand/skills/shadow-card/SKILL.md
+- name: suit-dynamics
+  version: 1.0.0
+  depends_on:
+  - anti-barnum-protocol
+  requires_tools:
+  - draw_tarot
+  tags:
+  - suits
+  - synthesis
+  path: app/agents/lenormand/skills/suit-dynamics/SKILL.md
+- name: tarot-history
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/tarot-history/SKILL.md
+- name: tarot-journaling
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/tarot-journaling/SKILL.md
+- name: tarot-proof-safety
+  version: 1.0.0
+  depends_on: []
+  requires_tools:
+  - draw_tarot
+  tags: []
+  path: app/agents/lenormand/skills/tarot-proof-safety/SKILL.md
+- name: tarot-safety
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/tarot-safety/SKILL.md
+- name: three-card-spread
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/three-card-spread/SKILL.md
+- name: uncertainty-language
+  version: 1.0.0
+  depends_on: []
+  requires_tools: []
+  tags: []
+  path: app/agents/lenormand/skills/uncertainty-language/SKILL.md
+- name: visual-symbol-reading
+  version: 1.0.0
+  depends_on: []
+  requires_tools:
+  - draw_tarot
+  tags: []
+  path: app/agents/lenormand/skills/visual-symbol-reading/SKILL.md

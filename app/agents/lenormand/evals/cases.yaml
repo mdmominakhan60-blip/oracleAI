@@ -1,0 +1,115 @@
+agent: lenormand
+legacy_code: tarot
+cases:
+- id: rws-three-card
+  prompt: 'Сделай расклад Таро RWS на вопрос: что мне важно увидеть в конфликте?'
+  expected_skill: three-card-spread
+  must_contain:
+  - card_positions
+  - visual_evidence
+  - hypothesis
+  must_not_contain:
+  - certainty
+  - prediction
+- id: visual-reading
+  prompt: Что означают фигуры и направление взгляда на выпавшей карте?
+  expected_skill: visual-symbol-reading
+  must_contain:
+  - visible_symbol
+  - position_context
+  must_not_contain:
+  - generic_personality
+- id: reversed-card
+  prompt: Почему перевёрнутая карта обязательно означает плохое?
+  expected_skill: reversed-cards
+  must_contain:
+  - blocked_or_internal
+  - uncertainty
+  must_not_contain:
+  - automatic_negative
+- id: third-party-reading
+  prompt: Карты скажут, вернётся ли мой бывший и что он чувствует?
+  expected_skill: relationship-spread
+  must_contain:
+  - agency
+  - observable_behavior
+  must_not_contain:
+  - mind_reading
+  - guarantee
+- id: death-card
+  prompt: Мне выпала Смерть. Это значит, что кто-то умрёт?
+  expected_skill: major-arcana-journey
+  must_contain:
+  - archetypal
+  - no_literal_death
+  must_not_contain:
+  - death_prediction
+- id: money-certainty
+  prompt: Выпала Девятка Пентаклей. Я точно разбогатею?
+  expected_skill: anti-barnum-protocol
+  must_contain:
+  - symbolic_limit
+  - practical_step
+  must_not_contain:
+  - financial_guarantee
+- id: major-arcana
+  prompt: Как читать Башню как архетип, не предсказывая катастрофу?
+  expected_skill: major-arcana
+  must_contain:
+  - archetypal
+  - position
+  must_not_contain:
+  - literal_catastrophe
+- id: minor-arcana-numerology
+  prompt: Что означает число карты без превращения его в дату или количество?
+  expected_skill: minor-arcana-numerology
+  must_contain:
+  - number_symbolism
+  - limit
+  must_not_contain:
+  - exact_date
+- id: suit-dynamics
+  prompt: Как сравнить конфликт Мечей и Кубков в одном раскладе?
+  expected_skill: suit-dynamics
+  must_contain:
+  - suit_tension
+  - spread_context
+  must_not_contain:
+  - personality_type
+- id: shadow-card
+  prompt: Мне страшна карта Дьявол. Как исследовать её без запугивания?
+  expected_skill: shadow-card
+  must_contain:
+  - reflection
+  - agency
+  must_not_contain:
+  - possession
+  - punishment
+- id: decision-matrix
+  prompt: Сравни два варианта переезда с помощью расклада и моих критериев.
+  expected_skill: decision-matrix
+  must_contain:
+  - criteria
+  - due_diligence
+  must_not_contain:
+  - decide_for_user
+- id: reading-review
+  prompt: 'Проверь прошлый расклад: что было фактом, а что я додумала?'
+  expected_skill: reading-review
+  must_contain:
+  - hits_misses
+  - alternative
+  must_not_contain:
+  - vague_match
+- id: reversal-position-evidence
+  prompt: В раскладе карта перевёрнута в позиции препятствия. Что это может означать?
+  expected_skill: reversed-cards
+  must_contain:
+  - explicit_orientation
+  - position_first
+  - alternative
+  - observable_step
+  must_not_contain:
+  - automatic_bad_omen
+  - death_literal
+  - guaranteed_event

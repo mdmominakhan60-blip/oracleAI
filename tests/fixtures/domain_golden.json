@@ -1,0 +1,4308 @@
+{
+  "schema": "oracleai-domain-golden-v1",
+  "generated_with": {
+    "kerykeion": "5.12.9",
+    "pyswisseph": "2.10.3.2",
+    "chart_contract": 1,
+    "engine": "Swiss Ephemeris via Kerykeion"
+  },
+  "cases": [
+    {
+      "input": {
+        "id": "kazan_exact",
+        "birth_date": "1990-06-21",
+        "birth_time": "14:30",
+        "city": "Kazan",
+        "lat": 55.79,
+        "lon": 49.12,
+        "tz": "Europe/Moscow",
+        "time_known": true
+      },
+      "output": {
+        "mode": "full",
+        "precision": "exact",
+        "sun": {
+          "sign": "Близнецы",
+          "symbol": "♊",
+          "element": "воздух"
+        },
+        "ascendant": {
+          "sign": "Весы",
+          "deg": 17.3,
+          "deg_exact": 17.262560352346412,
+          "abs_deg": 197.3,
+          "abs_deg_exact": 197.2625603523464
+        },
+        "mc": {
+          "sign": "Рак",
+          "deg": 24.1,
+          "deg_exact": 24.092132313320263,
+          "abs_deg": 114.1,
+          "abs_deg_exact": 114.09213231332026
+        },
+        "planets": [
+          {
+            "name": "Солнце",
+            "sign": "Близнецы",
+            "deg": 29.8,
+            "deg_exact": 29.799263986781497,
+            "abs_deg": 89.8,
+            "abs_deg_exact": 89.7992639867815,
+            "house": 9,
+            "retro": false
+          },
+          {
+            "name": "Луна",
+            "sign": "Близнецы",
+            "deg": 10.8,
+            "deg_exact": 10.824597488348374,
+            "abs_deg": 70.8,
+            "abs_deg_exact": 70.82459748834837,
+            "house": 8,
+            "retro": false
+          },
+          {
+            "name": "Меркурий",
+            "sign": "Близнецы",
+            "deg": 16.7,
+            "deg_exact": 16.658741854192158,
+            "abs_deg": 76.7,
+            "abs_deg_exact": 76.65874185419216,
+            "house": 9,
+            "retro": false
+          },
+          {
+            "name": "Венера",
+            "sign": "Телец",
+            "deg": 25.8,
+            "deg_exact": 25.775718153161563,
+            "abs_deg": 55.8,
+            "abs_deg_exact": 55.77571815316156,
+            "house": 8,
+            "retro": false
+          },
+          {
+            "name": "Марс",
+            "sign": "Овен",
+            "deg": 15.3,
+            "deg_exact": 15.288864187216264,
+            "abs_deg": 15.3,
+            "abs_deg_exact": 15.288864187216264,
+            "house": 6,
+            "retro": false
+          },
+          {
+            "name": "Юпитер",
+            "sign": "Рак",
+            "deg": 17.2,
+            "deg_exact": 17.185123983062155,
+            "abs_deg": 107.2,
+            "abs_deg_exact": 107.18512398306216,
+            "house": 9,
+            "retro": false
+          },
+          {
+            "name": "Сатурн",
+            "sign": "Козерог",
+            "deg": 23.7,
+            "deg_exact": 23.667038436162784,
+            "abs_deg": 293.7,
+            "abs_deg_exact": 293.6670384361628,
+            "house": 3,
+            "retro": true
+          },
+          {
+            "name": "Уран",
+            "sign": "Козерог",
+            "deg": 7.9,
+            "deg_exact": 7.930581674703035,
+            "abs_deg": 277.9,
+            "abs_deg_exact": 277.93058167470303,
+            "house": 3,
+            "retro": true
+          },
+          {
+            "name": "Нептун",
+            "sign": "Козерог",
+            "deg": 13.6,
+            "deg_exact": 13.565392979589092,
+            "abs_deg": 283.6,
+            "abs_deg_exact": 283.5653929795891,
+            "house": 3,
+            "retro": true
+          },
+          {
+            "name": "Плутон",
+            "sign": "Скорпион",
+            "deg": 15.3,
+            "deg_exact": 15.288872728868398,
+            "abs_deg": 225.3,
+            "abs_deg_exact": 225.2888727288684,
+            "house": 2,
+            "retro": true
+          }
+        ],
+        "houses": [
+          {
+            "n": 1,
+            "sign": "Весы",
+            "deg": 17.3,
+            "deg_exact": 17.262560352346412,
+            "abs_deg": 197.3,
+            "abs_deg_exact": 197.2625603523464
+          },
+          {
+            "n": 2,
+            "sign": "Скорпион",
+            "deg": 12.3,
+            "deg_exact": 12.332826272481668,
+            "abs_deg": 222.3,
+            "abs_deg_exact": 222.33282627248167
+          },
+          {
+            "n": 3,
+            "sign": "Стрелец",
+            "deg": 14.7,
+            "deg_exact": 14.72461992624551,
+            "abs_deg": 254.7,
+            "abs_deg_exact": 254.7246199262455
+          },
+          {
+            "n": 4,
+            "sign": "Козерог",
+            "deg": 24.1,
+            "deg_exact": 24.092132313320235,
+            "abs_deg": 294.1,
+            "abs_deg_exact": 294.09213231332023
+          },
+          {
+            "n": 5,
+            "sign": "Водолей",
+            "deg": 29.7,
+            "deg_exact": 29.72362839604648,
+            "abs_deg": 329.7,
+            "abs_deg_exact": 329.7236283960465
+          },
+          {
+            "n": 6,
+            "sign": "Рыбы",
+            "deg": 26.9,
+            "deg_exact": 26.928779116632768,
+            "abs_deg": 356.9,
+            "abs_deg_exact": 356.92877911663277
+          },
+          {
+            "n": 7,
+            "sign": "Овен",
+            "deg": 17.3,
+            "deg_exact": 17.26256035234644,
+            "abs_deg": 17.3,
+            "abs_deg_exact": 17.26256035234644
+          },
+          {
+            "n": 8,
+            "sign": "Телец",
+            "deg": 12.3,
+            "deg_exact": 12.332826272481668,
+            "abs_deg": 42.3,
+            "abs_deg_exact": 42.33282627248167
+          },
+          {
+            "n": 9,
+            "sign": "Близнецы",
+            "deg": 14.7,
+            "deg_exact": 14.72461992624551,
+            "abs_deg": 74.7,
+            "abs_deg_exact": 74.72461992624551
+          },
+          {
+            "n": 10,
+            "sign": "Рак",
+            "deg": 24.1,
+            "deg_exact": 24.092132313320263,
+            "abs_deg": 114.1,
+            "abs_deg_exact": 114.09213231332026
+          },
+          {
+            "n": 11,
+            "sign": "Лев",
+            "deg": 29.7,
+            "deg_exact": 29.72362839604648,
+            "abs_deg": 149.7,
+            "abs_deg_exact": 149.72362839604648
+          },
+          {
+            "n": 12,
+            "sign": "Дева",
+            "deg": 26.9,
+            "deg_exact": 26.92877911663274,
+            "abs_deg": 176.9,
+            "abs_deg_exact": 176.92877911663274
+          }
+        ],
+        "aspects": [
+          {
+            "p1": "Юпитер",
+            "p2": "Асцендент",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 0.1,
+            "orb_exact": 0.07743636928427122
+          },
+          {
+            "p1": "Сатурн",
+            "p2": "Середина неба",
+            "aspect": "оппозиция",
+            "glyph": "☍",
+            "orb": 0.4,
+            "orb_exact": 0.4250938771574795
+          },
+          {
+            "p1": "Меркурий",
+            "p2": "Асцендент",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 0.6,
+            "orb_exact": 0.6038184981542543
+          },
+          {
+            "p1": "Меркурий",
+            "p2": "Марс",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 1.4,
+            "orb_exact": 1.3698776669758956
+          },
+          {
+            "p1": "Венера",
+            "p2": "Середина неба",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 1.7,
+            "orb_exact": 1.683585839841271
+          },
+          {
+            "p1": "Марс",
+            "p2": "Нептун",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 1.7,
+            "orb_exact": 1.723471207627199
+          },
+          {
+            "p1": "Нептун",
+            "p2": "Плутон",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 1.7,
+            "orb_exact": 1.7234797492793064
+          },
+          {
+            "p1": "Марс",
+            "p2": "Юпитер",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 1.9,
+            "orb_exact": 1.8962597958458787
+          },
+          {
+            "p1": "Юпитер",
+            "p2": "Плутон",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 1.9,
+            "orb_exact": 1.8962512541937713
+          },
+          {
+            "p1": "Марс",
+            "p2": "Асцендент",
+            "aspect": "оппозиция",
+            "glyph": "☍",
+            "orb": 2.0,
+            "orb_exact": 1.97369616513015
+          },
+          {
+            "p1": "Венера",
+            "p2": "Сатурн",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 2.1,
+            "orb_exact": 2.108679716998779
+          },
+          {
+            "p1": "Юпитер",
+            "p2": "Нептун",
+            "aspect": "оппозиция",
+            "glyph": "☍",
+            "orb": 3.6,
+            "orb_exact": 3.6197310034730776
+          }
+        ],
+        "nodes": [
+          {
+            "name": "Раху (Северный узел)",
+            "sign": "Водолей",
+            "deg": 7.8,
+            "deg_exact": 7.812897238875223,
+            "abs_deg": 307.8,
+            "abs_deg_exact": 307.8128972388752,
+            "house": 4,
+            "retro": true
+          },
+          {
+            "name": "Кету (Южный узел)",
+            "sign": "Лев",
+            "deg": 7.8,
+            "deg_exact": 7.812897238875223,
+            "abs_deg": 127.8,
+            "abs_deg_exact": 127.81289723887522,
+            "house": 10,
+            "retro": true
+          },
+          {
+            "name": "Лилит (Чёрная Луна)",
+            "sign": "Стрелец",
+            "deg": 11.1,
+            "deg_exact": 11.126358171155204,
+            "abs_deg": 251.1,
+            "abs_deg_exact": 251.1263581711552,
+            "house": 2,
+            "retro": true
+          }
+        ],
+        "calculation": {
+          "contract_version": 2,
+          "configuration_fingerprint": "d4ddae4a193c1a86",
+          "config": {
+            "zodiac_type": "Tropical",
+            "house_system": "P",
+            "house_system_name": "Placidus",
+            "perspective_type": "Apparent Geocentric",
+            "node_mode": "true",
+            "node_mode_label": "True Node",
+            "ephemeris_engine": "Swiss Ephemeris via Kerykeion",
+            "active_points": [
+              "Sun",
+              "Moon",
+              "Mercury",
+              "Venus",
+              "Mars",
+              "Jupiter",
+              "Saturn",
+              "Uranus",
+              "Neptune",
+              "Pluto",
+              "Chiron",
+              "Juno",
+              "Ceres",
+              "Vesta",
+              "Pallas",
+              "True_North_Lunar_Node",
+              "True_South_Lunar_Node",
+              "True_Lilith",
+              "Ascendant",
+              "Medium_Coeli",
+              "Descendant",
+              "Imum_Coeli"
+            ],
+            "aspect_policy": {
+              "included": [
+                "conjunction",
+                "opposition",
+                "trine",
+                "square",
+                "sextile"
+              ],
+              "angles": {
+                "conjunction": 0.0,
+                "opposition": 180.0,
+                "trine": 120.0,
+                "square": 90.0,
+                "sextile": 60.0
+              },
+              "orbs_deg": {
+                "conjunction": 8.0,
+                "opposition": 8.0,
+                "trine": 8.0,
+                "square": 7.0,
+                "sextile": 6.0
+              },
+              "scope": "major aspects between active planets/points and angles"
+            },
+            "node_policy": "true_lunar_nodes_plus_true_lilith",
+            "precision_policy": "precision-state-v2",
+            "runtime_versions": {
+              "kerykeion": "5.12.9",
+              "swiss_ephemeris": "2.10.3.2",
+              "tzdata": "2026.3"
+            },
+            "configuration_schema_version": 1
+          },
+          "input": {
+            "birth_date": "1990-06-21",
+            "birth_time": "14:30",
+            "city": "Kazan",
+            "lat": 55.79,
+            "lon": 49.12,
+            "tz": "Europe/Moscow",
+            "time_known": true,
+            "precision_reason": "exact",
+            "adapter_version": "oracleai-kerykeion-engine-v2",
+            "request_fingerprint": "f6a53c9d77004a95",
+            "configuration_fingerprint": "d4ddae4a193c1a86",
+            "location_reason": "valid",
+            "coordinate_source": "unknown",
+            "coordinate_confidence": null,
+            "timezone_source": "provided",
+            "local_time_status": "normal",
+            "candidate_instants": [
+              "1990-06-21T10:30:00+00:00"
+            ],
+            "ambiguity_mode": "safe_date_only",
+            "precision_state": "exact",
+            "original_birth_time": "14:30",
+            "uncertainty": {
+              "kind": "none",
+              "candidate_instants": [
+                "1990-06-21T10:30:00+00:00"
+              ],
+              "angular_data_available": true
+            }
+          },
+          "precision": "exact",
+          "angular_data_available": true,
+          "values": {
+            "rounded_for_ui": true,
+            "exact_fields_suffix": "_exact",
+            "longitude_unit": "degrees",
+            "orb_unit": "degrees"
+          }
+        }
+      }
+    },
+    {
+      "input": {
+        "id": "berlin_dst_summer",
+        "birth_date": "2020-07-01",
+        "birth_time": "12:00",
+        "city": "Berlin",
+        "lat": 52.52,
+        "lon": 13.405,
+        "tz": "Europe/Berlin",
+        "time_known": true
+      },
+      "output": {
+        "mode": "full",
+        "precision": "exact",
+        "sun": {
+          "sign": "Рак",
+          "symbol": "♋",
+          "element": "вода"
+        },
+        "ascendant": {
+          "sign": "Дева",
+          "deg": 25.4,
+          "deg_exact": 25.350125342920848,
+          "abs_deg": 175.4,
+          "abs_deg_exact": 175.35012534292085
+        },
+        "mc": {
+          "sign": "Близнецы",
+          "deg": 23.9,
+          "deg_exact": 23.867621274857086,
+          "abs_deg": 83.9,
+          "abs_deg_exact": 83.86762127485709
+        },
+        "planets": [
+          {
+            "name": "Солнце",
+            "sign": "Рак",
+            "deg": 10.0,
+            "deg_exact": 10.026536274598769,
+            "abs_deg": 100.0,
+            "abs_deg_exact": 100.02653627459877,
+            "house": 10,
+            "retro": false
+          },
+          {
+            "name": "Луна",
+            "sign": "Скорпион",
+            "deg": 20.9,
+            "deg_exact": 20.922450062265852,
+            "abs_deg": 230.9,
+            "abs_deg_exact": 230.92245006226585,
+            "house": 3,
+            "retro": false
+          },
+          {
+            "name": "Меркурий",
+            "sign": "Рак",
+            "deg": 9.6,
+            "deg_exact": 9.565251433008967,
+            "abs_deg": 99.6,
+            "abs_deg_exact": 99.56525143300897,
+            "house": 10,
+            "retro": true
+          },
+          {
+            "name": "Венера",
+            "sign": "Близнецы",
+            "deg": 6.0,
+            "deg_exact": 6.030562298331802,
+            "abs_deg": 66.0,
+            "abs_deg_exact": 66.0305622983318,
+            "house": 9,
+            "retro": false
+          },
+          {
+            "name": "Марс",
+            "sign": "Овен",
+            "deg": 2.0,
+            "deg_exact": 2.0103800420695284,
+            "abs_deg": 2.0,
+            "abs_deg_exact": 2.0103800420695284,
+            "house": 7,
+            "retro": false
+          },
+          {
+            "name": "Юпитер",
+            "sign": "Козерог",
+            "deg": 24.0,
+            "deg_exact": 23.96776023715256,
+            "abs_deg": 294.0,
+            "abs_deg_exact": 293.96776023715256,
+            "house": 4,
+            "retro": true
+          },
+          {
+            "name": "Сатурн",
+            "sign": "Водолей",
+            "deg": 0.0,
+            "deg_exact": 0.03804506554075715,
+            "abs_deg": 300.0,
+            "abs_deg_exact": 300.03804506554076,
+            "house": 4,
+            "retro": true
+          },
+          {
+            "name": "Уран",
+            "sign": "Телец",
+            "deg": 9.9,
+            "deg_exact": 9.877928839868765,
+            "abs_deg": 39.9,
+            "abs_deg_exact": 39.877928839868765,
+            "house": 8,
+            "retro": false
+          },
+          {
+            "name": "Нептун",
+            "sign": "Рыбы",
+            "deg": 20.9,
+            "deg_exact": 20.94153899189439,
+            "abs_deg": 350.9,
+            "abs_deg_exact": 350.9415389918944,
+            "house": 6,
+            "retro": true
+          },
+          {
+            "name": "Плутон",
+            "sign": "Козерог",
+            "deg": 24.1,
+            "deg_exact": 24.08182924660457,
+            "abs_deg": 294.1,
+            "abs_deg_exact": 294.08182924660457,
+            "house": 4,
+            "retro": true
+          }
+        ],
+        "houses": [
+          {
+            "n": 1,
+            "sign": "Дева",
+            "deg": 25.4,
+            "deg_exact": 25.350125342920848,
+            "abs_deg": 175.4,
+            "abs_deg_exact": 175.35012534292085
+          },
+          {
+            "n": 2,
+            "sign": "Весы",
+            "deg": 18.4,
+            "deg_exact": 18.412003535615355,
+            "abs_deg": 198.4,
+            "abs_deg_exact": 198.41200353561536
+          },
+          {
+            "n": 3,
+            "sign": "Скорпион",
+            "deg": 17.9,
+            "deg_exact": 17.86928550033403,
+            "abs_deg": 227.9,
+            "abs_deg_exact": 227.86928550033403
+          },
+          {
+            "n": 4,
+            "sign": "Стрелец",
+            "deg": 23.9,
+            "deg_exact": 23.867621274857072,
+            "abs_deg": 263.9,
+            "abs_deg_exact": 263.8676212748571
+          },
+          {
+            "n": 5,
+            "sign": "Водолей",
+            "deg": 0.6,
+            "deg_exact": 0.5770828948759004,
+            "abs_deg": 300.6,
+            "abs_deg_exact": 300.5770828948759
+          },
+          {
+            "n": 6,
+            "sign": "Рыбы",
+            "deg": 1.1,
+            "deg_exact": 1.1384601106105379,
+            "abs_deg": 331.1,
+            "abs_deg_exact": 331.13846011061054
+          },
+          {
+            "n": 7,
+            "sign": "Рыбы",
+            "deg": 25.4,
+            "deg_exact": 25.35012534292082,
+            "abs_deg": 355.4,
+            "abs_deg_exact": 355.3501253429208
+          },
+          {
+            "n": 8,
+            "sign": "Овен",
+            "deg": 18.4,
+            "deg_exact": 18.412003535615327,
+            "abs_deg": 18.4,
+            "abs_deg_exact": 18.412003535615327
+          },
+          {
+            "n": 9,
+            "sign": "Телец",
+            "deg": 17.9,
+            "deg_exact": 17.86928550033406,
+            "abs_deg": 47.9,
+            "abs_deg_exact": 47.86928550033406
+          },
+          {
+            "n": 10,
+            "sign": "Близнецы",
+            "deg": 23.9,
+            "deg_exact": 23.867621274857086,
+            "abs_deg": 83.9,
+            "abs_deg_exact": 83.86762127485709
+          },
+          {
+            "n": 11,
+            "sign": "Лев",
+            "deg": 0.6,
+            "deg_exact": 0.5770828948758862,
+            "abs_deg": 120.6,
+            "abs_deg_exact": 120.57708289487589
+          },
+          {
+            "n": 12,
+            "sign": "Дева",
+            "deg": 1.1,
+            "deg_exact": 1.1384601106105379,
+            "abs_deg": 151.1,
+            "abs_deg_exact": 151.13846011061054
+          }
+        ],
+        "aspects": [
+          {
+            "p1": "Луна",
+            "p2": "Нептун",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 0.0,
+            "orb_exact": 0.0190889296285377
+          },
+          {
+            "p1": "Солнце",
+            "p2": "Уран",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 0.1,
+            "orb_exact": 0.14860743473000326
+          },
+          {
+            "p1": "Юпитер",
+            "p2": "Плутон",
+            "aspect": "соединение",
+            "glyph": "☌",
+            "orb": 0.1,
+            "orb_exact": 0.1140690094520096
+          },
+          {
+            "p1": "Меркурий",
+            "p2": "Уран",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 0.3,
+            "orb_exact": 0.31267740685979817
+          },
+          {
+            "p1": "Солнце",
+            "p2": "Меркурий",
+            "aspect": "соединение",
+            "glyph": "☌",
+            "orb": 0.5,
+            "orb_exact": 0.46128484158980143
+          },
+          {
+            "p1": "Плутон",
+            "p2": "Асцендент",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 1.3,
+            "orb_exact": 1.268296096316277
+          },
+          {
+            "p1": "Юпитер",
+            "p2": "Асцендент",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 1.4,
+            "orb_exact": 1.3823651057682866
+          },
+          {
+            "p1": "Асцендент",
+            "p2": "Середина неба",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 1.5,
+            "orb_exact": 1.4825040680637613
+          },
+          {
+            "p1": "Марс",
+            "p2": "Сатурн",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 2.0,
+            "orb_exact": 1.9723349765287708
+          },
+          {
+            "p1": "Нептун",
+            "p2": "Середина неба",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 2.9,
+            "orb_exact": 2.926082282962682
+          },
+          {
+            "p1": "Луна",
+            "p2": "Юпитер",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 3.0,
+            "orb_exact": 3.0453101748867084
+          },
+          {
+            "p1": "Юпитер",
+            "p2": "Нептун",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 3.0,
+            "orb_exact": 3.0262212452581707
+          }
+        ],
+        "nodes": [
+          {
+            "name": "Раху (Северный узел)",
+            "sign": "Близнецы",
+            "deg": 29.1,
+            "deg_exact": 29.11486648196076,
+            "abs_deg": 89.1,
+            "abs_deg_exact": 89.11486648196076,
+            "house": 10,
+            "retro": false
+          },
+          {
+            "name": "Кету (Южный узел)",
+            "sign": "Стрелец",
+            "deg": 29.1,
+            "deg_exact": 29.114866481960746,
+            "abs_deg": 269.1,
+            "abs_deg_exact": 269.11486648196075,
+            "house": 4,
+            "retro": false
+          },
+          {
+            "name": "Лилит (Чёрная Луна)",
+            "sign": "Телец",
+            "deg": 3.5,
+            "deg_exact": 3.5089607846534747,
+            "abs_deg": 33.5,
+            "abs_deg_exact": 33.508960784653475,
+            "house": 8,
+            "retro": false
+          }
+        ],
+        "calculation": {
+          "contract_version": 2,
+          "configuration_fingerprint": "d4ddae4a193c1a86",
+          "config": {
+            "zodiac_type": "Tropical",
+            "house_system": "P",
+            "house_system_name": "Placidus",
+            "perspective_type": "Apparent Geocentric",
+            "node_mode": "true",
+            "node_mode_label": "True Node",
+            "ephemeris_engine": "Swiss Ephemeris via Kerykeion",
+            "active_points": [
+              "Sun",
+              "Moon",
+              "Mercury",
+              "Venus",
+              "Mars",
+              "Jupiter",
+              "Saturn",
+              "Uranus",
+              "Neptune",
+              "Pluto",
+              "Chiron",
+              "Juno",
+              "Ceres",
+              "Vesta",
+              "Pallas",
+              "True_North_Lunar_Node",
+              "True_South_Lunar_Node",
+              "True_Lilith",
+              "Ascendant",
+              "Medium_Coeli",
+              "Descendant",
+              "Imum_Coeli"
+            ],
+            "aspect_policy": {
+              "included": [
+                "conjunction",
+                "opposition",
+                "trine",
+                "square",
+                "sextile"
+              ],
+              "angles": {
+                "conjunction": 0.0,
+                "opposition": 180.0,
+                "trine": 120.0,
+                "square": 90.0,
+                "sextile": 60.0
+              },
+              "orbs_deg": {
+                "conjunction": 8.0,
+                "opposition": 8.0,
+                "trine": 8.0,
+                "square": 7.0,
+                "sextile": 6.0
+              },
+              "scope": "major aspects between active planets/points and angles"
+            },
+            "node_policy": "true_lunar_nodes_plus_true_lilith",
+            "precision_policy": "precision-state-v2",
+            "runtime_versions": {
+              "kerykeion": "5.12.9",
+              "swiss_ephemeris": "2.10.3.2",
+              "tzdata": "2026.3"
+            },
+            "configuration_schema_version": 1
+          },
+          "input": {
+            "birth_date": "2020-07-01",
+            "birth_time": "12:00",
+            "city": "Berlin",
+            "lat": 52.52,
+            "lon": 13.405,
+            "tz": "Europe/Berlin",
+            "time_known": true,
+            "precision_reason": "exact",
+            "adapter_version": "oracleai-kerykeion-engine-v2",
+            "request_fingerprint": "1d75a12310043eda",
+            "configuration_fingerprint": "d4ddae4a193c1a86",
+            "location_reason": "valid",
+            "coordinate_source": "unknown",
+            "coordinate_confidence": null,
+            "timezone_source": "provided",
+            "local_time_status": "normal",
+            "candidate_instants": [
+              "2020-07-01T10:00:00+00:00"
+            ],
+            "ambiguity_mode": "safe_date_only",
+            "precision_state": "exact",
+            "original_birth_time": "12:00",
+            "uncertainty": {
+              "kind": "none",
+              "candidate_instants": [
+                "2020-07-01T10:00:00+00:00"
+              ],
+              "angular_data_available": true
+            }
+          },
+          "precision": "exact",
+          "angular_data_available": true,
+          "values": {
+            "rounded_for_ui": true,
+            "exact_fields_suffix": "_exact",
+            "longitude_unit": "degrees",
+            "orb_unit": "degrees"
+          }
+        }
+      }
+    },
+    {
+      "input": {
+        "id": "kolkata_no_dst",
+        "birth_date": "2020-01-15",
+        "birth_time": "12:00",
+        "city": "Kolkata",
+        "lat": 22.5726,
+        "lon": 88.3639,
+        "tz": "Asia/Kolkata",
+        "time_known": true
+      },
+      "output": {
+        "mode": "full",
+        "precision": "exact",
+        "sun": {
+          "sign": "Козерог",
+          "symbol": "♑",
+          "element": "земля"
+        },
+        "ascendant": {
+          "sign": "Телец",
+          "deg": 8.5,
+          "deg_exact": 8.527857848506969,
+          "abs_deg": 38.5,
+          "abs_deg_exact": 38.52785784850697
+        },
+        "mc": {
+          "sign": "Козерог",
+          "deg": 28.0,
+          "deg_exact": 27.956609961249967,
+          "abs_deg": 298.0,
+          "abs_deg_exact": 297.95660996124997
+        },
+        "planets": [
+          {
+            "name": "Солнце",
+            "sign": "Козерог",
+            "deg": 24.6,
+            "deg_exact": 24.55123499657742,
+            "abs_deg": 294.6,
+            "abs_deg_exact": 294.5512349965774,
+            "house": 9,
+            "retro": false
+          },
+          {
+            "name": "Луна",
+            "sign": "Дева",
+            "deg": 24.5,
+            "deg_exact": 24.452013747446927,
+            "abs_deg": 174.5,
+            "abs_deg_exact": 174.45201374744693,
+            "house": 5,
+            "retro": false
+          },
+          {
+            "name": "Меркурий",
+            "sign": "Козерог",
+            "deg": 27.5,
+            "deg_exact": 27.485624141135702,
+            "abs_deg": 297.5,
+            "abs_deg_exact": 297.4856241411357,
+            "house": 9,
+            "retro": false
+          },
+          {
+            "name": "Венера",
+            "sign": "Рыбы",
+            "deg": 1.8,
+            "deg_exact": 1.8120912416200667,
+            "abs_deg": 331.8,
+            "abs_deg_exact": 331.81209124162007,
+            "house": 11,
+            "retro": false
+          },
+          {
+            "name": "Марс",
+            "sign": "Стрелец",
+            "deg": 8.0,
+            "deg_exact": 8.014944022540732,
+            "abs_deg": 248.0,
+            "abs_deg_exact": 248.01494402254073,
+            "house": 7,
+            "retro": false
+          },
+          {
+            "name": "Юпитер",
+            "sign": "Козерог",
+            "deg": 9.9,
+            "deg_exact": 9.940627552376498,
+            "abs_deg": 279.9,
+            "abs_deg_exact": 279.9406275523765,
+            "house": 9,
+            "retro": false
+          },
+          {
+            "name": "Сатурн",
+            "sign": "Козерог",
+            "deg": 23.1,
+            "deg_exact": 23.07963892499697,
+            "abs_deg": 293.1,
+            "abs_deg_exact": 293.07963892499697,
+            "house": 9,
+            "retro": false
+          },
+          {
+            "name": "Уран",
+            "sign": "Телец",
+            "deg": 2.7,
+            "deg_exact": 2.65739975115806,
+            "abs_deg": 32.7,
+            "abs_deg_exact": 32.65739975115806,
+            "house": 12,
+            "retro": false
+          },
+          {
+            "name": "Нептун",
+            "sign": "Рыбы",
+            "deg": 16.6,
+            "deg_exact": 16.588891207539405,
+            "abs_deg": 346.6,
+            "abs_deg_exact": 346.5888912075394,
+            "house": 11,
+            "retro": false
+          },
+          {
+            "name": "Плутон",
+            "sign": "Козерог",
+            "deg": 22.9,
+            "deg_exact": 22.861878808044935,
+            "abs_deg": 292.9,
+            "abs_deg_exact": 292.86187880804493,
+            "house": 9,
+            "retro": false
+          }
+        ],
+        "houses": [
+          {
+            "n": 1,
+            "sign": "Телец",
+            "deg": 8.5,
+            "deg_exact": 8.527857848506969,
+            "abs_deg": 38.5,
+            "abs_deg_exact": 38.52785784850697
+          },
+          {
+            "n": 2,
+            "sign": "Близнецы",
+            "deg": 8.1,
+            "deg_exact": 8.141098099611227,
+            "abs_deg": 68.1,
+            "abs_deg_exact": 68.14109809961123
+          },
+          {
+            "n": 3,
+            "sign": "Рак",
+            "deg": 3.2,
+            "deg_exact": 3.213378101522437,
+            "abs_deg": 93.2,
+            "abs_deg_exact": 93.21337810152244
+          },
+          {
+            "n": 4,
+            "sign": "Рак",
+            "deg": 28.0,
+            "deg_exact": 27.956609961249967,
+            "abs_deg": 118.0,
+            "abs_deg_exact": 117.95660996124997
+          },
+          {
+            "n": 5,
+            "sign": "Лев",
+            "deg": 26.0,
+            "deg_exact": 25.984348374609624,
+            "abs_deg": 146.0,
+            "abs_deg_exact": 145.98434837460962
+          },
+          {
+            "n": 6,
+            "sign": "Весы",
+            "deg": 0.1,
+            "deg_exact": 0.05902496441211724,
+            "abs_deg": 180.1,
+            "abs_deg_exact": 180.05902496441212
+          },
+          {
+            "n": 7,
+            "sign": "Скорпион",
+            "deg": 8.5,
+            "deg_exact": 8.527857848506983,
+            "abs_deg": 218.5,
+            "abs_deg_exact": 218.52785784850698
+          },
+          {
+            "n": 8,
+            "sign": "Стрелец",
+            "deg": 8.1,
+            "deg_exact": 8.141098099611213,
+            "abs_deg": 248.1,
+            "abs_deg_exact": 248.1410980996112
+          },
+          {
+            "n": 9,
+            "sign": "Козерог",
+            "deg": 3.2,
+            "deg_exact": 3.213378101522437,
+            "abs_deg": 273.2,
+            "abs_deg_exact": 273.21337810152244
+          },
+          {
+            "n": 10,
+            "sign": "Козерог",
+            "deg": 28.0,
+            "deg_exact": 27.956609961249967,
+            "abs_deg": 298.0,
+            "abs_deg_exact": 297.95660996124997
+          },
+          {
+            "n": 11,
+            "sign": "Водолей",
+            "deg": 26.0,
+            "deg_exact": 25.984348374609624,
+            "abs_deg": 326.0,
+            "abs_deg_exact": 325.9843483746096
+          },
+          {
+            "n": 12,
+            "sign": "Овен",
+            "deg": 0.1,
+            "deg_exact": 0.05902496441210932,
+            "abs_deg": 0.1,
+            "abs_deg_exact": 0.05902496441210932
+          }
+        ],
+        "aspects": [
+          {
+            "p1": "Солнце",
+            "p2": "Луна",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 0.1,
+            "orb_exact": 0.09922124913049402
+          },
+          {
+            "p1": "Сатурн",
+            "p2": "Плутон",
+            "aspect": "соединение",
+            "glyph": "☌",
+            "orb": 0.2,
+            "orb_exact": 0.2177601169520358
+          },
+          {
+            "p1": "Меркурий",
+            "p2": "Середина неба",
+            "aspect": "соединение",
+            "glyph": "☌",
+            "orb": 0.5,
+            "orb_exact": 0.47098582011426515
+          },
+          {
+            "p1": "Венера",
+            "p2": "Уран",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 0.8,
+            "orb_exact": 0.845308509537972
+          },
+          {
+            "p1": "Луна",
+            "p2": "Сатурн",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 1.4,
+            "orb_exact": 1.372374822449956
+          },
+          {
+            "p1": "Юпитер",
+            "p2": "Асцендент",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 1.4,
+            "orb_exact": 1.4127697038695146
+          },
+          {
+            "p1": "Солнце",
+            "p2": "Сатурн",
+            "aspect": "соединение",
+            "glyph": "☌",
+            "orb": 1.5,
+            "orb_exact": 1.47159607158045
+          },
+          {
+            "p1": "Луна",
+            "p2": "Плутон",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 1.6,
+            "orb_exact": 1.5901349394019917
+          },
+          {
+            "p1": "Солнце",
+            "p2": "Плутон",
+            "aspect": "соединение",
+            "glyph": "☌",
+            "orb": 1.7,
+            "orb_exact": 1.6893561885324857
+          },
+          {
+            "p1": "Солнце",
+            "p2": "Меркурий",
+            "aspect": "соединение",
+            "glyph": "☌",
+            "orb": 2.9,
+            "orb_exact": 2.9343891445582813
+          },
+          {
+            "p1": "Луна",
+            "p2": "Меркурий",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 3.0,
+            "orb_exact": 3.0336103936887753
+          },
+          {
+            "p1": "Солнце",
+            "p2": "Середина неба",
+            "aspect": "соединение",
+            "glyph": "☌",
+            "orb": 3.4,
+            "orb_exact": 3.4053749646725464
+          }
+        ],
+        "nodes": [
+          {
+            "name": "Раху (Северный узел)",
+            "sign": "Рак",
+            "deg": 8.3,
+            "deg_exact": 8.324152045648958,
+            "abs_deg": 98.3,
+            "abs_deg_exact": 98.32415204564896,
+            "house": 3,
+            "retro": true
+          },
+          {
+            "name": "Кету (Южный узел)",
+            "sign": "Козерог",
+            "deg": 8.3,
+            "deg_exact": 8.32415204564893,
+            "abs_deg": 278.3,
+            "abs_deg_exact": 278.32415204564893,
+            "house": 9,
+            "retro": true
+          },
+          {
+            "name": "Лилит (Чёрная Луна)",
+            "sign": "Рыбы",
+            "deg": 2.0,
+            "deg_exact": 2.0007589808022317,
+            "abs_deg": 332.0,
+            "abs_deg_exact": 332.00075898080223,
+            "house": 11,
+            "retro": true
+          }
+        ],
+        "calculation": {
+          "contract_version": 2,
+          "configuration_fingerprint": "d4ddae4a193c1a86",
+          "config": {
+            "zodiac_type": "Tropical",
+            "house_system": "P",
+            "house_system_name": "Placidus",
+            "perspective_type": "Apparent Geocentric",
+            "node_mode": "true",
+            "node_mode_label": "True Node",
+            "ephemeris_engine": "Swiss Ephemeris via Kerykeion",
+            "active_points": [
+              "Sun",
+              "Moon",
+              "Mercury",
+              "Venus",
+              "Mars",
+              "Jupiter",
+              "Saturn",
+              "Uranus",
+              "Neptune",
+              "Pluto",
+              "Chiron",
+              "Juno",
+              "Ceres",
+              "Vesta",
+              "Pallas",
+              "True_North_Lunar_Node",
+              "True_South_Lunar_Node",
+              "True_Lilith",
+              "Ascendant",
+              "Medium_Coeli",
+              "Descendant",
+              "Imum_Coeli"
+            ],
+            "aspect_policy": {
+              "included": [
+                "conjunction",
+                "opposition",
+                "trine",
+                "square",
+                "sextile"
+              ],
+              "angles": {
+                "conjunction": 0.0,
+                "opposition": 180.0,
+                "trine": 120.0,
+                "square": 90.0,
+                "sextile": 60.0
+              },
+              "orbs_deg": {
+                "conjunction": 8.0,
+                "opposition": 8.0,
+                "trine": 8.0,
+                "square": 7.0,
+                "sextile": 6.0
+              },
+              "scope": "major aspects between active planets/points and angles"
+            },
+            "node_policy": "true_lunar_nodes_plus_true_lilith",
+            "precision_policy": "precision-state-v2",
+            "runtime_versions": {
+              "kerykeion": "5.12.9",
+              "swiss_ephemeris": "2.10.3.2",
+              "tzdata": "2026.3"
+            },
+            "configuration_schema_version": 1
+          },
+          "input": {
+            "birth_date": "2020-01-15",
+            "birth_time": "12:00",
+            "city": "Kolkata",
+            "lat": 22.5726,
+            "lon": 88.3639,
+            "tz": "Asia/Kolkata",
+            "time_known": true,
+            "precision_reason": "exact",
+            "adapter_version": "oracleai-kerykeion-engine-v2",
+            "request_fingerprint": "7b4b517a1cf2cb44",
+            "configuration_fingerprint": "d4ddae4a193c1a86",
+            "location_reason": "valid",
+            "coordinate_source": "unknown",
+            "coordinate_confidence": null,
+            "timezone_source": "provided",
+            "local_time_status": "normal",
+            "candidate_instants": [
+              "2020-01-15T06:30:00+00:00"
+            ],
+            "ambiguity_mode": "safe_date_only",
+            "precision_state": "exact",
+            "original_birth_time": "12:00",
+            "uncertainty": {
+              "kind": "none",
+              "candidate_instants": [
+                "2020-01-15T06:30:00+00:00"
+              ],
+              "angular_data_available": true
+            }
+          },
+          "precision": "exact",
+          "angular_data_available": true,
+          "values": {
+            "rounded_for_ui": true,
+            "exact_fields_suffix": "_exact",
+            "longitude_unit": "degrees",
+            "orb_unit": "degrees"
+          }
+        }
+      }
+    },
+    {
+      "input": {
+        "id": "utc_midnight",
+        "birth_date": "2000-01-01",
+        "birth_time": "00:00",
+        "city": "UTC",
+        "lat": 0.0,
+        "lon": 0.0,
+        "tz": "UTC",
+        "time_known": true
+      },
+      "output": {
+        "mode": "full",
+        "precision": "exact",
+        "sun": {
+          "sign": "Козерог",
+          "symbol": "♑",
+          "element": "земля"
+        },
+        "ascendant": {
+          "sign": "Весы",
+          "deg": 10.8,
+          "deg_exact": 10.83991267628437,
+          "abs_deg": 190.8,
+          "abs_deg_exact": 190.83991267628437
+        },
+        "mc": {
+          "sign": "Рак",
+          "deg": 9.2,
+          "deg_exact": 9.156665739099878,
+          "abs_deg": 99.2,
+          "abs_deg_exact": 99.15666573909988
+        },
+        "planets": [
+          {
+            "name": "Солнце",
+            "sign": "Козерог",
+            "deg": 9.9,
+            "deg_exact": 9.859215629981179,
+            "abs_deg": 279.9,
+            "abs_deg_exact": 279.8592156299812,
+            "house": 4,
+            "retro": false
+          },
+          {
+            "name": "Луна",
+            "sign": "Скорпион",
+            "deg": 7.3,
+            "deg_exact": 7.2933665498966604,
+            "abs_deg": 217.3,
+            "abs_deg_exact": 217.29336654989666,
+            "house": 1,
+            "retro": false
+          },
+          {
+            "name": "Меркурий",
+            "sign": "Козерог",
+            "deg": 1.1,
+            "deg_exact": 1.111804852324667,
+            "abs_deg": 271.1,
+            "abs_deg_exact": 271.11180485232467,
+            "house": 3,
+            "retro": false
+          },
+          {
+            "name": "Венера",
+            "sign": "Стрелец",
+            "deg": 1.0,
+            "deg_exact": 0.9614209109311673,
+            "abs_deg": 241.0,
+            "abs_deg_exact": 240.96142091093117,
+            "house": 2,
+            "retro": false
+          },
+          {
+            "name": "Марс",
+            "sign": "Водолей",
+            "deg": 27.6,
+            "deg_exact": 27.575480258965513,
+            "abs_deg": 327.6,
+            "abs_deg_exact": 327.5754802589655,
+            "house": 5,
+            "retro": false
+          },
+          {
+            "name": "Юпитер",
+            "sign": "Овен",
+            "deg": 25.2,
+            "deg_exact": 25.23307224446792,
+            "abs_deg": 25.2,
+            "abs_deg_exact": 25.23307224446792,
+            "house": 7,
+            "retro": false
+          },
+          {
+            "name": "Сатурн",
+            "sign": "Телец",
+            "deg": 10.4,
+            "deg_exact": 10.40583958554437,
+            "abs_deg": 40.4,
+            "abs_deg_exact": 40.40583958554437,
+            "house": 7,
+            "retro": true
+          },
+          {
+            "name": "Уран",
+            "sign": "Водолей",
+            "deg": 14.8,
+            "deg_exact": 14.78410710943865,
+            "abs_deg": 314.8,
+            "abs_deg_exact": 314.78410710943865,
+            "house": 5,
+            "retro": false
+          },
+          {
+            "name": "Нептун",
+            "sign": "Водолей",
+            "deg": 3.2,
+            "deg_exact": 3.17522337702934,
+            "abs_deg": 303.2,
+            "abs_deg_exact": 303.17522337702934,
+            "house": 4,
+            "retro": false
+          },
+          {
+            "name": "Плутон",
+            "sign": "Стрелец",
+            "deg": 11.4,
+            "deg_exact": 11.437101342964638,
+            "abs_deg": 251.4,
+            "abs_deg_exact": 251.43710134296464,
+            "house": 2,
+            "retro": false
+          }
+        ],
+        "houses": [
+          {
+            "n": 1,
+            "sign": "Весы",
+            "deg": 10.8,
+            "deg_exact": 10.83991267628437,
+            "abs_deg": 190.8,
+            "abs_deg_exact": 190.83991267628437
+          },
+          {
+            "n": 2,
+            "sign": "Скорпион",
+            "deg": 12.4,
+            "deg_exact": 12.408526482238472,
+            "abs_deg": 222.4,
+            "abs_deg_exact": 222.40852648223847
+          },
+          {
+            "n": 3,
+            "sign": "Стрелец",
+            "deg": 11.5,
+            "deg_exact": 11.500340383036018,
+            "abs_deg": 251.5,
+            "abs_deg_exact": 251.50034038303602
+          },
+          {
+            "n": 4,
+            "sign": "Козерог",
+            "deg": 9.2,
+            "deg_exact": 9.156665739099878,
+            "abs_deg": 279.2,
+            "abs_deg_exact": 279.1566657390999
+          },
+          {
+            "n": 5,
+            "sign": "Водолей",
+            "deg": 7.6,
+            "deg_exact": 7.55643808988799,
+            "abs_deg": 307.6,
+            "abs_deg_exact": 307.556438089888
+          },
+          {
+            "n": 6,
+            "sign": "Рыбы",
+            "deg": 8.3,
+            "deg_exact": 8.323610192624983,
+            "abs_deg": 338.3,
+            "abs_deg_exact": 338.323610192625
+          },
+          {
+            "n": 7,
+            "sign": "Овен",
+            "deg": 10.8,
+            "deg_exact": 10.83991267628437,
+            "abs_deg": 10.8,
+            "abs_deg_exact": 10.83991267628437
+          },
+          {
+            "n": 8,
+            "sign": "Телец",
+            "deg": 12.4,
+            "deg_exact": 12.408526482238472,
+            "abs_deg": 42.4,
+            "abs_deg_exact": 42.40852648223847
+          },
+          {
+            "n": 9,
+            "sign": "Близнецы",
+            "deg": 11.5,
+            "deg_exact": 11.500340383036018,
+            "abs_deg": 71.5,
+            "abs_deg_exact": 71.50034038303602
+          },
+          {
+            "n": 10,
+            "sign": "Рак",
+            "deg": 9.2,
+            "deg_exact": 9.156665739099878,
+            "abs_deg": 99.2,
+            "abs_deg_exact": 99.15666573909988
+          },
+          {
+            "n": 11,
+            "sign": "Лев",
+            "deg": 7.6,
+            "deg_exact": 7.556438089888005,
+            "abs_deg": 127.6,
+            "abs_deg_exact": 127.556438089888
+          },
+          {
+            "n": 12,
+            "sign": "Дева",
+            "deg": 8.3,
+            "deg_exact": 8.323610192624955,
+            "abs_deg": 158.3,
+            "abs_deg_exact": 158.32361019262495
+          }
+        ],
+        "aspects": [
+          {
+            "p1": "Солнце",
+            "p2": "Сатурн",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 0.5,
+            "orb_exact": 0.5466239555631773
+          },
+          {
+            "p1": "Плутон",
+            "p2": "Асцендент",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 0.6,
+            "orb_exact": 0.5971886666802675
+          },
+          {
+            "p1": "Солнце",
+            "p2": "Середина неба",
+            "aspect": "оппозиция",
+            "glyph": "☍",
+            "orb": 0.7,
+            "orb_exact": 0.7025498908813006
+          },
+          {
+            "p1": "Солнце",
+            "p2": "Асцендент",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 1.0,
+            "orb_exact": 0.9806970463031917
+          },
+          {
+            "p1": "Сатурн",
+            "p2": "Середина неба",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 1.2,
+            "orb_exact": 1.249173846444478
+          },
+          {
+            "p1": "Асцендент",
+            "p2": "Середина неба",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 1.7,
+            "orb_exact": 1.6832469371844923
+          },
+          {
+            "p1": "Луна",
+            "p2": "Середина неба",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 1.9,
+            "orb_exact": 1.863299189203218
+          },
+          {
+            "p1": "Венера",
+            "p2": "Нептун",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 2.2,
+            "orb_exact": 2.2138024660981728
+          },
+          {
+            "p1": "Марс",
+            "p2": "Юпитер",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 2.3,
+            "orb_exact": 2.3424080144976074
+          },
+          {
+            "p1": "Солнце",
+            "p2": "Луна",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 2.6,
+            "orb_exact": 2.5658490800845186
+          },
+          {
+            "p1": "Луна",
+            "p2": "Сатурн",
+            "aspect": "оппозиция",
+            "glyph": "☍",
+            "orb": 3.1,
+            "orb_exact": 3.1124730356477244
+          },
+          {
+            "p1": "Уран",
+            "p2": "Плутон",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 3.3,
+            "orb_exact": 3.3470057664740125
+          }
+        ],
+        "nodes": [
+          {
+            "name": "Раху (Северный узел)",
+            "sign": "Лев",
+            "deg": 4.0,
+            "deg_exact": 3.9787960020622677,
+            "abs_deg": 124.0,
+            "abs_deg_exact": 123.97879600206227,
+            "house": 10,
+            "retro": true
+          },
+          {
+            "name": "Кету (Южный узел)",
+            "sign": "Водолей",
+            "deg": 4.0,
+            "deg_exact": 3.9787960020622677,
+            "abs_deg": 304.0,
+            "abs_deg_exact": 303.97879600206227,
+            "house": 4,
+            "retro": true
+          },
+          {
+            "name": "Лилит (Чёрная Луна)",
+            "sign": "Стрелец",
+            "deg": 12.2,
+            "deg_exact": 12.212593338569064,
+            "abs_deg": 252.2,
+            "abs_deg_exact": 252.21259333856906,
+            "house": 3,
+            "retro": false
+          }
+        ],
+        "calculation": {
+          "contract_version": 2,
+          "configuration_fingerprint": "d4ddae4a193c1a86",
+          "config": {
+            "zodiac_type": "Tropical",
+            "house_system": "P",
+            "house_system_name": "Placidus",
+            "perspective_type": "Apparent Geocentric",
+            "node_mode": "true",
+            "node_mode_label": "True Node",
+            "ephemeris_engine": "Swiss Ephemeris via Kerykeion",
+            "active_points": [
+              "Sun",
+              "Moon",
+              "Mercury",
+              "Venus",
+              "Mars",
+              "Jupiter",
+              "Saturn",
+              "Uranus",
+              "Neptune",
+              "Pluto",
+              "Chiron",
+              "Juno",
+              "Ceres",
+              "Vesta",
+              "Pallas",
+              "True_North_Lunar_Node",
+              "True_South_Lunar_Node",
+              "True_Lilith",
+              "Ascendant",
+              "Medium_Coeli",
+              "Descendant",
+              "Imum_Coeli"
+            ],
+            "aspect_policy": {
+              "included": [
+                "conjunction",
+                "opposition",
+                "trine",
+                "square",
+                "sextile"
+              ],
+              "angles": {
+                "conjunction": 0.0,
+                "opposition": 180.0,
+                "trine": 120.0,
+                "square": 90.0,
+                "sextile": 60.0
+              },
+              "orbs_deg": {
+                "conjunction": 8.0,
+                "opposition": 8.0,
+                "trine": 8.0,
+                "square": 7.0,
+                "sextile": 6.0
+              },
+              "scope": "major aspects between active planets/points and angles"
+            },
+            "node_policy": "true_lunar_nodes_plus_true_lilith",
+            "precision_policy": "precision-state-v2",
+            "runtime_versions": {
+              "kerykeion": "5.12.9",
+              "swiss_ephemeris": "2.10.3.2",
+              "tzdata": "2026.3"
+            },
+            "configuration_schema_version": 1
+          },
+          "input": {
+            "birth_date": "2000-01-01",
+            "birth_time": "00:00",
+            "city": "UTC",
+            "lat": 0.0,
+            "lon": 0.0,
+            "tz": "UTC",
+            "time_known": true,
+            "precision_reason": "exact",
+            "adapter_version": "oracleai-kerykeion-engine-v2",
+            "request_fingerprint": "8481cba2f67d7b40",
+            "configuration_fingerprint": "d4ddae4a193c1a86",
+            "location_reason": "valid",
+            "coordinate_source": "unknown",
+            "coordinate_confidence": null,
+            "timezone_source": "provided",
+            "local_time_status": "normal",
+            "candidate_instants": [
+              "2000-01-01T00:00:00+00:00"
+            ],
+            "ambiguity_mode": "safe_date_only",
+            "precision_state": "exact",
+            "original_birth_time": "00:00",
+            "uncertainty": {
+              "kind": "none",
+              "candidate_instants": [
+                "2000-01-01T00:00:00+00:00"
+              ],
+              "angular_data_available": true
+            }
+          },
+          "precision": "exact",
+          "angular_data_available": true,
+          "values": {
+            "rounded_for_ui": true,
+            "exact_fields_suffix": "_exact",
+            "longitude_unit": "degrees",
+            "orb_unit": "degrees"
+          }
+        }
+      }
+    },
+    {
+      "input": {
+        "id": "anchorage_high_lat",
+        "birth_date": "2000-03-20",
+        "birth_time": "12:00",
+        "city": "Anchorage",
+        "lat": 61.2181,
+        "lon": -149.9003,
+        "tz": "America/Anchorage",
+        "time_known": true
+      },
+      "output": {
+        "mode": "full",
+        "precision": "exact",
+        "sun": {
+          "sign": "Овен",
+          "symbol": "♈",
+          "element": "огонь"
+        },
+        "ascendant": {
+          "sign": "Рак",
+          "deg": 26.0,
+          "deg_exact": 25.98187650103111,
+          "abs_deg": 116.0,
+          "abs_deg_exact": 115.98187650103111
+        },
+        "mc": {
+          "sign": "Рыбы",
+          "deg": 12.4,
+          "deg_exact": 12.42114012659772,
+          "abs_deg": 342.4,
+          "abs_deg_exact": 342.4211401265977
+        },
+        "planets": [
+          {
+            "name": "Солнце",
+            "sign": "Овен",
+            "deg": 0.6,
+            "deg_exact": 0.5548619174826867,
+            "abs_deg": 0.6,
+            "abs_deg_exact": 0.5548619174826867,
+            "house": 10,
+            "retro": false
+          },
+          {
+            "name": "Луна",
+            "sign": "Весы",
+            "deg": 9.0,
+            "deg_exact": 9.018783848986345,
+            "abs_deg": 189.0,
+            "abs_deg_exact": 189.01878384898635,
+            "house": 4,
+            "retro": false
+          },
+          {
+            "name": "Меркурий",
+            "sign": "Рыбы",
+            "deg": 4.5,
+            "deg_exact": 4.451572768082542,
+            "abs_deg": 334.5,
+            "abs_deg_exact": 334.45157276808254,
+            "house": 9,
+            "retro": false
+          },
+          {
+            "name": "Венера",
+            "sign": "Рыбы",
+            "deg": 9.1,
+            "deg_exact": 9.130780956689591,
+            "abs_deg": 339.1,
+            "abs_deg_exact": 339.1307809566896,
+            "house": 9,
+            "retro": false
+          },
+          {
+            "name": "Марс",
+            "sign": "Овен",
+            "deg": 28.4,
+            "deg_exact": 28.392672916533463,
+            "abs_deg": 28.4,
+            "abs_deg_exact": 28.392672916533463,
+            "house": 11,
+            "retro": false
+          },
+          {
+            "name": "Юпитер",
+            "sign": "Телец",
+            "deg": 6.7,
+            "deg_exact": 6.720363618703232,
+            "abs_deg": 36.7,
+            "abs_deg_exact": 36.72036361870323,
+            "house": 11,
+            "retro": false
+          },
+          {
+            "name": "Сатурн",
+            "sign": "Телец",
+            "deg": 14.3,
+            "deg_exact": 14.278823953351349,
+            "abs_deg": 44.3,
+            "abs_deg_exact": 44.27882395335135,
+            "house": 11,
+            "retro": false
+          },
+          {
+            "name": "Уран",
+            "sign": "Водолей",
+            "deg": 19.2,
+            "deg_exact": 19.16860404627778,
+            "abs_deg": 319.2,
+            "abs_deg_exact": 319.1686040462778,
+            "house": 8,
+            "retro": false
+          },
+          {
+            "name": "Нептун",
+            "sign": "Водолей",
+            "deg": 5.9,
+            "deg_exact": 5.941348614920571,
+            "abs_deg": 305.9,
+            "abs_deg_exact": 305.94134861492057,
+            "house": 7,
+            "retro": false
+          },
+          {
+            "name": "Плутон",
+            "sign": "Стрелец",
+            "deg": 12.9,
+            "deg_exact": 12.893700225758067,
+            "abs_deg": 252.9,
+            "abs_deg_exact": 252.89370022575807,
+            "house": 5,
+            "retro": true
+          }
+        ],
+        "houses": [
+          {
+            "n": 1,
+            "sign": "Рак",
+            "deg": 26.0,
+            "deg_exact": 25.98187650103111,
+            "abs_deg": 116.0,
+            "abs_deg_exact": 115.98187650103111
+          },
+          {
+            "n": 2,
+            "sign": "Лев",
+            "deg": 6.6,
+            "deg_exact": 6.619189362589978,
+            "abs_deg": 126.6,
+            "abs_deg_exact": 126.61918936258998
+          },
+          {
+            "n": 3,
+            "sign": "Лев",
+            "deg": 20.8,
+            "deg_exact": 20.804129911914742,
+            "abs_deg": 140.8,
+            "abs_deg_exact": 140.80412991191474
+          },
+          {
+            "n": 4,
+            "sign": "Дева",
+            "deg": 12.4,
+            "deg_exact": 12.42114012659772,
+            "abs_deg": 162.4,
+            "abs_deg_exact": 162.42114012659772
+          },
+          {
+            "n": 5,
+            "sign": "Весы",
+            "deg": 20.2,
+            "deg_exact": 20.218026087626015,
+            "abs_deg": 200.2,
+            "abs_deg_exact": 200.21802608762601
+          },
+          {
+            "n": 6,
+            "sign": "Стрелец",
+            "deg": 18.4,
+            "deg_exact": 18.378512321485744,
+            "abs_deg": 258.4,
+            "abs_deg_exact": 258.37851232148574
+          },
+          {
+            "n": 7,
+            "sign": "Козерог",
+            "deg": 26.0,
+            "deg_exact": 25.981876501031138,
+            "abs_deg": 296.0,
+            "abs_deg_exact": 295.98187650103114
+          },
+          {
+            "n": 8,
+            "sign": "Водолей",
+            "deg": 6.6,
+            "deg_exact": 6.619189362589964,
+            "abs_deg": 306.6,
+            "abs_deg_exact": 306.61918936258996
+          },
+          {
+            "n": 9,
+            "sign": "Водолей",
+            "deg": 20.8,
+            "deg_exact": 20.804129911914742,
+            "abs_deg": 320.8,
+            "abs_deg_exact": 320.80412991191474
+          },
+          {
+            "n": 10,
+            "sign": "Рыбы",
+            "deg": 12.4,
+            "deg_exact": 12.42114012659772,
+            "abs_deg": 342.4,
+            "abs_deg_exact": 342.4211401265977
+          },
+          {
+            "n": 11,
+            "sign": "Овен",
+            "deg": 20.2,
+            "deg_exact": 20.218026087626004,
+            "abs_deg": 20.2,
+            "abs_deg_exact": 20.218026087626004
+          },
+          {
+            "n": 12,
+            "sign": "Близнецы",
+            "deg": 18.4,
+            "deg_exact": 18.378512321485744,
+            "abs_deg": 78.4,
+            "abs_deg_exact": 78.37851232148574
+          }
+        ],
+        "aspects": [
+          {
+            "p1": "Плутон",
+            "p2": "Середина неба",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 0.5,
+            "orb_exact": 0.4725600991603187
+          },
+          {
+            "p1": "Юпитер",
+            "p2": "Нептун",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 0.8,
+            "orb_exact": 0.7790150037826606
+          },
+          {
+            "p1": "Сатурн",
+            "p2": "Середина неба",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 1.9,
+            "orb_exact": 1.8576838267536004
+          },
+          {
+            "p1": "Меркурий",
+            "p2": "Юпитер",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 2.3,
+            "orb_exact": 2.2687908506206895
+          },
+          {
+            "p1": "Венера",
+            "p2": "Юпитер",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 2.4,
+            "orb_exact": 2.4104173379863596
+          },
+          {
+            "p1": "Марс",
+            "p2": "Асцендент",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 2.4,
+            "orb_exact": 2.4107964155023183
+          },
+          {
+            "p1": "Луна",
+            "p2": "Нептун",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 3.1,
+            "orb_exact": 3.0774352340657742
+          },
+          {
+            "p1": "Венера",
+            "p2": "Середина неба",
+            "aspect": "соединение",
+            "glyph": "☌",
+            "orb": 3.3,
+            "orb_exact": 3.290359169908129
+          },
+          {
+            "p1": "Венера",
+            "p2": "Плутон",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 3.8,
+            "orb_exact": 3.762919269068476
+          },
+          {
+            "p1": "Луна",
+            "p2": "Плутон",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 3.9,
+            "orb_exact": 3.8749163767716936
+          },
+          {
+            "p1": "Солнце",
+            "p2": "Асцендент",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 4.6,
+            "orb_exact": 4.572985416451559
+          },
+          {
+            "p1": "Меркурий",
+            "p2": "Венера",
+            "aspect": "соединение",
+            "glyph": "☌",
+            "orb": 4.7,
+            "orb_exact": 4.679208188607049
+          }
+        ],
+        "nodes": [
+          {
+            "name": "Раху (Северный узел)",
+            "sign": "Лев",
+            "deg": 2.0,
+            "deg_exact": 2.02685482290849,
+            "abs_deg": 122.0,
+            "abs_deg_exact": 122.02685482290849,
+            "house": 1,
+            "retro": true
+          },
+          {
+            "name": "Кету (Южный узел)",
+            "sign": "Водолей",
+            "deg": 2.0,
+            "deg_exact": 2.02685482290849,
+            "abs_deg": 302.0,
+            "abs_deg_exact": 302.0268548229085,
+            "house": 7,
+            "retro": true
+          },
+          {
+            "name": "Лилит (Чёрная Луна)",
+            "sign": "Козерог",
+            "deg": 19.6,
+            "deg_exact": 19.63699435052405,
+            "abs_deg": 289.6,
+            "abs_deg_exact": 289.63699435052405,
+            "house": 6,
+            "retro": true
+          }
+        ],
+        "calculation": {
+          "contract_version": 2,
+          "configuration_fingerprint": "d4ddae4a193c1a86",
+          "config": {
+            "zodiac_type": "Tropical",
+            "house_system": "P",
+            "house_system_name": "Placidus",
+            "perspective_type": "Apparent Geocentric",
+            "node_mode": "true",
+            "node_mode_label": "True Node",
+            "ephemeris_engine": "Swiss Ephemeris via Kerykeion",
+            "active_points": [
+              "Sun",
+              "Moon",
+              "Mercury",
+              "Venus",
+              "Mars",
+              "Jupiter",
+              "Saturn",
+              "Uranus",
+              "Neptune",
+              "Pluto",
+              "Chiron",
+              "Juno",
+              "Ceres",
+              "Vesta",
+              "Pallas",
+              "True_North_Lunar_Node",
+              "True_South_Lunar_Node",
+              "True_Lilith",
+              "Ascendant",
+              "Medium_Coeli",
+              "Descendant",
+              "Imum_Coeli"
+            ],
+            "aspect_policy": {
+              "included": [
+                "conjunction",
+                "opposition",
+                "trine",
+                "square",
+                "sextile"
+              ],
+              "angles": {
+                "conjunction": 0.0,
+                "opposition": 180.0,
+                "trine": 120.0,
+                "square": 90.0,
+                "sextile": 60.0
+              },
+              "orbs_deg": {
+                "conjunction": 8.0,
+                "opposition": 8.0,
+                "trine": 8.0,
+                "square": 7.0,
+                "sextile": 6.0
+              },
+              "scope": "major aspects between active planets/points and angles"
+            },
+            "node_policy": "true_lunar_nodes_plus_true_lilith",
+            "precision_policy": "precision-state-v2",
+            "runtime_versions": {
+              "kerykeion": "5.12.9",
+              "swiss_ephemeris": "2.10.3.2",
+              "tzdata": "2026.3"
+            },
+            "configuration_schema_version": 1
+          },
+          "input": {
+            "birth_date": "2000-03-20",
+            "birth_time": "12:00",
+            "city": "Anchorage",
+            "lat": 61.2181,
+            "lon": -149.9003,
+            "tz": "America/Anchorage",
+            "time_known": true,
+            "precision_reason": "exact",
+            "adapter_version": "oracleai-kerykeion-engine-v2",
+            "request_fingerprint": "823b1ee3f28e839c",
+            "configuration_fingerprint": "d4ddae4a193c1a86",
+            "location_reason": "valid",
+            "coordinate_source": "unknown",
+            "coordinate_confidence": null,
+            "timezone_source": "provided",
+            "local_time_status": "normal",
+            "candidate_instants": [
+              "2000-03-20T21:00:00+00:00"
+            ],
+            "ambiguity_mode": "safe_date_only",
+            "precision_state": "exact",
+            "original_birth_time": "12:00",
+            "uncertainty": {
+              "kind": "none",
+              "candidate_instants": [
+                "2000-03-20T21:00:00+00:00"
+              ],
+              "angular_data_available": true
+            }
+          },
+          "precision": "exact",
+          "angular_data_available": true,
+          "values": {
+            "rounded_for_ui": true,
+            "exact_fields_suffix": "_exact",
+            "longitude_unit": "degrees",
+            "orb_unit": "degrees"
+          }
+        }
+      }
+    },
+    {
+      "input": {
+        "id": "sydney_southern",
+        "birth_date": "1990-06-21",
+        "birth_time": "14:30",
+        "city": "Sydney",
+        "lat": -33.8688,
+        "lon": 151.2093,
+        "tz": "Australia/Sydney",
+        "time_known": true
+      },
+      "output": {
+        "mode": "full",
+        "precision": "exact",
+        "sun": {
+          "sign": "Близнецы",
+          "symbol": "♊",
+          "element": "воздух"
+        },
+        "ascendant": {
+          "sign": "Скорпион",
+          "deg": 23.3,
+          "deg_exact": 23.267290000554112,
+          "abs_deg": 233.3,
+          "abs_deg_exact": 233.2672900005541
+        },
+        "mc": {
+          "sign": "Лев",
+          "deg": 5.5,
+          "deg_exact": 5.463920805174155,
+          "abs_deg": 125.5,
+          "abs_deg_exact": 125.46392080517415
+        },
+        "planets": [
+          {
+            "name": "Солнце",
+            "sign": "Близнецы",
+            "deg": 29.6,
+            "deg_exact": 29.560582790597493,
+            "abs_deg": 89.6,
+            "abs_deg_exact": 89.5605827905975,
+            "house": 8,
+            "retro": false
+          },
+          {
+            "name": "Луна",
+            "sign": "Близнецы",
+            "deg": 7.1,
+            "deg_exact": 7.059126230161553,
+            "abs_deg": 67.1,
+            "abs_deg_exact": 67.05912623016155,
+            "house": 7,
+            "retro": false
+          },
+          {
+            "name": "Меркурий",
+            "sign": "Близнецы",
+            "deg": 16.2,
+            "deg_exact": 16.1670549438484,
+            "abs_deg": 76.2,
+            "abs_deg_exact": 76.1670549438484,
+            "house": 7,
+            "retro": false
+          },
+          {
+            "name": "Венера",
+            "sign": "Телец",
+            "deg": 25.5,
+            "deg_exact": 25.480451880133636,
+            "abs_deg": 55.5,
+            "abs_deg_exact": 55.480451880133636,
+            "house": 7,
+            "retro": false
+          },
+          {
+            "name": "Марс",
+            "sign": "Овен",
+            "deg": 15.1,
+            "deg_exact": 15.110930331919919,
+            "abs_deg": 15.1,
+            "abs_deg_exact": 15.110930331919919,
+            "house": 6,
+            "retro": false
+          },
+          {
+            "name": "Юпитер",
+            "sign": "Рак",
+            "deg": 17.1,
+            "deg_exact": 17.130211645260488,
+            "abs_deg": 107.1,
+            "abs_deg_exact": 107.13021164526049,
+            "house": 9,
+            "retro": false
+          },
+          {
+            "name": "Сатурн",
+            "sign": "Козерог",
+            "deg": 23.7,
+            "deg_exact": 23.683033668629434,
+            "abs_deg": 293.7,
+            "abs_deg_exact": 293.68303366862943,
+            "house": 3,
+            "retro": true
+          },
+          {
+            "name": "Уран",
+            "sign": "Козерог",
+            "deg": 7.9,
+            "deg_exact": 7.9405756593089905,
+            "abs_deg": 277.9,
+            "abs_deg_exact": 277.940575659309,
+            "house": 2,
+            "retro": true
+          },
+          {
+            "name": "Нептун",
+            "sign": "Козерог",
+            "deg": 13.6,
+            "deg_exact": 13.571886768438674,
+            "abs_deg": 283.6,
+            "abs_deg_exact": 283.5718867684387,
+            "house": 3,
+            "retro": true
+          },
+          {
+            "name": "Плутон",
+            "sign": "Скорпион",
+            "deg": 15.3,
+            "deg_exact": 15.29331248679648,
+            "abs_deg": 225.3,
+            "abs_deg_exact": 225.29331248679648,
+            "house": 12,
+            "retro": true
+          }
+        ],
+        "houses": [
+          {
+            "n": 1,
+            "sign": "Скорпион",
+            "deg": 23.3,
+            "deg_exact": 23.267290000554112,
+            "abs_deg": 233.3,
+            "abs_deg_exact": 233.2672900005541
+          },
+          {
+            "n": 2,
+            "sign": "Стрелец",
+            "deg": 19.8,
+            "deg_exact": 19.785802425955012,
+            "abs_deg": 259.8,
+            "abs_deg_exact": 259.785802425955
+          },
+          {
+            "n": 3,
+            "sign": "Козерог",
+            "deg": 12.2,
+            "deg_exact": 12.246677018341188,
+            "abs_deg": 282.2,
+            "abs_deg_exact": 282.2466770183412
+          },
+          {
+            "n": 4,
+            "sign": "Водолей",
+            "deg": 5.5,
+            "deg_exact": 5.463920805174155,
+            "abs_deg": 305.5,
+            "abs_deg_exact": 305.46392080517415
+          },
+          {
+            "n": 5,
+            "sign": "Рыбы",
+            "deg": 3.6,
+            "deg_exact": 3.603982517876034,
+            "abs_deg": 333.6,
+            "abs_deg_exact": 333.60398251787603
+          },
+          {
+            "n": 6,
+            "sign": "Овен",
+            "deg": 10.6,
+            "deg_exact": 10.554472917910743,
+            "abs_deg": 10.6,
+            "abs_deg_exact": 10.554472917910743
+          },
+          {
+            "n": 7,
+            "sign": "Телец",
+            "deg": 23.3,
+            "deg_exact": 23.267290000554112,
+            "abs_deg": 53.3,
+            "abs_deg_exact": 53.26729000055411
+          },
+          {
+            "n": 8,
+            "sign": "Близнецы",
+            "deg": 19.8,
+            "deg_exact": 19.785802425955012,
+            "abs_deg": 79.8,
+            "abs_deg_exact": 79.78580242595501
+          },
+          {
+            "n": 9,
+            "sign": "Рак",
+            "deg": 12.2,
+            "deg_exact": 12.246677018341188,
+            "abs_deg": 102.2,
+            "abs_deg_exact": 102.24667701834119
+          },
+          {
+            "n": 10,
+            "sign": "Лев",
+            "deg": 5.5,
+            "deg_exact": 5.463920805174155,
+            "abs_deg": 125.5,
+            "abs_deg_exact": 125.46392080517415
+          },
+          {
+            "n": 11,
+            "sign": "Дева",
+            "deg": 3.6,
+            "deg_exact": 3.603982517876034,
+            "abs_deg": 153.6,
+            "abs_deg_exact": 153.60398251787603
+          },
+          {
+            "n": 12,
+            "sign": "Весы",
+            "deg": 10.6,
+            "deg_exact": 10.554472917910715,
+            "abs_deg": 190.6,
+            "abs_deg_exact": 190.55447291791072
+          }
+        ],
+        "aspects": [
+          {
+            "p1": "Сатурн",
+            "p2": "Асцендент",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 0.4,
+            "orb_exact": 0.41574366807532215
+          },
+          {
+            "p1": "Меркурий",
+            "p2": "Марс",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 1.1,
+            "orb_exact": 1.0561246119284817
+          },
+          {
+            "p1": "Марс",
+            "p2": "Нептун",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 1.5,
+            "orb_exact": 1.5390435634812434
+          },
+          {
+            "p1": "Луна",
+            "p2": "Середина неба",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 1.6,
+            "orb_exact": 1.5952054249873981
+          },
+          {
+            "p1": "Нептун",
+            "p2": "Плутон",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 1.7,
+            "orb_exact": 1.721425718357807
+          },
+          {
+            "p1": "Венера",
+            "p2": "Сатурн",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 1.8,
+            "orb_exact": 1.7974182115042083
+          },
+          {
+            "p1": "Юпитер",
+            "p2": "Плутон",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 1.8,
+            "orb_exact": 1.836899158464007
+          },
+          {
+            "p1": "Марс",
+            "p2": "Юпитер",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 2.0,
+            "orb_exact": 2.0192813133405707
+          },
+          {
+            "p1": "Венера",
+            "p2": "Асцендент",
+            "aspect": "оппозиция",
+            "glyph": "☍",
+            "orb": 2.2,
+            "orb_exact": 2.2131618795795305
+          },
+          {
+            "p1": "Юпитер",
+            "p2": "Нептун",
+            "aspect": "оппозиция",
+            "glyph": "☍",
+            "orb": 3.6,
+            "orb_exact": 3.558324876821814
+          },
+          {
+            "p1": "Уран",
+            "p2": "Нептун",
+            "aspect": "соединение",
+            "glyph": "☌",
+            "orb": 5.6,
+            "orb_exact": 5.631311109129683
+          },
+          {
+            "p1": "Юпитер",
+            "p2": "Асцендент",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 6.1,
+            "orb_exact": 6.1370783552936246
+          }
+        ],
+        "nodes": [
+          {
+            "name": "Раху (Северный узел)",
+            "sign": "Водолей",
+            "deg": 7.8,
+            "deg_exact": 7.835672538605024,
+            "abs_deg": 307.8,
+            "abs_deg_exact": 307.835672538605,
+            "house": 4,
+            "retro": true
+          },
+          {
+            "name": "Кету (Южный узел)",
+            "sign": "Лев",
+            "deg": 7.8,
+            "deg_exact": 7.835672538605024,
+            "abs_deg": 127.8,
+            "abs_deg_exact": 127.83567253860502,
+            "house": 10,
+            "retro": true
+          },
+          {
+            "name": "Лилит (Чёрная Луна)",
+            "sign": "Стрелец",
+            "deg": 11.5,
+            "deg_exact": 11.54721961265193,
+            "abs_deg": 251.5,
+            "abs_deg_exact": 251.54721961265193,
+            "house": 1,
+            "retro": true
+          }
+        ],
+        "calculation": {
+          "contract_version": 2,
+          "configuration_fingerprint": "d4ddae4a193c1a86",
+          "config": {
+            "zodiac_type": "Tropical",
+            "house_system": "P",
+            "house_system_name": "Placidus",
+            "perspective_type": "Apparent Geocentric",
+            "node_mode": "true",
+            "node_mode_label": "True Node",
+            "ephemeris_engine": "Swiss Ephemeris via Kerykeion",
+            "active_points": [
+              "Sun",
+              "Moon",
+              "Mercury",
+              "Venus",
+              "Mars",
+              "Jupiter",
+              "Saturn",
+              "Uranus",
+              "Neptune",
+              "Pluto",
+              "Chiron",
+              "Juno",
+              "Ceres",
+              "Vesta",
+              "Pallas",
+              "True_North_Lunar_Node",
+              "True_South_Lunar_Node",
+              "True_Lilith",
+              "Ascendant",
+              "Medium_Coeli",
+              "Descendant",
+              "Imum_Coeli"
+            ],
+            "aspect_policy": {
+              "included": [
+                "conjunction",
+                "opposition",
+                "trine",
+                "square",
+                "sextile"
+              ],
+              "angles": {
+                "conjunction": 0.0,
+                "opposition": 180.0,
+                "trine": 120.0,
+                "square": 90.0,
+                "sextile": 60.0
+              },
+              "orbs_deg": {
+                "conjunction": 8.0,
+                "opposition": 8.0,
+                "trine": 8.0,
+                "square": 7.0,
+                "sextile": 6.0
+              },
+              "scope": "major aspects between active planets/points and angles"
+            },
+            "node_policy": "true_lunar_nodes_plus_true_lilith",
+            "precision_policy": "precision-state-v2",
+            "runtime_versions": {
+              "kerykeion": "5.12.9",
+              "swiss_ephemeris": "2.10.3.2",
+              "tzdata": "2026.3"
+            },
+            "configuration_schema_version": 1
+          },
+          "input": {
+            "birth_date": "1990-06-21",
+            "birth_time": "14:30",
+            "city": "Sydney",
+            "lat": -33.8688,
+            "lon": 151.2093,
+            "tz": "Australia/Sydney",
+            "time_known": true,
+            "precision_reason": "exact",
+            "adapter_version": "oracleai-kerykeion-engine-v2",
+            "request_fingerprint": "3c92ecbf9acce091",
+            "configuration_fingerprint": "d4ddae4a193c1a86",
+            "location_reason": "valid",
+            "coordinate_source": "unknown",
+            "coordinate_confidence": null,
+            "timezone_source": "provided",
+            "local_time_status": "normal",
+            "candidate_instants": [
+              "1990-06-21T04:30:00+00:00"
+            ],
+            "ambiguity_mode": "safe_date_only",
+            "precision_state": "exact",
+            "original_birth_time": "14:30",
+            "uncertainty": {
+              "kind": "none",
+              "candidate_instants": [
+                "1990-06-21T04:30:00+00:00"
+              ],
+              "angular_data_available": true
+            }
+          },
+          "precision": "exact",
+          "angular_data_available": true,
+          "values": {
+            "rounded_for_ui": true,
+            "exact_fields_suffix": "_exact",
+            "longitude_unit": "degrees",
+            "orb_unit": "degrees"
+          }
+        }
+      }
+    },
+    {
+      "input": {
+        "id": "leap_day",
+        "birth_date": "2000-02-29",
+        "birth_time": "12:00",
+        "city": "UTC",
+        "lat": 0.0,
+        "lon": 0.0,
+        "tz": "UTC",
+        "time_known": true
+      },
+      "output": {
+        "mode": "full",
+        "precision": "exact",
+        "sun": {
+          "sign": "Рыбы",
+          "symbol": "♓",
+          "element": "вода"
+        },
+        "ascendant": {
+          "sign": "Близнецы",
+          "deg": 10.2,
+          "deg_exact": 10.233059759534171,
+          "abs_deg": 70.2,
+          "abs_deg_exact": 70.23305975953417
+        },
+        "mc": {
+          "sign": "Рыбы",
+          "deg": 6.9,
+          "deg_exact": 6.881756296928074,
+          "abs_deg": 336.9,
+          "abs_deg_exact": 336.8817562969281
+        },
+        "planets": [
+          {
+            "name": "Солнце",
+            "sign": "Рыбы",
+            "deg": 10.2,
+            "deg_exact": 10.20582966495732,
+            "abs_deg": 340.2,
+            "abs_deg_exact": 340.2058296649573,
+            "house": 10,
+            "retro": false
+          },
+          {
+            "name": "Луна",
+            "sign": "Козерог",
+            "deg": 5.5,
+            "deg_exact": 5.536133043377276,
+            "abs_deg": 275.5,
+            "abs_deg_exact": 275.5361330433773,
+            "house": 7,
+            "retro": false
+          },
+          {
+            "name": "Меркурий",
+            "sign": "Рыбы",
+            "deg": 12.5,
+            "deg_exact": 12.506500967798388,
+            "abs_deg": 342.5,
+            "abs_deg_exact": 342.5065009677984,
+            "house": 10,
+            "retro": true
+          },
+          {
+            "name": "Венера",
+            "sign": "Водолей",
+            "deg": 14.0,
+            "deg_exact": 13.956566446344027,
+            "abs_deg": 314.0,
+            "abs_deg_exact": 313.956566446344,
+            "house": 9,
+            "retro": false
+          },
+          {
+            "name": "Марс",
+            "sign": "Овен",
+            "deg": 13.2,
+            "deg_exact": 13.221572343599933,
+            "abs_deg": 13.2,
+            "abs_deg_exact": 13.221572343599933,
+            "house": 11,
+            "retro": false
+          },
+          {
+            "name": "Юпитер",
+            "sign": "Телец",
+            "deg": 2.6,
+            "deg_exact": 2.5770531225718187,
+            "abs_deg": 32.6,
+            "abs_deg_exact": 32.57705312257182,
+            "house": 11,
+            "retro": false
+          },
+          {
+            "name": "Сатурн",
+            "sign": "Телец",
+            "deg": 12.4,
+            "deg_exact": 12.365781627993385,
+            "abs_deg": 42.4,
+            "abs_deg_exact": 42.365781627993385,
+            "house": 12,
+            "retro": false
+          },
+          {
+            "name": "Уран",
+            "sign": "Водолей",
+            "deg": 18.1,
+            "deg_exact": 18.12299443342829,
+            "abs_deg": 318.1,
+            "abs_deg_exact": 318.1229944334283,
+            "house": 9,
+            "retro": false
+          },
+          {
+            "name": "Нептун",
+            "sign": "Водолей",
+            "deg": 5.4,
+            "deg_exact": 5.350202907576829,
+            "abs_deg": 305.4,
+            "abs_deg_exact": 305.35020290757683,
+            "house": 8,
+            "retro": false
+          },
+          {
+            "name": "Плутон",
+            "sign": "Стрелец",
+            "deg": 12.8,
+            "deg_exact": 12.837863360205262,
+            "abs_deg": 252.8,
+            "abs_deg_exact": 252.83786336020526,
+            "house": 7,
+            "retro": false
+          }
+        ],
+        "houses": [
+          {
+            "n": 1,
+            "sign": "Близнецы",
+            "deg": 10.2,
+            "deg_exact": 10.233059759534171,
+            "abs_deg": 70.2,
+            "abs_deg_exact": 70.23305975953417
+          },
+          {
+            "n": 2,
+            "sign": "Рак",
+            "deg": 7.9,
+            "deg_exact": 7.909257462535052,
+            "abs_deg": 97.9,
+            "abs_deg_exact": 97.90925746253505
+          },
+          {
+            "n": 3,
+            "sign": "Лев",
+            "deg": 6.2,
+            "deg_exact": 6.229987897796178,
+            "abs_deg": 126.2,
+            "abs_deg_exact": 126.22998789779618
+          },
+          {
+            "n": 4,
+            "sign": "Дева",
+            "deg": 6.9,
+            "deg_exact": 6.881756296928074,
+            "abs_deg": 156.9,
+            "abs_deg_exact": 156.88175629692807
+          },
+          {
+            "n": 5,
+            "sign": "Весы",
+            "deg": 9.4,
+            "deg_exact": 9.37143156466891,
+            "abs_deg": 189.4,
+            "abs_deg_exact": 189.3714315646689
+          },
+          {
+            "n": 6,
+            "sign": "Скорпион",
+            "deg": 11.0,
+            "deg_exact": 11.03630442950265,
+            "abs_deg": 221.0,
+            "abs_deg_exact": 221.03630442950265
+          },
+          {
+            "n": 7,
+            "sign": "Стрелец",
+            "deg": 10.2,
+            "deg_exact": 10.233059759534171,
+            "abs_deg": 250.2,
+            "abs_deg_exact": 250.23305975953417
+          },
+          {
+            "n": 8,
+            "sign": "Козерог",
+            "deg": 7.9,
+            "deg_exact": 7.909257462535038,
+            "abs_deg": 277.9,
+            "abs_deg_exact": 277.90925746253504
+          },
+          {
+            "n": 9,
+            "sign": "Водолей",
+            "deg": 6.2,
+            "deg_exact": 6.22998789779615,
+            "abs_deg": 306.2,
+            "abs_deg_exact": 306.22998789779615
+          },
+          {
+            "n": 10,
+            "sign": "Рыбы",
+            "deg": 6.9,
+            "deg_exact": 6.881756296928074,
+            "abs_deg": 336.9,
+            "abs_deg_exact": 336.8817562969281
+          },
+          {
+            "n": 11,
+            "sign": "Овен",
+            "deg": 9.4,
+            "deg_exact": 9.371431564668905,
+            "abs_deg": 9.4,
+            "abs_deg_exact": 9.371431564668905
+          },
+          {
+            "n": 12,
+            "sign": "Телец",
+            "deg": 11.0,
+            "deg_exact": 11.036304429502643,
+            "abs_deg": 41.0,
+            "abs_deg_exact": 41.03630442950264
+          }
+        ],
+        "aspects": [
+          {
+            "p1": "Солнце",
+            "p2": "Асцендент",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 0.0,
+            "orb_exact": 0.02723009457685066
+          },
+          {
+            "p1": "Меркурий",
+            "p2": "Сатурн",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 0.1,
+            "orb_exact": 0.14071933980500262
+          },
+          {
+            "p1": "Меркурий",
+            "p2": "Плутон",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 0.3,
+            "orb_exact": 0.3313623924068736
+          },
+          {
+            "p1": "Марс",
+            "p2": "Плутон",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 0.4,
+            "orb_exact": 0.3837089833946834
+          },
+          {
+            "p1": "Венера",
+            "p2": "Марс",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 0.7,
+            "orb_exact": 0.7349941027441105
+          },
+          {
+            "p1": "Венера",
+            "p2": "Плутон",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 1.1,
+            "orb_exact": 1.1187030861387655
+          },
+          {
+            "p1": "Луна",
+            "p2": "Середина неба",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 1.3,
+            "orb_exact": 1.345623253550798
+          },
+          {
+            "p1": "Венера",
+            "p2": "Сатурн",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 1.6,
+            "orb_exact": 1.5907848183506417
+          },
+          {
+            "p1": "Солнце",
+            "p2": "Сатурн",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 2.2,
+            "orb_exact": 2.1599519630360646
+          },
+          {
+            "p1": "Солнце",
+            "p2": "Меркурий",
+            "aspect": "соединение",
+            "glyph": "☌",
+            "orb": 2.3,
+            "orb_exact": 2.3006713028410672
+          },
+          {
+            "p1": "Меркурий",
+            "p2": "Асцендент",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 2.3,
+            "orb_exact": 2.2734412082642166
+          },
+          {
+            "p1": "Солнце",
+            "p2": "Плутон",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 2.6,
+            "orb_exact": 2.632033695247941
+          }
+        ],
+        "nodes": [
+          {
+            "name": "Раху (Северный узел)",
+            "sign": "Лев",
+            "deg": 3.2,
+            "deg_exact": 3.1995571033805987,
+            "abs_deg": 123.2,
+            "abs_deg_exact": 123.1995571033806,
+            "house": 2,
+            "retro": false
+          },
+          {
+            "name": "Кету (Южный узел)",
+            "sign": "Водолей",
+            "deg": 3.2,
+            "deg_exact": 3.1995571033805845,
+            "abs_deg": 303.2,
+            "abs_deg_exact": 303.1995571033806,
+            "house": 8,
+            "retro": false
+          },
+          {
+            "name": "Лилит (Чёрная Луна)",
+            "sign": "Стрелец",
+            "deg": 27.4,
+            "deg_exact": 27.432776044587627,
+            "abs_deg": 267.4,
+            "abs_deg_exact": 267.4327760445876,
+            "house": 7,
+            "retro": true
+          }
+        ],
+        "calculation": {
+          "contract_version": 2,
+          "configuration_fingerprint": "d4ddae4a193c1a86",
+          "config": {
+            "zodiac_type": "Tropical",
+            "house_system": "P",
+            "house_system_name": "Placidus",
+            "perspective_type": "Apparent Geocentric",
+            "node_mode": "true",
+            "node_mode_label": "True Node",
+            "ephemeris_engine": "Swiss Ephemeris via Kerykeion",
+            "active_points": [
+              "Sun",
+              "Moon",
+              "Mercury",
+              "Venus",
+              "Mars",
+              "Jupiter",
+              "Saturn",
+              "Uranus",
+              "Neptune",
+              "Pluto",
+              "Chiron",
+              "Juno",
+              "Ceres",
+              "Vesta",
+              "Pallas",
+              "True_North_Lunar_Node",
+              "True_South_Lunar_Node",
+              "True_Lilith",
+              "Ascendant",
+              "Medium_Coeli",
+              "Descendant",
+              "Imum_Coeli"
+            ],
+            "aspect_policy": {
+              "included": [
+                "conjunction",
+                "opposition",
+                "trine",
+                "square",
+                "sextile"
+              ],
+              "angles": {
+                "conjunction": 0.0,
+                "opposition": 180.0,
+                "trine": 120.0,
+                "square": 90.0,
+                "sextile": 60.0
+              },
+              "orbs_deg": {
+                "conjunction": 8.0,
+                "opposition": 8.0,
+                "trine": 8.0,
+                "square": 7.0,
+                "sextile": 6.0
+              },
+              "scope": "major aspects between active planets/points and angles"
+            },
+            "node_policy": "true_lunar_nodes_plus_true_lilith",
+            "precision_policy": "precision-state-v2",
+            "runtime_versions": {
+              "kerykeion": "5.12.9",
+              "swiss_ephemeris": "2.10.3.2",
+              "tzdata": "2026.3"
+            },
+            "configuration_schema_version": 1
+          },
+          "input": {
+            "birth_date": "2000-02-29",
+            "birth_time": "12:00",
+            "city": "UTC",
+            "lat": 0.0,
+            "lon": 0.0,
+            "tz": "UTC",
+            "time_known": true,
+            "precision_reason": "exact",
+            "adapter_version": "oracleai-kerykeion-engine-v2",
+            "request_fingerprint": "0fbc1cd2bcce0cc3",
+            "configuration_fingerprint": "d4ddae4a193c1a86",
+            "location_reason": "valid",
+            "coordinate_source": "unknown",
+            "coordinate_confidence": null,
+            "timezone_source": "provided",
+            "local_time_status": "normal",
+            "candidate_instants": [
+              "2000-02-29T12:00:00+00:00"
+            ],
+            "ambiguity_mode": "safe_date_only",
+            "precision_state": "exact",
+            "original_birth_time": "12:00",
+            "uncertainty": {
+              "kind": "none",
+              "candidate_instants": [
+                "2000-02-29T12:00:00+00:00"
+              ],
+              "angular_data_available": true
+            }
+          },
+          "precision": "exact",
+          "angular_data_available": true,
+          "values": {
+            "rounded_for_ui": true,
+            "exact_fields_suffix": "_exact",
+            "longitude_unit": "degrees",
+            "orb_unit": "degrees"
+          }
+        }
+      }
+    },
+    {
+      "input": {
+        "id": "date_only_no_time",
+        "birth_date": "1990-06-21",
+        "birth_time": null,
+        "city": "Kazan",
+        "lat": 55.79,
+        "lon": 49.12,
+        "tz": "Europe/Moscow",
+        "time_known": false
+      },
+      "output": {
+        "mode": "full",
+        "precision": "date_only",
+        "sun": {
+          "sign": "Близнецы",
+          "symbol": "♊",
+          "element": "воздух"
+        },
+        "ascendant": null,
+        "mc": null,
+        "planets": [
+          {
+            "name": "Солнце",
+            "sign": "Близнецы",
+            "deg": 29.7,
+            "deg_exact": 29.6998140733822,
+            "abs_deg": 89.7,
+            "abs_deg_exact": 89.6998140733822,
+            "house": null,
+            "retro": false
+          },
+          {
+            "name": "Луна",
+            "sign": "Близнецы",
+            "deg": 9.3,
+            "deg_exact": 9.255599213403073,
+            "abs_deg": 69.3,
+            "abs_deg_exact": 69.25559921340307,
+            "house": null,
+            "retro": false
+          },
+          {
+            "name": "Меркурий",
+            "sign": "Близнецы",
+            "deg": 16.5,
+            "deg_exact": 16.45357712101584,
+            "abs_deg": 76.5,
+            "abs_deg_exact": 76.45357712101584,
+            "house": null,
+            "retro": false
+          },
+          {
+            "name": "Венера",
+            "sign": "Телец",
+            "deg": 25.7,
+            "deg_exact": 25.652684411936796,
+            "abs_deg": 55.7,
+            "abs_deg_exact": 55.6526844119368,
+            "house": null,
+            "retro": false
+          },
+          {
+            "name": "Марс",
+            "sign": "Овен",
+            "deg": 15.2,
+            "deg_exact": 15.2147355133627,
+            "abs_deg": 15.2,
+            "abs_deg_exact": 15.2147355133627,
+            "house": null,
+            "retro": false
+          },
+          {
+            "name": "Юпитер",
+            "sign": "Рак",
+            "deg": 17.2,
+            "deg_exact": 17.162240376882963,
+            "abs_deg": 107.2,
+            "abs_deg_exact": 107.16224037688296,
+            "house": null,
+            "retro": false
+          },
+          {
+            "name": "Сатурн",
+            "sign": "Козерог",
+            "deg": 23.7,
+            "deg_exact": 23.673709408477805,
+            "abs_deg": 293.7,
+            "abs_deg_exact": 293.6737094084778,
+            "house": null,
+            "retro": true
+          },
+          {
+            "name": "Уран",
+            "sign": "Козерог",
+            "deg": 7.9,
+            "deg_exact": 7.934746822100976,
+            "abs_deg": 277.9,
+            "abs_deg_exact": 277.934746822101,
+            "house": null,
+            "retro": true
+          },
+          {
+            "name": "Нептун",
+            "sign": "Козерог",
+            "deg": 13.6,
+            "deg_exact": 13.568099738692922,
+            "abs_deg": 283.6,
+            "abs_deg_exact": 283.5680997386929,
+            "house": null,
+            "retro": true
+          },
+          {
+            "name": "Плутон",
+            "sign": "Скорпион",
+            "deg": 15.3,
+            "deg_exact": 15.290719285030718,
+            "abs_deg": 225.3,
+            "abs_deg_exact": 225.29071928503072,
+            "house": null,
+            "retro": true
+          }
+        ],
+        "houses": [],
+        "aspects": [
+          {
+            "p1": "Меркурий",
+            "p2": "Марс",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 1.2,
+            "orb_exact": 1.2388416076531428
+          },
+          {
+            "p1": "Марс",
+            "p2": "Нептун",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 1.6,
+            "orb_exact": 1.6466357746697895
+          },
+          {
+            "p1": "Нептун",
+            "p2": "Плутон",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 1.7,
+            "orb_exact": 1.7226195463377962
+          },
+          {
+            "p1": "Марс",
+            "p2": "Юпитер",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 1.9,
+            "orb_exact": 1.9475048635202938
+          },
+          {
+            "p1": "Юпитер",
+            "p2": "Плутон",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 1.9,
+            "orb_exact": 1.8715210918522303
+          },
+          {
+            "p1": "Венера",
+            "p2": "Сатурн",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 2.0,
+            "orb_exact": 1.9789750034589986
+          },
+          {
+            "p1": "Юпитер",
+            "p2": "Нептун",
+            "aspect": "оппозиция",
+            "glyph": "☍",
+            "orb": 3.6,
+            "orb_exact": 3.5941406381900265
+          }
+        ],
+        "nodes": [
+          {
+            "name": "Раху (Северный узел)",
+            "sign": "Водолей",
+            "deg": 7.8,
+            "deg_exact": 7.8223612422467,
+            "abs_deg": 307.8,
+            "abs_deg_exact": 307.8223612422467,
+            "house": null,
+            "retro": true
+          },
+          {
+            "name": "Кету (Южный узел)",
+            "sign": "Лев",
+            "deg": 7.8,
+            "deg_exact": 7.8223612422467,
+            "abs_deg": 127.8,
+            "abs_deg_exact": 127.8223612422467,
+            "house": null,
+            "retro": true
+          },
+          {
+            "name": "Лилит (Чёрная Луна)",
+            "sign": "Стрелец",
+            "deg": 11.3,
+            "deg_exact": 11.300610284472583,
+            "abs_deg": 251.3,
+            "abs_deg_exact": 251.30061028447258,
+            "house": null,
+            "retro": true
+          }
+        ],
+        "calculation": {
+          "contract_version": 2,
+          "configuration_fingerprint": "d4ddae4a193c1a86",
+          "config": {
+            "zodiac_type": "Tropical",
+            "house_system": "P",
+            "house_system_name": "Placidus",
+            "perspective_type": "Apparent Geocentric",
+            "node_mode": "true",
+            "node_mode_label": "True Node",
+            "ephemeris_engine": "Swiss Ephemeris via Kerykeion",
+            "active_points": [
+              "Sun",
+              "Moon",
+              "Mercury",
+              "Venus",
+              "Mars",
+              "Jupiter",
+              "Saturn",
+              "Uranus",
+              "Neptune",
+              "Pluto",
+              "Chiron",
+              "Juno",
+              "Ceres",
+              "Vesta",
+              "Pallas",
+              "True_North_Lunar_Node",
+              "True_South_Lunar_Node",
+              "True_Lilith",
+              "Ascendant",
+              "Medium_Coeli",
+              "Descendant",
+              "Imum_Coeli"
+            ],
+            "aspect_policy": {
+              "included": [
+                "conjunction",
+                "opposition",
+                "trine",
+                "square",
+                "sextile"
+              ],
+              "angles": {
+                "conjunction": 0.0,
+                "opposition": 180.0,
+                "trine": 120.0,
+                "square": 90.0,
+                "sextile": 60.0
+              },
+              "orbs_deg": {
+                "conjunction": 8.0,
+                "opposition": 8.0,
+                "trine": 8.0,
+                "square": 7.0,
+                "sextile": 6.0
+              },
+              "scope": "major aspects between active planets/points and angles"
+            },
+            "node_policy": "true_lunar_nodes_plus_true_lilith",
+            "precision_policy": "precision-state-v2",
+            "runtime_versions": {
+              "kerykeion": "5.12.9",
+              "swiss_ephemeris": "2.10.3.2",
+              "tzdata": "2026.3"
+            },
+            "configuration_schema_version": 1
+          },
+          "input": {
+            "birth_date": "1990-06-21",
+            "birth_time": null,
+            "city": "Kazan",
+            "lat": 55.79,
+            "lon": 49.12,
+            "tz": "Europe/Moscow",
+            "time_known": false,
+            "precision_reason": "date_only",
+            "adapter_version": "oracleai-kerykeion-engine-v2",
+            "request_fingerprint": "5e7d2474da0e5455",
+            "configuration_fingerprint": "d4ddae4a193c1a86",
+            "location_reason": "valid",
+            "coordinate_source": "unknown",
+            "coordinate_confidence": null,
+            "timezone_source": "provided",
+            "local_time_status": "not_applicable",
+            "candidate_instants": [],
+            "ambiguity_mode": "safe_date_only",
+            "precision_state": "date_only",
+            "original_birth_time": null,
+            "uncertainty": {
+              "kind": "none",
+              "candidate_instants": [],
+              "angular_data_available": false
+            }
+          },
+          "precision": "date_only",
+          "angular_data_available": false,
+          "values": {
+            "rounded_for_ui": true,
+            "exact_fields_suffix": "_exact",
+            "longitude_unit": "degrees",
+            "orb_unit": "degrees"
+          }
+        }
+      }
+    },
+    {
+      "input": {
+        "id": "time_without_timezone",
+        "birth_date": "1990-06-21",
+        "birth_time": "14:30",
+        "city": "Kazan",
+        "lat": 55.79,
+        "lon": 49.12,
+        "tz": null,
+        "time_known": true
+      },
+      "output": {
+        "mode": "full",
+        "precision": "date_only",
+        "sun": {
+          "sign": "Близнецы",
+          "symbol": "♊",
+          "element": "воздух"
+        },
+        "ascendant": null,
+        "mc": null,
+        "planets": [
+          {
+            "name": "Солнце",
+            "sign": "Близнецы",
+            "deg": 29.9,
+            "deg_exact": 29.858933521536514,
+            "abs_deg": 89.9,
+            "abs_deg_exact": 89.85893352153651,
+            "house": null,
+            "retro": false
+          },
+          {
+            "name": "Луна",
+            "sign": "Близнецы",
+            "deg": 11.8,
+            "deg_exact": 11.765945625347342,
+            "abs_deg": 71.8,
+            "abs_deg_exact": 71.76594562534734,
+            "house": null,
+            "retro": false
+          },
+          {
+            "name": "Меркурий",
+            "sign": "Близнецы",
+            "deg": 16.8,
+            "deg_exact": 16.78204192357562,
+            "abs_deg": 76.8,
+            "abs_deg_exact": 76.78204192357562,
+            "house": null,
+            "retro": false
+          },
+          {
+            "name": "Венера",
+            "sign": "Телец",
+            "deg": 25.8,
+            "deg_exact": 25.849542581512658,
+            "abs_deg": 55.8,
+            "abs_deg_exact": 55.84954258151266,
+            "house": null,
+            "retro": false
+          },
+          {
+            "name": "Марс",
+            "sign": "Овен",
+            "deg": 15.3,
+            "deg_exact": 15.333334209328441,
+            "abs_deg": 15.3,
+            "abs_deg_exact": 15.333334209328441,
+            "house": null,
+            "retro": false
+          },
+          {
+            "name": "Юпитер",
+            "sign": "Рак",
+            "deg": 17.2,
+            "deg_exact": 17.198856505148896,
+            "abs_deg": 107.2,
+            "abs_deg_exact": 107.1988565051489,
+            "house": null,
+            "retro": false
+          },
+          {
+            "name": "Сатурн",
+            "sign": "Козерог",
+            "deg": 23.7,
+            "deg_exact": 23.66303155063582,
+            "abs_deg": 293.7,
+            "abs_deg_exact": 293.6630315506358,
+            "house": null,
+            "retro": true
+          },
+          {
+            "name": "Уран",
+            "sign": "Козерог",
+            "deg": 7.9,
+            "deg_exact": 7.928081913494793,
+            "abs_deg": 277.9,
+            "abs_deg_exact": 277.9280819134948,
+            "house": null,
+            "retro": true
+          },
+          {
+            "name": "Нептун",
+            "sign": "Козерог",
+            "deg": 13.6,
+            "deg_exact": 13.563768228930826,
+            "abs_deg": 283.6,
+            "abs_deg_exact": 283.5637682289308,
+            "house": null,
+            "retro": true
+          },
+          {
+            "name": "Плутон",
+            "sign": "Скорпион",
+            "deg": 15.3,
+            "deg_exact": 15.287767086633437,
+            "abs_deg": 225.3,
+            "abs_deg_exact": 225.28776708663344,
+            "house": null,
+            "retro": true
+          }
+        ],
+        "houses": [],
+        "aspects": [
+          {
+            "p1": "Меркурий",
+            "p2": "Марс",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 1.4,
+            "orb_exact": 1.4487077142471776
+          },
+          {
+            "p1": "Нептун",
+            "p2": "Плутон",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 1.7,
+            "orb_exact": 1.723998857702611
+          },
+          {
+            "p1": "Марс",
+            "p2": "Нептун",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 1.8,
+            "orb_exact": 1.7695659803976014
+          },
+          {
+            "p1": "Марс",
+            "p2": "Юпитер",
+            "aspect": "квадрат",
+            "glyph": "□",
+            "orb": 1.9,
+            "orb_exact": 1.8655222958204831
+          },
+          {
+            "p1": "Юпитер",
+            "p2": "Плутон",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 1.9,
+            "orb_exact": 1.9110894185154734
+          },
+          {
+            "p1": "Венера",
+            "p2": "Сатурн",
+            "aspect": "трин",
+            "glyph": "△",
+            "orb": 2.2,
+            "orb_exact": 2.1865110308768294
+          },
+          {
+            "p1": "Луна",
+            "p2": "Марс",
+            "aspect": "секстиль",
+            "glyph": "⚹",
+            "orb": 3.6,
+            "orb_exact": 3.5673885839810993
+          },
+          {
+            "p1": "Юпитер",
+            "p2": "Нептун",
+            "aspect": "оппозиция",
+            "glyph": "☍",
+            "orb": 3.6,
+            "orb_exact": 3.6350882762180845
+          }
+        ],
+        "nodes": [
+          {
+            "name": "Раху (Северный узел)",
+            "sign": "Водолей",
+            "deg": 7.8,
+            "deg_exact": 7.8072444532520535,
+            "abs_deg": 307.8,
+            "abs_deg_exact": 307.80724445325205,
+            "house": null,
+            "retro": true
+          },
+          {
+            "name": "Кету (Южный узел)",
+            "sign": "Лев",
+            "deg": 7.8,
+            "deg_exact": 7.8072444532520535,
+            "abs_deg": 127.8,
+            "abs_deg_exact": 127.80724445325205,
+            "house": null,
+            "retro": true
+          },
+          {
+            "name": "Лилит (Чёрная Луна)",
+            "sign": "Стрелец",
+            "deg": 11.0,
+            "deg_exact": 11.022435653964976,
+            "abs_deg": 251.0,
+            "abs_deg_exact": 251.02243565396498,
+            "house": null,
+            "retro": true
+          }
+        ],
+        "calculation": {
+          "contract_version": 2,
+          "configuration_fingerprint": "d4ddae4a193c1a86",
+          "config": {
+            "zodiac_type": "Tropical",
+            "house_system": "P",
+            "house_system_name": "Placidus",
+            "perspective_type": "Apparent Geocentric",
+            "node_mode": "true",
+            "node_mode_label": "True Node",
+            "ephemeris_engine": "Swiss Ephemeris via Kerykeion",
+            "active_points": [
+              "Sun",
+              "Moon",
+              "Mercury",
+              "Venus",
+              "Mars",
+              "Jupiter",
+              "Saturn",
+              "Uranus",
+              "Neptune",
+              "Pluto",
+              "Chiron",
+              "Juno",
+              "Ceres",
+              "Vesta",
+              "Pallas",
+              "True_North_Lunar_Node",
+              "True_South_Lunar_Node",
+              "True_Lilith",
+              "Ascendant",
+              "Medium_Coeli",
+              "Descendant",
+              "Imum_Coeli"
+            ],
+            "aspect_policy": {
+              "included": [
+                "conjunction",
+                "opposition",
+                "trine",
+                "square",
+                "sextile"
+              ],
+              "angles": {
+                "conjunction": 0.0,
+                "opposition": 180.0,
+                "trine": 120.0,
+                "square": 90.0,
+                "sextile": 60.0
+              },
+              "orbs_deg": {
+                "conjunction": 8.0,
+                "opposition": 8.0,
+                "trine": 8.0,
+                "square": 7.0,
+                "sextile": 6.0
+              },
+              "scope": "major aspects between active planets/points and angles"
+            },
+            "node_policy": "true_lunar_nodes_plus_true_lilith",
+            "precision_policy": "precision-state-v2",
+            "runtime_versions": {
+              "kerykeion": "5.12.9",
+              "swiss_ephemeris": "2.10.3.2",
+              "tzdata": "2026.3"
+            },
+            "configuration_schema_version": 1
+          },
+          "input": {
+            "birth_date": "1990-06-21",
+            "birth_time": null,
+            "city": "Kazan",
+            "lat": 55.79,
+            "lon": 49.12,
+            "tz": null,
+            "time_known": false,
+            "precision_reason": "date_only_missing_timezone",
+            "adapter_version": "oracleai-kerykeion-engine-v2",
+            "request_fingerprint": "685a913e94368b61",
+            "configuration_fingerprint": "d4ddae4a193c1a86",
+            "location_reason": "valid",
+            "coordinate_source": "unknown",
+            "coordinate_confidence": null,
+            "timezone_source": "missing",
+            "local_time_status": "no_timezone",
+            "candidate_instants": [],
+            "ambiguity_mode": "safe_date_only",
+            "precision_state": "date_only",
+            "original_birth_time": "14:30",
+            "uncertainty": {
+              "kind": "none",
+              "candidate_instants": [],
+              "angular_data_available": false
+            }
+          },
+          "precision": "date_only",
+          "angular_data_available": false,
+          "values": {
+            "rounded_for_ui": true,
+            "exact_fields_suffix": "_exact",
+            "longitude_unit": "degrees",
+            "orb_unit": "degrees"
+          }
+        }
+      }
+    }
+  ],
+  "pure_contracts": {
+    "circular_midpoint_350_10": 0.0,
+    "synastry_boundary_inside": [
+      {
+        "p1": "Солнце",
+        "p2": "Луна",
+        "aspect": "соединение",
+        "glyph": "☌",
+        "orb": 8.0,
+        "code": "conjunction"
+      }
+    ],
+    "synastry_boundary_outside": [],
+    "matrix_1990_05_15": {
+      "personal": {
+        "n": 15,
+        "arcana": "Дьявол",
+        "title": "Личный аркан (характер)",
+        "meaning": "искушения, привязанности, теневая сторона",
+        "keywords": "искушения, привязанности, теневая сторона",
+        "plus": "Мощная энергия, умение видеть и использовать ресурсы, страсть.",
+        "minus": "Зависимости, страх перед силой, привязанность к материальному, самообман.",
+        "advice": "Признай свою тень — то, что осознано, перестаёт управлять."
+      },
+      "spirit": {
+        "n": 5,
+        "arcana": "Иерофант",
+        "title": "Духовный аркан",
+        "meaning": "наставничество, традиции, обучение",
+        "keywords": "наставничество, традиции, обучение",
+        "plus": "Учитель по призванию, хранитель традиций, даёт мудрые советы.",
+        "minus": "Догматизм, «я знаю как надо», страх выйти из привычных рамок.",
+        "advice": "Учи других, но оставь себе право на свой путь, даже нетрадиционный."
+      },
+      "family": {
+        "n": 19,
+        "arcana": "Солнце",
+        "title": "Родовая линия",
+        "meaning": "радость, успех, признание",
+        "keywords": "радость, успех, признание",
+        "plus": "Тепло, уверенность, умение радоваться жизни и светить другим.",
+        "minus": "Эгоцентризм, потребность быть в центре любой ценой, выгорание от «улыбки по долгу».",
+        "advice": "Радуйся без повода — тогда сияние станет настоящим, а не дежурным."
+      },
+      "destiny": {
+        "n": 12,
+        "arcana": "Повешенный",
+        "title": "Линия предназначения",
+        "meaning": "смена угла зрения, жертва ради роста",
+        "keywords": "смена угла зрения, жертва ради роста",
+        "plus": "Умение увидеть ситуацию с другой стороны, рост через паузу.",
+        "minus": "Жертвенность, зависание в подвешенном состоянии, страх перемен.",
+        "advice": "Отпусти контроль над тем, что не можешь изменить, — и увидишь выход."
+      },
+      "center": {
+        "n": 6,
+        "arcana": "Влюблённые",
+        "title": "Центр матрицы",
+        "meaning": "выбор сердца, союзы, гармония",
+        "keywords": "выбор сердца, союзы, гармония",
+        "plus": "Умение любить, выбирать по сердцу, выстраивать гармоничные союзы.",
+        "minus": "Сомнения в выборе, зависимость от партнёра, раздвоенность.",
+        "advice": "Выбирай сердцем и неси ответственность за выбор, а не перекладывай его."
+      },
+      "love": {
+        "n": 9,
+        "arcana": "Отшельник",
+        "title": "Линия любви",
+        "meaning": "мудрость, поиск себя, уединение",
+        "keywords": "мудрость, поиск себя, уединение",
+        "plus": "Глубина, самодостаточность, мудрость, добытая собственным опытом.",
+        "minus": "Изоляция, недоверие людям, уход от жизни в свою «башню».",
+        "advice": "Выходи к людям с тем светом, что нашла в тишине."
+      },
+      "money": {
+        "n": 4,
+        "arcana": "Император",
+        "title": "Линия денег",
+        "meaning": "структура, порядок, лидерство",
+        "keywords": "структура, порядок, лидерство",
+        "plus": "Воля, опора, умение управлять и держать слово; надёжность.",
+        "minus": "Жёсткость, контроль, подавление чувств ради вечного «надо».",
+        "advice": "Дай себе разрешение расслабиться — власть и мягкость совместимы."
+      }
+    },
+    "tarot_deck_counts": {
+      "total": 78,
+      "unique_ids": 78,
+      "majors": 22,
+      "minors": 56,
+      "suits": {
+        "Кубков": 14,
+        "Пентаклей": 14,
+        "Мечей": 14,
+        "Жезлов": 14
+      }
+    },
+    "vedic_date_only": {
+      "tool": "get_vedic_chart",
+      "calculation_mode": "deterministic",
+      "tradition": "Vedic/Jyotish",
+      "ayanamsa": "Lahiri",
+      "ephemeris": "Swiss Ephemeris via pyswisseph 20230604",
+      "inputs": {
+        "birth_date": "1990-06-21",
+        "birth_time": null,
+        "city": "Kazan",
+        "latitude": 55.79,
+        "longitude": 49.12,
+        "timezone": "Europe/Moscow",
+        "time_known": false
+      },
+      "result": {
+        "precision": "date_only",
+        "zodiac": "sidereal",
+        "ayanamsa": "Lahiri",
+        "city": "Kazan",
+        "planets": [
+          {
+            "name": "Солнце",
+            "planet": "Sun",
+            "longitude": 65.972259,
+            "sign": "Близнецы",
+            "sign_index": 2,
+            "degree": 5.972259,
+            "retrograde": false,
+            "nakshatra": {
+              "longitude": 65.972259,
+              "index": 5,
+              "name": "Mrigashira",
+              "name_ru": "Мригашира",
+              "pada": 4,
+              "lord": "Mars",
+              "span_start": 53.333333,
+              "span_end": 66.666667
+            }
+          },
+          {
+            "name": "Луна",
+            "planet": "Moon",
+            "longitude": 45.528044,
+            "sign": "Телец",
+            "sign_index": 1,
+            "degree": 15.528044,
+            "retrograde": false,
+            "nakshatra": {
+              "longitude": 45.528044,
+              "index": 4,
+              "name": "Rohini",
+              "name_ru": "Рохини",
+              "pada": 2,
+              "lord": "Moon",
+              "span_start": 40.0,
+              "span_end": 53.333333
+            }
+          },
+          {
+            "name": "Меркурий",
+            "planet": "Mercury",
+            "longitude": 52.726022,
+            "sign": "Телец",
+            "sign_index": 1,
+            "degree": 22.726022,
+            "retrograde": false,
+            "nakshatra": {
+              "longitude": 52.726022,
+              "index": 4,
+              "name": "Rohini",
+              "name_ru": "Рохини",
+              "pada": 4,
+              "lord": "Moon",
+              "span_start": 40.0,
+              "span_end": 53.333333
+            }
+          },
+          {
+            "name": "Венера",
+            "planet": "Venus",
+            "longitude": 31.925129,
+            "sign": "Телец",
+            "sign_index": 1,
+            "degree": 1.925129,
+            "retrograde": false,
+            "nakshatra": {
+              "longitude": 31.925129,
+              "index": 3,
+              "name": "Krittika",
+              "name_ru": "Криттика",
+              "pada": 2,
+              "lord": "Sun",
+              "span_start": 26.666667,
+              "span_end": 40.0
+            }
+          },
+          {
+            "name": "Марс",
+            "planet": "Mars",
+            "longitude": 351.48718,
+            "sign": "Рыбы",
+            "sign_index": 11,
+            "degree": 21.48718,
+            "retrograde": false,
+            "nakshatra": {
+              "longitude": 351.48718,
+              "index": 27,
+              "name": "Revati",
+              "name_ru": "Ревати",
+              "pada": 2,
+              "lord": "Mercury",
+              "span_start": 346.666667,
+              "span_end": 360.0
+            }
+          },
+          {
+            "name": "Юпитер",
+            "planet": "Jupiter",
+            "longitude": 83.434685,
+            "sign": "Близнецы",
+            "sign_index": 2,
+            "degree": 23.434685,
+            "retrograde": false,
+            "nakshatra": {
+              "longitude": 83.434685,
+              "index": 7,
+              "name": "Punarvasu",
+              "name_ru": "Пунарвасу",
+              "pada": 2,
+              "lord": "Jupiter",
+              "span_start": 80.0,
+              "span_end": 93.333333
+            }
+          },
+          {
+            "name": "Сатурн",
+            "planet": "Saturn",
+            "longitude": 269.946154,
+            "sign": "Стрелец",
+            "sign_index": 8,
+            "degree": 29.946154,
+            "retrograde": true,
+            "nakshatra": {
+              "longitude": 269.946154,
+              "index": 21,
+              "name": "Uttara Ashadha",
+              "name_ru": "Уттара-Ашадха",
+              "pada": 1,
+              "lord": "Sun",
+              "span_start": 266.666667,
+              "span_end": 280.0
+            }
+          },
+          {
+            "name": "Раху",
+            "planet": "Rahu",
+            "longitude": 284.094806,
+            "sign": "Козерог",
+            "sign_index": 9,
+            "degree": 14.094806,
+            "retrograde": true,
+            "nakshatra": {
+              "longitude": 284.094806,
+              "index": 22,
+              "name": "Shravana",
+              "name_ru": "Шравана",
+              "pada": 2,
+              "lord": "Moon",
+              "span_start": 280.0,
+              "span_end": 293.333333
+            }
+          },
+          {
+            "name": "Кету",
+            "planet": "Ketu",
+            "longitude": 104.094806,
+            "sign": "Рак",
+            "sign_index": 3,
+            "degree": 14.094806,
+            "retrograde": true,
+            "nakshatra": {
+              "longitude": 104.094806,
+              "index": 8,
+              "name": "Pushya",
+              "name_ru": "Пушья",
+              "pada": 4,
+              "lord": "Saturn",
+              "span_start": 93.333333,
+              "span_end": 106.666667
+            }
+          }
+        ],
+        "lunar_nodes": {
+          "Rahu": {
+            "name": "Раху",
+            "planet": "Rahu",
+            "longitude": 284.094806,
+            "sign": "Козерог",
+            "sign_index": 9,
+            "degree": 14.094806,
+            "retrograde": true,
+            "nakshatra": {
+              "longitude": 284.094806,
+              "index": 22,
+              "name": "Shravana",
+              "name_ru": "Шравана",
+              "pada": 2,
+              "lord": "Moon",
+              "span_start": 280.0,
+              "span_end": 293.333333
+            }
+          },
+          "Ketu": {
+            "name": "Кету",
+            "planet": "Ketu",
+            "longitude": 104.094806,
+            "sign": "Рак",
+            "sign_index": 3,
+            "degree": 14.094806,
+            "retrograde": true,
+            "nakshatra": {
+              "longitude": 104.094806,
+              "index": 8,
+              "name": "Pushya",
+              "name_ru": "Пушья",
+              "pada": 4,
+              "lord": "Saturn",
+              "span_start": 93.333333,
+              "span_end": 106.666667
+            }
+          }
+        },
+        "lagna": null,
+        "houses": []
+      },
+      "limitations": [
+        "birth time is unknown or unconfirmed; lagna and houses are omitted"
+      ]
+    }
+  }
+}

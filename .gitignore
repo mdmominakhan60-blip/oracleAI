@@ -1,0 +1,70 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.db
+*.db-wal
+*.db-shm
+/data/*
+!/data/llm_eval/
+!/data/llm_eval/*.jsonl
+!/data/palm_golden/
+!/data/palm_golden/README.md
+!/data/palm_golden/schema.json
+!/data/palm_golden/manifest.template.jsonl
+!/data/palm_golden/predictions.template.jsonl
+!/data/palm_golden/reviewer_registry.schema.json
+!/data/palm_golden/reviewer_registry.template.json
+# Local agent/index state — not project source
+.omc/
+.codegraph/
+.claude/
+.omo/
+# Случайно занесённые home-конфиги и редакторский мусор — не исходники проекта
+.bashrc
+.bash_profile
+.zshrc
+.zprofile
+.zshrc_history
+.zsh_history
+.profile
+.gitconfig
+.gitmodules
+.mcp.json
+.ripgreprc
+.vscode
+.idea
+
+# Локальные журналы и временные проверки
+*.log
+*.qa_*.py
+
+# Frontend dependency/build outputs
+node_modules/
+miniapp/dist/
+
+# Generated QA, browser, coverage and local runtime outputs
+artifacts/
+coverage/
+htmlcov/
+playwright-report/
+test-results/
+screenshots/
+*.trace.zip
+*.har
+*.coverage
+*.tmp
+*.bak
+*.old
+*.orig
+*.patch
+*.dump
+*.out
+*.pdf
+
+# Host-mounted encrypted PostgreSQL backup artifacts
+/backups/
+infra/backups/
+infra/restore-rehearsal/oracle-*.dump.enc
+infra/restore-rehearsal/oracle-*.dump.enc.sha256
