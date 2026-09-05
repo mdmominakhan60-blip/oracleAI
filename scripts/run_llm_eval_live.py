@@ -134,10 +134,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--min-calibration-rate", type=float, default=0.80)
     args = parser.parse_args(argv)
 
-    if not os.getenv("OPENAI_API_KEY") or not os.getenv("OPENAI_API_BASE"):
-        print("OPENAI_API_KEY and OPENAI_API_BASE are required for a live evaluation", file=sys.stderr)
+    base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("OPENAI_API_BASE")
+    if not os.getenv("OPENAI_API_KEY") or not base_url:
+        print("OPENAI_API_KEY and OPENAI_BASE_URL (or OPENAI_API_BASE) are required for a live evaluation", file=sys.stderr)
         return 2
-    client = OpenAI()
+    client = OpenAI(base_url=base_url)
     available = catalog(client)
     model = choose_model(args.model, available)
     cases = select_cases(load_jsonl(args.cases), args.limit)
