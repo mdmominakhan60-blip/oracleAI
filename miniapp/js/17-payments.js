@@ -25,7 +25,7 @@
       popular: 'Самый популярный', openStars: 'Открыть оплату Stars', busy: 'Создаю защищённый заказ…',
       emptyPlans: 'Тарифы временно недоступны.', emptyProducts: 'Пакеты скоро появятся.', pay: 'Оплатить', payProduct: 'Оплатить {title}',
       footer: 'OracleAI не хранит данные карты или ключи кошелька. По вопросам оплаты можно открыть историю заказов и обратиться в поддержку.',
-      orders: 'История заказов', noOrders: 'Заказов пока нет.', retry: 'Повторить',
+      orders: 'История заказов', noOrders: 'Заказов пока нет.', retry: 'Повторить', closeAria: 'Закрыть',
       loadFailed: 'Не удалось открыть оплату. Попробуй ещё раз.', starsUnavailable: 'Stars сейчас недоступны. Попробуй чуть позже.',
       cryptoUnavailable: 'Крипто-оплата сейчас недоступна. Попробуй чуть позже.', invoiceOpened: 'Счёт открыт в Telegram',
       paid: 'Оплата прошла — доступ уже открывается ✦', paymentPassed: 'Оплата подтверждена — доступ уже открывается ✦', paymentFailed: 'Telegram не подтвердил оплату. Попробуй ещё раз.', payProduct: 'Оплатить продукт',
@@ -44,7 +44,7 @@
       popular: 'MOST POPULAR', openStars: 'Open Stars checkout', busy: 'Creating a protected order…',
       emptyPlans: 'Plans are temporarily unavailable.', emptyProducts: 'Packs are coming soon.', pay: 'Pay', payProduct: 'Pay for {title}',
       footer: 'OracleAI does not store card data or wallet keys. Open your order history or contact support with payment questions.',
-      orders: 'Order history', noOrders: 'No orders yet.', retry: 'Retry',
+      orders: 'Order history', noOrders: 'No orders yet.', retry: 'Retry', closeAria: 'Close',
       loadFailed: 'Payment could not be opened. Please try again.', starsUnavailable: 'Stars are temporarily unavailable. Please try again later.',
       cryptoUnavailable: 'Crypto payments are temporarily unavailable. Please try again later.', invoiceOpened: 'Invoice opened in Telegram',
       paid: 'Payment received — access is opening ✦', paymentPassed: 'Payment confirmed — access is opening ✦', paymentFailed: 'Telegram did not confirm the payment. Please try again.', payProduct: 'Pay for product',
@@ -283,7 +283,7 @@
   app.retryPayments = function () { paymentState().data = null; this.loadPayments(); };
 
   app.showPaymentOrders = async function () {
-    this.showModal(`<h3>${esc(payT('orders'))}</h3><button class="m-close" data-act="modal-close" aria-label="${esc(payT('orders'))}">✕</button><div id="payment-history-body" class="pay-orders"><div class="loader-ring"></div></div>`);
+    this.showModal(`<h3>${esc(payT('orders'))}</h3><button class="m-close" data-act="modal-close" aria-label="${esc(payT('closeAria'))}">✕</button><div id="payment-history-body" class="pay-orders"><div class="loader-ring"></div></div>`);
     await this.loadPaymentHistory();
   };
 

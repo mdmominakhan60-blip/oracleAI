@@ -18,14 +18,25 @@ document.addEventListener('keydown', function (event) {
     app.doSend();
   }
   // Esc закрывает верхний модал/sheet — удобно на ПК и для скринридеров.
-  if (event.key === 'Escape') {
-    const tool = document.getElementById('tool-expand');
-    if (tool && tool.classList.contains('open') && typeof app.setToolbox === 'function') {
-      app.setToolbox(false);
-      return;
-    }
-    if (document.getElementById('app-modal') && typeof app.closeModal === 'function') {
-      app.closeModal();
+  // A11y (BUS-133, A-3): Tab/Shift+Tab зациклены внутри активного диалога.
+  if (event.key === 'Escape' || event.key === 'Tab') {
+    const dlg = typeof app.activeDialog === 'function' ? app.activeDialog() : null;
+    if (dlg) {
+      if (event.key === 'Tab') {
+        if (typeof app.trapTabKey === 'function') app.trapTabKey(dlg, event);
+        return;
+      }
+      // Escape
+      const tool = document.getElementById('tool-expand');
+      if (tool && tool.classList.contains('open') && typeof app.setToolbox === 'function') {
+        event.preventDefault();
+        app.setToolbox(false);
+        return;
+      }
+      if (typeof app.closeModal === 'function') {
+        event.preventDefault();
+        app.closeModal();
+      }
     }
   }
 });

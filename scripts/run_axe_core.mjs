@@ -27,7 +27,7 @@ function makeUrl(view, agent = '', tab = '') {
 
 const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
 const context = await browser.newContext({
-  viewport: { width: 1440, height: 900 }, locale: 'ru-RU', reducedMotion: 'reduce',
+  viewport: { width: 1440, height: 900 }, locale: 'ru-RU', reducedMotion: 'reduce', bypassCSP: true,
   // DEV_KEY обязателен при DEV_MODE=1 (BUS-90): без заголовка dev_user ловит 401.
   extraHTTPHeaders: process.env.DEV_KEY ? { 'X-Dev-Key': process.env.DEV_KEY } : {},
 });

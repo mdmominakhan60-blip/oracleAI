@@ -327,7 +327,7 @@
   app.openDiary = async function(id) {
     try {
       const entry = await api('/api/diary/' + Number(id));
-      this.showModal(`<h3>${esc(profileT('historyDiary'))}</h3><button class="m-close" data-act="modal-close">✕</button><div style="font-size:12px;color:var(--text-dim);margin:8px 0">${esc(fmtDay((entry.created_at || '').slice(0, 10)))}</div><div style="font-size:14px;line-height:1.65;white-space:pre-wrap">${esc(entry.text || '')}</div>`);
+      this.showModal(`<h3>${esc(profileT('historyDiary'))}</h3><button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button><div style="font-size:12px;color:var(--text-dim);margin:8px 0">${esc(fmtDay((entry.created_at || '').slice(0, 10)))}</div><div style="font-size:14px;line-height:1.65;white-space:pre-wrap">${esc(entry.text || '')}</div>`);
     } catch (e) { alert(friendlyError(e, 'Это временно. Попробуй ещё раз.')); }
   };
 
@@ -336,7 +336,7 @@
     try {
       const suffix = Number(reportId) > 0 ? '?report_id=' + encodeURIComponent(Number(reportId)) : '';
       const r = await api('/api/reports/' + kind + suffix);
-      this.showModal(`<h3>${esc(r.title)}</h3><button class="m-close" data-act="modal-close">✕</button><div style="font-size:13.5px;line-height:1.65;margin-top:8px">${rich(r.body)}</div>`);
+      this.showModal(`<h3>${esc(r.title)}</h3><button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button><div style="font-size:13.5px;line-height:1.65;margin-top:8px">${rich(r.body)}</div>`);
     } catch (e) { alert(friendlyError(e, 'Это временно. Попробуй ещё раз.')); }
   };
 
@@ -349,7 +349,7 @@
         <div class="rc-strip"><img src="/static/img/tarot/${esc(c.img || 'm00')}.jpg" alt="${esc(c.name)}" loading="lazy">
           <span>${esc(c.name)}${c.reversed ? ' ↺' : ''}</span></div>`).join('');
       const cards = (r.cards || []).map(c => `${c.emoji} ${c.name}${c.reversed ? ' ↺' : ''} — ${c.meaning}`).join('\n');
-      this.showModal(`<h3>🎴 ${esc(r.question || profileT('readingFallback'))}</h3><button class="m-close" data-act="modal-close">✕</button>
+      this.showModal(`<h3>🎴 ${esc(r.question || profileT('readingFallback'))}</h3><button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button>
         <div class="rc-strip-row">${cardStrip}</div>
         <div style="font-size:12px;color:var(--text-dim);white-space:pre-wrap;margin:8px 0">${esc(cards)}</div>
         <div style="font-size:13.5px;line-height:1.65;white-space:pre-wrap">${esc(r.answer || '—')}</div>
@@ -372,7 +372,7 @@
   // Память: управление — просмотр с датой, удалить, добавить вручную.
 
   app.openMemories = async function() {
-    this.showModal(`<h3>${esc(profileT('memoryTitle'))}</h3><button class="m-close" data-act="modal-close">✕</button>
+    this.showModal(`<h3>${esc(profileT('memoryTitle'))}</h3><button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button>
       <div id="mem-body" style="margin-top:6px"><div class="loader-ring"></div></div>`);
     try {
       // «На паузе» означает, что Оракул не использует и не сохраняет новые факты.
@@ -465,7 +465,7 @@
 
 
   app.openPrivacyCenter = async function() {
-    this.showModal(`<h3>Центр приватности</h3><button class="m-close" data-act="modal-close" aria-label="Закрыть">✕</button><div id="privacy-body" class="modal-body"><div class="loader-ring"></div></div>`);
+    this.showModal(`<h3>Центр приватности</h3><button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button><div id="privacy-body" class="modal-body"><div class="loader-ring"></div></div>`);
     try {
       const privacy = await api('/api/account/privacy');
       const categories = (privacy.categories || []).map(item => `<div class="privacy-row"><b>${esc(item.label)}</b><span>${item.exportable ? 'доступно в экспорте' : 'не входит в экспорт'}</span></div>`).join('');
@@ -576,7 +576,7 @@
         </div>
         <span class="tc-open">›</span>
       </div>`).join('');
-    this.showModal(`<h3>${esc(profileT('allReadingsTitle'))}</h3><button class="m-close" data-act="modal-close">✕</button>
+    this.showModal(`<h3>${esc(profileT('allReadingsTitle'))}</h3><button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button>
       <div style="margin-top:8px">${items || `<div style="color:var(--text-faint);font-size:13px;text-align:center;padding:6px 0">${esc(profileT('readingsNone'))}</div>
         <button class="btn btn-primary" style="width:100%;margin-top:10px" data-act="chat-fn" data-chat="tarot" data-fn="featureTarot">${esc(profileT('firstCard'))}</button>`}</div>`);
   };
@@ -612,7 +612,7 @@
 
   // Если карта ещё не собрана — ведём пользователя в сборщик данных.
   app.openBuildChart = async function() {
-    this.showModal(`<h3>${esc(profileT('fullChartTitle'))}</h3><button class="m-close" data-act="modal-close">✕</button>
+    this.showModal(`<h3>${esc(profileT('fullChartTitle'))}</h3><button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button>
       <div id="fc-body" style="margin-top:8px"><div class="loader-ring"></div></div>`);
     try {
       const c = await api('/api/chart');
@@ -766,7 +766,7 @@
 
   app.openLanguage = function() {
     const current = (this.me && this.me.lang) || 'ru';
-    this.showModal(`<h3>${esc(t('language'))}</h3><button class="m-close" data-act="modal-close" aria-label="Закрыть">✕</button>
+    this.showModal(`<h3>${esc(t('language'))}</h3><button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button>
       <p class="modal-soft-copy">${esc(t('languageCopy'))}</p>
       <div class="language-picker">
         <button class="language-choice ${current === 'ru' ? 'active' : ''}" data-act="set-lang" data-lang="ru"><b>${esc(t('russian'))}</b><small>Русский</small></button>
@@ -798,7 +798,7 @@
     this.markBellSeen && this.markBellSeen();
     const en = oracleLang() === 'en';
     const bellTitle = en ? 'Notifications' : 'Уведомления';
-    this.showModal(`<h3>${esc(bellTitle)}</h3><button class="m-close" data-act="modal-close" aria-label="${en ? 'Close' : 'Закрыть'}">✕</button>
+    this.showModal(`<h3>${esc(bellTitle)}</h3><button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button>
       <div id="bell-body" style="margin-top:8px"><div class="loader-ring"></div></div>`);
     try {
       if (!this.today) this.today = await api('/api/today');
@@ -854,19 +854,77 @@
   };
 
 
+  // A11y (BUS-133, A-5): единая точка фокус-менеджмента всех app-modal.
+  // activeElement ДО создания оверлея — иначе триггер уже под overlay-контекстом.
   app.showModal = function(html, variant = '') {
+    // Ревью BUS-133 (minor): trigger читаем ДО remove() старого модала — при каскадном
+    // confirm поверх модала activeElement после remove() уже body.
+    const trigger = document.activeElement;
     const old = document.getElementById('app-modal');
     if (old) old.remove();   // один модал за раз — без дублей id и наложений
+    this._modalTrigger = trigger;
     const ov = document.createElement('div');
     ov.className = 'modal-overlay' + (variant === 'full' ? ' full' : '');
     ov.id = 'app-modal';
-    ov.innerHTML = `<div class="modal${variant === 'full' ? ' full' : ''}">${html}</div>`;
-    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+    ov.innerHTML = `<div class="modal${variant === 'full' ? ' full' : ''}" role="dialog" aria-modal="true" tabindex="-1">${html}</div>`;
+    // aria-labelledby ставим только при найденном заголовке — ссылка на пустой id хуже её отсутствия
+    const h3 = ov.querySelector('.modal > h3, .modal .picker-title');
+    if (h3) {
+      if (!h3.id) h3.id = 'app-modal-title';
+      ov.querySelector('.modal').setAttribute('aria-labelledby', h3.id);
+    }
+    ov.addEventListener('click', e => { if (e.target === ov) app.closeModal(); });
     document.body.appendChild(ov);
+    // Фокус на первый интерактивный элемент (или на сам диалог, если разметка без контролов — picker rows и т.п.)
+    const focusables = this.modalFocusables(ov.querySelector('.modal'));
+    const first = focusables[0] || ov.querySelector('.modal');
+    if (first) setTimeout(() => first.focus(), 0);
     if (typeof app.syncBackButton === 'function') app.syncBackButton();
   };
 
-  app.closeModal = function() { const el = document.getElementById('app-modal'); if (el) el.remove(); if (typeof app.syncBackButton === 'function') app.syncBackButton(); };
+  // Интерактивные потомки диалога: ссылки и элементы с tabindex тоже участвуют в Tab-цикле.
+  app.modalFocusables = function(root) {
+    if (!root) return [];
+    return Array.from(root.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+      .filter(el => el.offsetParent !== null || el === document.activeElement);
+  };
+
+  // A11y (BUS-133, A-3): активный диалог для Esc/Tab — app-modal или открытый te-sheet.
+  app.activeDialog = function() {
+    const modal = document.querySelector('#app-modal .modal');
+    if (modal) return modal;
+    const tool = document.getElementById('tool-expand');
+    if (tool && tool.classList.contains('open')) return tool.querySelector('.te-sheet');
+    return null;
+  };
+
+  // Цикл Tab/Shift+Tab внутри диалога; возвращает true, если событие поглощено.
+  app.trapTabKey = function(dlg, event) {
+    const focusables = this.modalFocusables(dlg);
+    const active = document.activeElement;
+    if (!focusables.length) {
+      if (!dlg.contains(active)) { event.preventDefault(); dlg.focus(); }
+      return true;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (event.shiftKey) {
+      if (active === first || !dlg.contains(active)) { event.preventDefault(); last.focus(); return true; }
+    } else if (active === last || !dlg.contains(active)) {
+      event.preventDefault(); first.focus(); return true;
+    }
+    return false;
+  };
+
+  app.closeModal = function() {
+    const el = document.getElementById('app-modal');
+    const trigger = this._modalTrigger;
+    this._modalTrigger = null;
+    if (el) el.remove();
+    // A11y (BUS-133, A-5): возврат фокуса на триггер — иначе SR/Tab остаются «в пустоте».
+    if (trigger && document.contains(trigger) && typeof trigger.focus === 'function') trigger.focus();
+    if (typeof app.syncBackButton === 'function') app.syncBackButton();
+  };
 
   // FE-005/FE-007: деструктивные действия подтверждаются фирменным модалом,
   // а не системным window.confirm — тот блокирует фокус в Telegram WebView
@@ -875,7 +933,7 @@
     this._confirmCb = typeof onYes === 'function' ? onYes : null;
     const cancel = oracleLang() === 'en' ? 'Cancel' : 'Отмена';
     this.showModal(`<h3>${esc(title)}</h3>
-      <button class="m-close" data-act="modal-close">✕</button>
+      <button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button>
       <div style="font-size:13.5px;line-height:1.6;margin:6px 0 14px;color:var(--text-soft)">${esc(copy)}</div>
       <div style="display:flex;gap:10px">
         <button class="btn btn-ghost" style="flex:1" type="button" data-act="confirm-no">${esc(cancel)}</button>

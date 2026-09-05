@@ -231,7 +231,7 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
         </div>
       </div>`;
     }).join('');
-    this.showModal(`<h3>🌙 Лунный календарь</h3><button class="m-close" data-act="modal-close">✕</button>
+    this.showModal(`<h3>🌙 Лунный календарь</h3><button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button>
       <div class="moon-detail">${rows}</div>`);
   };
 

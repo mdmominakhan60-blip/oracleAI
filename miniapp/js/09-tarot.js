@@ -89,7 +89,7 @@ const tarotPositionText = (code, position, index) =>
           <div class="picker-title">${esc(tarotT('pickerTitle'))}</div>
           <div class="picker-sub">${esc(tarotT('pickerSub'))}</div>
         </div>
-        <button class="m-close" data-act="modal-close">✕</button>
+        <button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button>
       </div>
       <div class="picker-schemes">${rows}</div>
       <div class="picker-note">${esc(tarotT('pickerNote'))}</div>`, 'full');
@@ -128,7 +128,7 @@ const tarotPositionText = (code, position, index) =>
           <div class="picker-title">${esc(tarotT('deckPickerTitle'))}</div>
           <div class="picker-sub">${esc(tarotT('deckPickerSub'))}</div>
         </div>
-        <button class="m-close" data-act="modal-close">✕</button>
+        <button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button>
       </div>
       <div class="picker-schemes">${rows}</div>`, 'full');
   };
@@ -146,7 +146,7 @@ const tarotPositionText = (code, position, index) =>
     const s = p.spreads.find(x => x.code === code);
     if (s && s.tier === 'premium' && !s.owned) {
       this.showModal(`<h3>✨ ${esc(tarotSpreadText(s, 'title'))}</h3>
-        <button class="m-close" data-act="modal-close">✕</button>
+        <button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button>
         <div class="fc-adv" style="margin-top:4px">
           ${esc(tarotT('premiumCopy'))}
         </div>
