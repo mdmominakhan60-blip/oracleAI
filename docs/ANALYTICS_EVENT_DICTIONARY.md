@@ -70,6 +70,16 @@ The product KPI endpoint groups by `sku` and `channel`, reports variable provide
 
 Monetization events are emitted only from authenticated server-owned transitions. `sku`, `price_variant`, `result_category` and `reason` are validated categorical values; `channel` is an allowlisted surface/channel category. The client cannot submit an event name, grant amount, payment amount, receipt, order payload or arbitrary props. `credit_pack_paid` is not emitted on duplicate webhook delivery, and `credit_spent` is emitted only after the atomic debit/grant transaction succeeds.
 
+## Feedback survey events
+
+Событие задаётся словарём до реализации кода (инженерный эпик BUS-180): имя войдёт в server-owned allowlist `app/repo/analytics.py`, триггер и тест добавляются при реализации. Параметры бонуса — спека BUS-170 §7 rev3 (решение BUS-177, принято CEO: 40✦, `source='review_bonus'`, 90 дней).
+
+| Event | Момент | Allowed props | Surface | Owner | KPI |
+|---|---|---|---|---|---|
+| `survey_grant_issued` | Серверный триггер в момент успешного идемпотентного гранта бонуса за day-7 опрос: одна транзакция с записью ответов (`feedback_responses`) и `crystal_lot`-грантом (`source='review_bonus'`, `expires_at` = момент гранта + 90d). Не эмитируется при отклонённом POST (анти-абьюз — спека BUS-170 §5) и при повторной выдаче (один бонус на пользователя за всю жизнь). | `survey_code`: `day7_v1`; `bonus_kind`: `crystals_40`; `amount`: `40`; `expires_at`: server-derived ISO timestamp (грант + 90d, совпадает с `expires_at` лота) | `miniapp` | Product | Claim rate, claim→spend за 90d, claim→paid vs baseline (CFO-метрики, BUS-170 §8.1). |
+
+`tg_id` — в авторской колонке `events` (server-owned), не в props. Все props — server-owned значения: клиент не влияет ни на имя события, ни на сумму, ни на `survey_code`. Свободный текст отзыва в события не попадает (спека BUS-170 §5.5).
+
 ## Dashboard definitions
 
 | KPI | Definition | Exclusions |
@@ -78,6 +88,8 @@ Monetization events are emitted only from authenticated server-owned transitions
 | First ritual rate | Unique users with `first_ritual` divided by cohort users. | Do not count `practice_start` alone. |
 | First question rate | Unique users with `first_question` divided by cohort users. | Failed/denied question is not completion. |
 | D1 / D7 return | Cohort users with milestone event divided by cohort users with first open. | No push/open pressure interpretation. |
+| Survey claim rate | Unique users with `survey_grant_issued` divided by users who received the survey invitation. | Responses without bonus (anti-abuse gates, BUS-170 §5) are not claims. |
+| Claim→spend (90d) | Users spending the granted lot within 90d of `survey_grant_issued`, divided by grant recipients. | Only the granted `review_bonus` lot counts, not user's own crystals. |
 | Fallback rate | `llm_fallback` operational records divided by successful provider completions, segmented by purpose/provider/language outside event table. | Never attach prompt, answer or memory. |
 
 ## Review and ownership
