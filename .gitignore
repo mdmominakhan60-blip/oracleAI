@@ -38,6 +38,7 @@ __pycache__/
 
 # Локальные журналы и временные проверки
 *.log
+!docs/RELEASE/evidence/*.log
 *.qa_*.py
 
 # Frontend dependency/build outputs
