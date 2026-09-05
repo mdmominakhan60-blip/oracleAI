@@ -24,7 +24,9 @@
   --color-text-primary: #faf8ff;
   --color-text-secondary: #d4cee7;
   --color-text-muted: #a39bbd;
-  --color-text-subtle: #6f6890;
+  /* BUS-115 (A-1): #948cb2 даёт 5.50–6.20:1 на всех трёх фонах (WCAG AA ≥4.5:1);
+     старый #6f6890 давал 3.36–3.78:1. Иерархия subtle < muted < secondary сохранена. */
+  --color-text-subtle: #948cb2;
   --color-border: rgba(230, 219, 255, .14);
   --color-border-strong: rgba(245, 212, 139, .50);
   --color-success: #7be0c5;

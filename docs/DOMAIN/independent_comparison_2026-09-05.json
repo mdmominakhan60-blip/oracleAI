@@ -1,0 +1,1142 @@
+{
+  "schema": "oracleai-independent-comparison-v1",
+  "generated": "2026-09-05T00:43:16.179485+00:00",
+  "product_engine": {
+    "name": "OracleAI Engine v2 -> Kerykeion 5.12.9 -> Swiss Ephemeris 2.10.3.2",
+    "contract": "app/core/chart_contract v1; adapter oracleai-kerykeion-engine-v2",
+    "settings": {
+      "zodiac": "Tropical",
+      "perspective": "Apparent Geocentric",
+      "houses": "Placidus (P)",
+      "nodes": "true node",
+      "node_lilith_policy": "true_lunar_nodes_plus_true_lilith"
+    }
+  },
+  "authority_a": {
+    "name": "NASA/JPL Horizons API",
+    "quantity": "Observer quantity 31, apparent ecliptic-of-date longitude, geocenter 500@399",
+    "independence_note": "Separate implementation and pipeline from Swiss Ephemeris; network API.",
+    "status": "captured"
+  },
+  "authority_b": {
+    "name": "Skyfield + JPL DE421.bsp + ERFA (pyerfa)",
+    "quantity": "apparent GCRS position rotated to ecliptic-of-date (pnm06a + obl06, TT)",
+    "independence_note": "Fully independent code path: DE421 Chebyshev interpolation and IAU 2006/2000A precession-nutation from ERFA; no shared code or data with Swiss Ephemeris."
+  },
+  "cases": [
+    {
+      "case_id": "kazan_1990_normal",
+      "input": {
+        "date": "1990-06-21",
+        "time": "14:30",
+        "tz": "Europe/Moscow",
+        "lat": 55.79,
+        "lon": 49.12,
+        "time_known": true
+      },
+      "utc_instant": "1990-06-21T10:30:00+00:00",
+      "covers": "normal",
+      "precision": "exact",
+      "comparisons_skyfield_de421": [
+        {
+          "body": "Солнце",
+          "oracleai_abs_deg_exact": 89.79926398681137,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 89.79925426071809,
+          "delta_deg": 9.726093281869908e-06
+        },
+        {
+          "body": "Луна",
+          "oracleai_abs_deg_exact": 70.82459748833605,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 70.82429207373906,
+          "delta_deg": 0.00030541459699406914
+        },
+        {
+          "body": "Меркурий",
+          "oracleai_abs_deg_exact": 76.65874185422138,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 76.65873966601826,
+          "delta_deg": 2.18820309783041e-06
+        },
+        {
+          "body": "Венера",
+          "oracleai_abs_deg_exact": 55.7757181531862,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 55.77572822024183,
+          "delta_deg": 1.0067055626450383e-05
+        },
+        {
+          "body": "Марс",
+          "oracleai_abs_deg_exact": 15.288864187238518,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 15.288909928675453,
+          "delta_deg": 4.574143693503174e-05
+        },
+        {
+          "body": "Юпитер",
+          "oracleai_abs_deg_exact": 107.18512398309073,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 107.18517482537094,
+          "delta_deg": 5.084228018858994e-05
+        },
+        {
+          "body": "Сатурн",
+          "oracleai_abs_deg_exact": 293.667038436107,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 293.66700998972465,
+          "delta_deg": 2.844638237320396e-05
+        },
+        {
+          "body": "Уран",
+          "oracleai_abs_deg_exact": 277.9305816746734,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 277.9305617121741,
+          "delta_deg": 1.996249932290084e-05
+        },
+        {
+          "body": "Нептун",
+          "oracleai_abs_deg_exact": 283.5653929795626,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 283.5653683774292,
+          "delta_deg": 2.4602133407825022e-05
+        },
+        {
+          "body": "Плутон",
+          "oracleai_abs_deg_exact": 225.28887272884563,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 225.28912100688592,
+          "delta_deg": 0.00024827804028859646
+        }
+      ],
+      "non_comparable": [
+        "ASC",
+        "MC",
+        "Placidus houses",
+        "true lunar nodes",
+        "True Lilith",
+        "retrograde flag",
+        "Chiron/asteroids"
+      ],
+      "comparisons_jpl_horizons": [
+        {
+          "body": "Солнце",
+          "jpl_command": "10",
+          "oracleai_abs_deg_exact": 89.79926398681137,
+          "jpl_obs_ecliptic_longitude_deg": 89.7992408,
+          "delta_deg": 2.3186811347386538e-05
+        },
+        {
+          "body": "Луна",
+          "jpl_command": "301",
+          "oracleai_abs_deg_exact": 70.82459748833605,
+          "jpl_obs_ecliptic_longitude_deg": 70.8243153,
+          "delta_deg": 0.0002821883360581978
+        },
+        {
+          "body": "Меркурий",
+          "jpl_command": "199",
+          "oracleai_abs_deg_exact": 76.65874185422138,
+          "jpl_obs_ecliptic_longitude_deg": 76.6587229,
+          "delta_deg": 1.8954221388867154e-05
+        },
+        {
+          "body": "Венера",
+          "jpl_command": "299",
+          "oracleai_abs_deg_exact": 55.7757181531862,
+          "jpl_obs_ecliptic_longitude_deg": 55.7756887,
+          "delta_deg": 2.9453186186856328e-05
+        },
+        {
+          "body": "Марс",
+          "jpl_command": "499",
+          "oracleai_abs_deg_exact": 15.288864187238518,
+          "jpl_obs_ecliptic_longitude_deg": 15.2888471,
+          "delta_deg": 1.708723851834293e-05
+        },
+        {
+          "body": "Юпитер",
+          "jpl_command": "599",
+          "oracleai_abs_deg_exact": 107.18512398309073,
+          "jpl_obs_ecliptic_longitude_deg": 107.1851588,
+          "delta_deg": 3.481690924900249e-05
+        },
+        {
+          "body": "Сатурн",
+          "jpl_command": "699",
+          "oracleai_abs_deg_exact": 293.667038436107,
+          "jpl_obs_ecliptic_longitude_deg": 293.6669862,
+          "delta_deg": 5.2236107023873046e-05
+        },
+        {
+          "body": "Уран",
+          "jpl_command": "799",
+          "oracleai_abs_deg_exact": 277.9305816746734,
+          "jpl_obs_ecliptic_longitude_deg": 277.9305388,
+          "delta_deg": 4.287467339736395e-05
+        },
+        {
+          "body": "Нептун",
+          "jpl_command": "899",
+          "oracleai_abs_deg_exact": 283.5653929795626,
+          "jpl_obs_ecliptic_longitude_deg": 283.5653601,
+          "delta_deg": 3.287956258191116e-05
+        },
+        {
+          "body": "Плутон",
+          "jpl_command": "999",
+          "oracleai_abs_deg_exact": 225.28887272884563,
+          "jpl_obs_ecliptic_longitude_deg": 225.288802,
+          "delta_deg": 7.07288456283095e-05
+        }
+      ],
+      "max_delta_jpl_deg": 0.0002821883360581978,
+      "max_delta_skyfield_deg": 0.00030541459699406914
+    },
+    {
+      "case_id": "berlin_2020_dst",
+      "input": {
+        "date": "2020-07-01",
+        "time": "12:00",
+        "tz": "Europe/Berlin",
+        "lat": 52.52,
+        "lon": 13.405,
+        "time_known": true
+      },
+      "utc_instant": "2020-07-01T10:00:00+00:00",
+      "covers": "dst_summer",
+      "precision": "exact",
+      "comparisons_skyfield_de421": [
+        {
+          "body": "Солнце",
+          "oracleai_abs_deg_exact": 100.0265362745987,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 100.02654475538736,
+          "delta_deg": 8.480788665110595e-06
+        },
+        {
+          "body": "Луна",
+          "oracleai_abs_deg_exact": 230.9224500622575,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 230.92213937013568,
+          "delta_deg": 0.0003106921218147818
+        },
+        {
+          "body": "Меркурий",
+          "oracleai_abs_deg_exact": 99.56525143290355,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 99.56525808236132,
+          "delta_deg": 6.649457759522193e-06
+        },
+        {
+          "body": "Венера",
+          "oracleai_abs_deg_exact": 66.03056229827939,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 66.03059321758806,
+          "delta_deg": 3.091930867071824e-05
+        },
+        {
+          "body": "Марс",
+          "oracleai_abs_deg_exact": 2.0103800420698668,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 2.010357604717028,
+          "delta_deg": 2.2437352839688174e-05
+        },
+        {
+          "body": "Юпитер",
+          "oracleai_abs_deg_exact": 293.9677602371538,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 293.96773555524993,
+          "delta_deg": 2.4681903880718892e-05
+        },
+        {
+          "body": "Сатурн",
+          "oracleai_abs_deg_exact": 300.03804506554326,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 300.0380548458973,
+          "delta_deg": 9.780354048416484e-06
+        },
+        {
+          "body": "Уран",
+          "oracleai_abs_deg_exact": 39.877928839865774,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 39.8779046313663,
+          "delta_deg": 2.420849946815906e-05
+        },
+        {
+          "body": "Нептун",
+          "oracleai_abs_deg_exact": 350.9415389918947,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 350.94153377887204,
+          "delta_deg": 5.213022632233333e-06
+        },
+        {
+          "body": "Плутон",
+          "oracleai_abs_deg_exact": 294.08182924660474,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 294.08187076806786,
+          "delta_deg": 4.152146311753313e-05
+        }
+      ],
+      "non_comparable": [
+        "ASC",
+        "MC",
+        "Placidus houses",
+        "true lunar nodes",
+        "True Lilith",
+        "retrograde flag",
+        "Chiron/asteroids"
+      ],
+      "comparisons_jpl_horizons": [
+        {
+          "body": "Солнце",
+          "jpl_command": "10",
+          "oracleai_abs_deg_exact": 100.0265362745987,
+          "jpl_obs_ecliptic_longitude_deg": 100.0265316,
+          "delta_deg": 4.674598699239141e-06
+        },
+        {
+          "body": "Луна",
+          "jpl_command": "301",
+          "oracleai_abs_deg_exact": 230.9224500622575,
+          "jpl_obs_ecliptic_longitude_deg": 230.9221284,
+          "delta_deg": 0.0003216622575052952
+        },
+        {
+          "body": "Меркурий",
+          "jpl_command": "199",
+          "oracleai_abs_deg_exact": 99.56525143290355,
+          "jpl_obs_ecliptic_longitude_deg": 99.5652439,
+          "delta_deg": 7.532903566698224e-06
+        },
+        {
+          "body": "Венера",
+          "jpl_command": "299",
+          "oracleai_abs_deg_exact": 66.03056229827939,
+          "jpl_obs_ecliptic_longitude_deg": 66.0305811,
+          "delta_deg": 1.8801720614192163e-05
+        },
+        {
+          "body": "Марс",
+          "jpl_command": "499",
+          "oracleai_abs_deg_exact": 2.0103800420698668,
+          "jpl_obs_ecliptic_longitude_deg": 2.0103473,
+          "delta_deg": 3.2742069862479184e-05
+        },
+        {
+          "body": "Юпитер",
+          "jpl_command": "599",
+          "oracleai_abs_deg_exact": 293.9677602371538,
+          "jpl_obs_ecliptic_longitude_deg": 293.9677122,
+          "delta_deg": 4.803715381740403e-05
+        },
+        {
+          "body": "Сатурн",
+          "jpl_command": "699",
+          "oracleai_abs_deg_exact": 300.03804506554326,
+          "jpl_obs_ecliptic_longitude_deg": 300.0380357,
+          "delta_deg": 9.365543235162477e-06
+        },
+        {
+          "body": "Уран",
+          "jpl_command": "799",
+          "oracleai_abs_deg_exact": 39.877928839865774,
+          "jpl_obs_ecliptic_longitude_deg": 39.8778798,
+          "delta_deg": 4.9039865757549705e-05
+        },
+        {
+          "body": "Нептун",
+          "jpl_command": "899",
+          "oracleai_abs_deg_exact": 350.9415389918947,
+          "jpl_obs_ecliptic_longitude_deg": 350.9415278,
+          "delta_deg": 1.1191894657258672e-05
+        },
+        {
+          "body": "Плутон",
+          "jpl_command": "999",
+          "oracleai_abs_deg_exact": 294.08182924660474,
+          "jpl_obs_ecliptic_longitude_deg": 294.0818931,
+          "delta_deg": 6.385339526104872e-05
+        }
+      ],
+      "max_delta_jpl_deg": 0.0003216622575052952,
+      "max_delta_skyfield_deg": 0.0003106921218147818
+    },
+    {
+      "case_id": "kolkata_2020_hist_tz",
+      "input": {
+        "date": "2020-01-15",
+        "time": "12:00",
+        "tz": "Asia/Kolkata",
+        "lat": 22.5726,
+        "lon": 88.3639,
+        "time_known": true
+      },
+      "utc_instant": "2020-01-15T06:30:00+00:00",
+      "covers": "historical_timezone",
+      "precision": "exact",
+      "comparisons_skyfield_de421": [
+        {
+          "body": "Солнце",
+          "oracleai_abs_deg_exact": 294.5512349965774,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 294.5512222033271,
+          "delta_deg": 1.279325033465284e-05
+        },
+        {
+          "body": "Луна",
+          "oracleai_abs_deg_exact": 174.45201374744946,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 174.45161360885584,
+          "delta_deg": 0.0004001385936192037
+        },
+        {
+          "body": "Меркурий",
+          "oracleai_abs_deg_exact": 297.48562414113576,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 297.48560921114813,
+          "delta_deg": 1.492998762842035e-05
+        },
+        {
+          "body": "Венера",
+          "oracleai_abs_deg_exact": 331.8120912416199,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 331.8120654213477,
+          "delta_deg": 2.5820272185228532e-05
+        },
+        {
+          "body": "Марс",
+          "oracleai_abs_deg_exact": 248.0149440224998,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 248.0149524672775,
+          "delta_deg": 8.444777705562956e-06
+        },
+        {
+          "body": "Юпитер",
+          "oracleai_abs_deg_exact": 279.9406275523765,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 279.9406322709615,
+          "delta_deg": 4.718584989404917e-06
+        },
+        {
+          "body": "Сатурн",
+          "oracleai_abs_deg_exact": 293.07963892499737,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 293.07965871612066,
+          "delta_deg": 1.9791123293089186e-05
+        },
+        {
+          "body": "Уран",
+          "oracleai_abs_deg_exact": 32.65739975116361,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 32.657395303825325,
+          "delta_deg": 4.447338284307989e-06
+        },
+        {
+          "body": "Нептун",
+          "oracleai_abs_deg_exact": 346.5888912075394,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 346.5888836240599,
+          "delta_deg": 7.583479487038858e-06
+        },
+        {
+          "body": "Плутон",
+          "oracleai_abs_deg_exact": 292.86187880805323,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 292.8619250371534,
+          "delta_deg": 4.6229100178152294e-05
+        }
+      ],
+      "non_comparable": [
+        "ASC",
+        "MC",
+        "Placidus houses",
+        "true lunar nodes",
+        "True Lilith",
+        "retrograde flag",
+        "Chiron/asteroids"
+      ],
+      "comparisons_jpl_horizons": [
+        {
+          "body": "Солнце",
+          "jpl_command": "10",
+          "oracleai_abs_deg_exact": 294.5512349965774,
+          "jpl_obs_ecliptic_longitude_deg": 294.5512091,
+          "delta_deg": 2.5896577426465228e-05
+        },
+        {
+          "body": "Луна",
+          "jpl_command": "301",
+          "oracleai_abs_deg_exact": 174.45201374744946,
+          "jpl_obs_ecliptic_longitude_deg": 174.4516346,
+          "delta_deg": 0.00037914744945055645
+        },
+        {
+          "body": "Меркурий",
+          "jpl_command": "199",
+          "oracleai_abs_deg_exact": 297.48562414113576,
+          "jpl_obs_ecliptic_longitude_deg": 297.4856025,
+          "delta_deg": 2.1641135731442773e-05
+        },
+        {
+          "body": "Венера",
+          "jpl_command": "299",
+          "oracleai_abs_deg_exact": 331.8120912416199,
+          "jpl_obs_ecliptic_longitude_deg": 331.8120615,
+          "delta_deg": 2.9741619869128044e-05
+        },
+        {
+          "body": "Марс",
+          "jpl_command": "499",
+          "oracleai_abs_deg_exact": 248.0149440224998,
+          "jpl_obs_ecliptic_longitude_deg": 248.0149399,
+          "delta_deg": 4.122499802861057e-06
+        },
+        {
+          "body": "Юпитер",
+          "jpl_command": "599",
+          "oracleai_abs_deg_exact": 279.9406275523765,
+          "jpl_obs_ecliptic_longitude_deg": 279.9406253,
+          "delta_deg": 2.2523764755533193e-06
+        },
+        {
+          "body": "Сатурн",
+          "jpl_command": "699",
+          "oracleai_abs_deg_exact": 293.07963892499737,
+          "jpl_obs_ecliptic_longitude_deg": 293.0796494,
+          "delta_deg": 1.0475002625298657e-05
+        },
+        {
+          "body": "Уран",
+          "jpl_command": "799",
+          "oracleai_abs_deg_exact": 32.65739975116361,
+          "jpl_obs_ecliptic_longitude_deg": 32.6573731,
+          "delta_deg": 2.665116360844877e-05
+        },
+        {
+          "body": "Нептун",
+          "jpl_command": "899",
+          "oracleai_abs_deg_exact": 346.5888912075394,
+          "jpl_obs_ecliptic_longitude_deg": 346.5888814,
+          "delta_deg": 9.807539413486666e-06
+        },
+        {
+          "body": "Плутон",
+          "jpl_command": "999",
+          "oracleai_abs_deg_exact": 292.86187880805323,
+          "jpl_obs_ecliptic_longitude_deg": 292.8619154,
+          "delta_deg": 3.6591946752650983e-05
+        }
+      ],
+      "max_delta_jpl_deg": 0.00037914744945055645,
+      "max_delta_skyfield_deg": 0.0004001385936192037
+    },
+    {
+      "case_id": "utc_2000_midnight",
+      "input": {
+        "date": "2000-01-01",
+        "time": "00:00",
+        "tz": "UTC",
+        "lat": 0.0,
+        "lon": 0.0,
+        "time_known": true
+      },
+      "utc_instant": "2000-01-01T00:00:00+00:00",
+      "covers": "midnight_and_zero_meridian",
+      "precision": "exact",
+      "comparisons_skyfield_de421": [
+        {
+          "body": "Солнце",
+          "oracleai_abs_deg_exact": 279.85921562998124,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 279.8592183084288,
+          "delta_deg": 2.6784475721797207e-06
+        },
+        {
+          "body": "Луна",
+          "oracleai_abs_deg_exact": 217.29336654989638,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 217.2932186167492,
+          "delta_deg": 0.0001479331471898604
+        },
+        {
+          "body": "Меркурий",
+          "oracleai_abs_deg_exact": 271.1118048523248,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 271.11181216827225,
+          "delta_deg": 7.315947470942774e-06
+        },
+        {
+          "body": "Венера",
+          "oracleai_abs_deg_exact": 240.96142091093105,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 240.9613871673165,
+          "delta_deg": 3.374361455144026e-05
+        },
+        {
+          "body": "Марс",
+          "oracleai_abs_deg_exact": 327.5754802589658,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 327.5754473167971,
+          "delta_deg": 3.294216867288924e-05
+        },
+        {
+          "body": "Юпитер",
+          "oracleai_abs_deg_exact": 25.233072244467962,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 25.23309701244373,
+          "delta_deg": 2.4767975759232286e-05
+        },
+        {
+          "body": "Сатурн",
+          "oracleai_abs_deg_exact": 40.40583958554505,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 40.405811763757015,
+          "delta_deg": 2.782178802362978e-05
+        },
+        {
+          "body": "Уран",
+          "oracleai_abs_deg_exact": 314.78410710944337,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 314.7840619016327,
+          "delta_deg": 4.520781067185453e-05
+        },
+        {
+          "body": "Нептун",
+          "oracleai_abs_deg_exact": 303.17522337701644,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 303.17526053857944,
+          "delta_deg": 3.7161563000154274e-05
+        },
+        {
+          "body": "Плутон",
+          "oracleai_abs_deg_exact": 251.43710134296236,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 251.43707542957065,
+          "delta_deg": 2.5913391709764255e-05
+        }
+      ],
+      "non_comparable": [
+        "ASC",
+        "MC",
+        "Placidus houses",
+        "true lunar nodes",
+        "True Lilith",
+        "retrograde flag",
+        "Chiron/asteroids"
+      ],
+      "comparisons_jpl_horizons": [
+        {
+          "body": "Солнце",
+          "jpl_command": "10",
+          "oracleai_abs_deg_exact": 279.85921562998124,
+          "jpl_obs_ecliptic_longitude_deg": 279.8592049,
+          "delta_deg": 1.0729981227086682e-05
+        },
+        {
+          "body": "Луна",
+          "jpl_command": "301",
+          "oracleai_abs_deg_exact": 217.29336654989638,
+          "jpl_obs_ecliptic_longitude_deg": 217.2933209,
+          "delta_deg": 4.5649896378563426e-05
+        },
+        {
+          "body": "Меркурий",
+          "jpl_command": "199",
+          "oracleai_abs_deg_exact": 271.1118048523248,
+          "jpl_obs_ecliptic_longitude_deg": 271.1117994,
+          "delta_deg": 5.452324785437668e-06
+        },
+        {
+          "body": "Венера",
+          "jpl_command": "299",
+          "oracleai_abs_deg_exact": 240.96142091093105,
+          "jpl_obs_ecliptic_longitude_deg": 240.9614017,
+          "delta_deg": 1.9210931043289747e-05
+        },
+        {
+          "body": "Марс",
+          "jpl_command": "499",
+          "oracleai_abs_deg_exact": 327.5754802589658,
+          "jpl_obs_ecliptic_longitude_deg": 327.5754592,
+          "delta_deg": 2.105896578541433e-05
+        },
+        {
+          "body": "Юпитер",
+          "jpl_command": "599",
+          "oracleai_abs_deg_exact": 25.233072244467962,
+          "jpl_obs_ecliptic_longitude_deg": 25.2331086,
+          "delta_deg": 3.635553204617281e-05
+        },
+        {
+          "body": "Сатурн",
+          "jpl_command": "699",
+          "oracleai_abs_deg_exact": 40.40583958554505,
+          "jpl_obs_ecliptic_longitude_deg": 40.4058374,
+          "delta_deg": 2.18554504272106e-06
+        },
+        {
+          "body": "Уран",
+          "jpl_command": "799",
+          "oracleai_abs_deg_exact": 314.78410710944337,
+          "jpl_obs_ecliptic_longitude_deg": 314.7840519,
+          "delta_deg": 5.52094433601269e-05
+        },
+        {
+          "body": "Нептун",
+          "jpl_command": "899",
+          "oracleai_abs_deg_exact": 303.17522337701644,
+          "jpl_obs_ecliptic_longitude_deg": 303.1752432,
+          "delta_deg": 1.9822983574613318e-05
+        },
+        {
+          "body": "Плутон",
+          "jpl_command": "999",
+          "oracleai_abs_deg_exact": 251.43710134296236,
+          "jpl_obs_ecliptic_longitude_deg": 251.43715,
+          "delta_deg": 4.865703763812235e-05
+        }
+      ],
+      "max_delta_jpl_deg": 5.52094433601269e-05,
+      "max_delta_skyfield_deg": 0.0001479331471898604
+    },
+    {
+      "case_id": "anchorage_2000_high_lat",
+      "input": {
+        "date": "2000-03-20",
+        "time": "12:00",
+        "tz": "America/Anchorage",
+        "lat": 61.2181,
+        "lon": -149.9003,
+        "time_known": true
+      },
+      "utc_instant": "2000-03-20T21:00:00+00:00",
+      "covers": "high_latitude",
+      "precision": "exact",
+      "comparisons_skyfield_de421": [
+        {
+          "body": "Солнце",
+          "oracleai_abs_deg_exact": 0.5548619174827899,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 0.554878823729028,
+          "delta_deg": 1.6906246230519173e-05
+        },
+        {
+          "body": "Луна",
+          "oracleai_abs_deg_exact": 189.01878384898632,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 189.01899070463406,
+          "delta_deg": 0.00020685564774680643
+        },
+        {
+          "body": "Меркурий",
+          "oracleai_abs_deg_exact": 334.45157276808254,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 334.4515837536525,
+          "delta_deg": 1.098556998613276e-05
+        },
+        {
+          "body": "Венера",
+          "oracleai_abs_deg_exact": 339.13078095669164,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 339.13076574468084,
+          "delta_deg": 1.5212010794130038e-05
+        },
+        {
+          "body": "Марс",
+          "oracleai_abs_deg_exact": 28.392672916538604,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 28.39267442931198,
+          "delta_deg": 1.5127733661302045e-06
+        },
+        {
+          "body": "Юпитер",
+          "oracleai_abs_deg_exact": 36.7203636187033,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 36.72040691652597,
+          "delta_deg": 4.329782265699578e-05
+        },
+        {
+          "body": "Сатурн",
+          "oracleai_abs_deg_exact": 44.278823953355705,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 44.27879247263964,
+          "delta_deg": 3.148071607483871e-05
+        },
+        {
+          "body": "Уран",
+          "oracleai_abs_deg_exact": 319.16860404627874,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 319.1685532718935,
+          "delta_deg": 5.077438527223421e-05
+        },
+        {
+          "body": "Нептун",
+          "oracleai_abs_deg_exact": 305.9413486149206,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 305.94138599949315,
+          "delta_deg": 3.738457252211447e-05
+        },
+        {
+          "body": "Плутон",
+          "oracleai_abs_deg_exact": 252.89370022576094,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 252.8937122379309,
+          "delta_deg": 1.2012169975150755e-05
+        }
+      ],
+      "non_comparable": [
+        "ASC",
+        "MC",
+        "Placidus houses",
+        "true lunar nodes",
+        "True Lilith",
+        "retrograde flag",
+        "Chiron/asteroids"
+      ],
+      "comparisons_jpl_horizons": [
+        {
+          "body": "Солнце",
+          "jpl_command": "10",
+          "oracleai_abs_deg_exact": 0.5548619174827899,
+          "jpl_obs_ecliptic_longitude_deg": 0.5548654,
+          "delta_deg": 3.48251720083681e-06
+        },
+        {
+          "body": "Луна",
+          "jpl_command": "301",
+          "oracleai_abs_deg_exact": 189.01878384898632,
+          "jpl_obs_ecliptic_longitude_deg": 189.0190663,
+          "delta_deg": 0.0002824510136747449
+        },
+        {
+          "body": "Меркурий",
+          "jpl_command": "199",
+          "oracleai_abs_deg_exact": 334.45157276808254,
+          "jpl_obs_ecliptic_longitude_deg": 334.451572,
+          "delta_deg": 7.68082543345372e-07
+        },
+        {
+          "body": "Венера",
+          "jpl_command": "299",
+          "oracleai_abs_deg_exact": 339.13078095669164,
+          "jpl_obs_ecliptic_longitude_deg": 339.1307749,
+          "delta_deg": 6.056691631783906e-06
+        },
+        {
+          "body": "Марс",
+          "jpl_command": "499",
+          "oracleai_abs_deg_exact": 28.392672916538604,
+          "jpl_obs_ecliptic_longitude_deg": 28.3926619,
+          "delta_deg": 1.1016538593366931e-05
+        },
+        {
+          "body": "Юпитер",
+          "jpl_command": "599",
+          "oracleai_abs_deg_exact": 36.7203636187033,
+          "jpl_obs_ecliptic_longitude_deg": 36.7204188,
+          "delta_deg": 5.518129668757865e-05
+        },
+        {
+          "body": "Сатурн",
+          "jpl_command": "699",
+          "oracleai_abs_deg_exact": 44.278823953355705,
+          "jpl_obs_ecliptic_longitude_deg": 44.2787967,
+          "delta_deg": 2.725335571085452e-05
+        },
+        {
+          "body": "Уран",
+          "jpl_command": "799",
+          "oracleai_abs_deg_exact": 319.16860404627874,
+          "jpl_obs_ecliptic_longitude_deg": 319.16854,
+          "delta_deg": 6.40462787373508e-05
+        },
+        {
+          "body": "Нептун",
+          "jpl_command": "899",
+          "oracleai_abs_deg_exact": 305.9413486149206,
+          "jpl_obs_ecliptic_longitude_deg": 305.9413686,
+          "delta_deg": 1.9985079347861756e-05
+        },
+        {
+          "body": "Плутон",
+          "jpl_command": "999",
+          "oracleai_abs_deg_exact": 252.89370022576094,
+          "jpl_obs_ecliptic_longitude_deg": 252.8937668,
+          "delta_deg": 6.657423907086013e-05
+        }
+      ],
+      "max_delta_jpl_deg": 0.0002824510136747449,
+      "max_delta_skyfield_deg": 0.00020685564774680643
+    },
+    {
+      "case_id": "sydney_1990_edge_lon",
+      "input": {
+        "date": "1990-06-21",
+        "time": "14:30",
+        "tz": "Australia/Sydney",
+        "lat": -33.8688,
+        "lon": 151.2093,
+        "time_known": true
+      },
+      "utc_instant": "1990-06-21T04:30:00+00:00",
+      "covers": "edge_longitude_southern",
+      "precision": "exact",
+      "comparisons_skyfield_de421": [
+        {
+          "body": "Солнце",
+          "oracleai_abs_deg_exact": 89.5605827905975,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 89.56057292274411,
+          "delta_deg": 9.86785337886431e-06
+        },
+        {
+          "body": "Луна",
+          "oracleai_abs_deg_exact": 67.05912623014787,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 67.0588010117639,
+          "delta_deg": 0.000325218383977699
+        },
+        {
+          "body": "Меркурий",
+          "oracleai_abs_deg_exact": 76.16705494384834,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 76.16705321290986,
+          "delta_deg": 1.730938492983114e-06
+        },
+        {
+          "body": "Венера",
+          "oracleai_abs_deg_exact": 55.480451880133906,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 55.4804622251778,
+          "delta_deg": 1.0345043904180784e-05
+        },
+        {
+          "body": "Марс",
+          "oracleai_abs_deg_exact": 15.110930331933808,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 15.11097607706479,
+          "delta_deg": 4.574513098987154e-05
+        },
+        {
+          "body": "Юпитер",
+          "oracleai_abs_deg_exact": 107.130211645272,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 107.13026244180766,
+          "delta_deg": 5.079653567463538e-05
+        },
+        {
+          "body": "Сатурн",
+          "oracleai_abs_deg_exact": 293.6830336686293,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 293.68300520510843,
+          "delta_deg": 2.846352089136417e-05
+        },
+        {
+          "body": "Уран",
+          "oracleai_abs_deg_exact": 277.9405756593089,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 277.9405556538142,
+          "delta_deg": 2.0005494661745615e-05
+        },
+        {
+          "body": "Нептун",
+          "oracleai_abs_deg_exact": 283.57188676844123,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 283.5718621338589,
+          "delta_deg": 2.4634582359794877e-05
+        },
+        {
+          "body": "Плутон",
+          "oracleai_abs_deg_exact": 225.29331248679512,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 225.29356139746832,
+          "delta_deg": 0.00024891067320709226
+        }
+      ],
+      "non_comparable": [
+        "ASC",
+        "MC",
+        "Placidus houses",
+        "true lunar nodes",
+        "True Lilith",
+        "retrograde flag",
+        "Chiron/asteroids"
+      ],
+      "comparisons_jpl_horizons": [
+        {
+          "body": "Солнце",
+          "jpl_command": "10",
+          "oracleai_abs_deg_exact": 89.5605827905975,
+          "jpl_obs_ecliptic_longitude_deg": 89.5605594,
+          "delta_deg": 2.3390597505112964e-05
+        },
+        {
+          "body": "Луна",
+          "jpl_command": "301",
+          "oracleai_abs_deg_exact": 67.05912623014787,
+          "jpl_obs_ecliptic_longitude_deg": 67.0588328,
+          "delta_deg": 0.00029343014784899424
+        },
+        {
+          "body": "Меркурий",
+          "jpl_command": "199",
+          "oracleai_abs_deg_exact": 76.16705494384834,
+          "jpl_obs_ecliptic_longitude_deg": 76.167036,
+          "delta_deg": 1.894384834599805e-05
+        },
+        {
+          "body": "Венера",
+          "jpl_command": "299",
+          "oracleai_abs_deg_exact": 55.480451880133906,
+          "jpl_obs_ecliptic_longitude_deg": 55.4804223,
+          "delta_deg": 2.9580133912077144e-05
+        },
+        {
+          "body": "Марс",
+          "jpl_command": "499",
+          "oracleai_abs_deg_exact": 15.110930331933808,
+          "jpl_obs_ecliptic_longitude_deg": 15.1109131,
+          "delta_deg": 1.7231933810535338e-05
+        },
+        {
+          "body": "Юпитер",
+          "jpl_command": "599",
+          "oracleai_abs_deg_exact": 107.130211645272,
+          "jpl_obs_ecliptic_longitude_deg": 107.1302476,
+          "delta_deg": 3.5954727991338586e-05
+        },
+        {
+          "body": "Сатурн",
+          "jpl_command": "699",
+          "oracleai_abs_deg_exact": 293.6830336686293,
+          "jpl_obs_ecliptic_longitude_deg": 293.6829815,
+          "delta_deg": 5.216862933821176e-05
+        },
+        {
+          "body": "Уран",
+          "jpl_command": "799",
+          "oracleai_abs_deg_exact": 277.9405756593089,
+          "jpl_obs_ecliptic_longitude_deg": 277.9405327,
+          "delta_deg": 4.295930887110444e-05
+        },
+        {
+          "body": "Нептун",
+          "jpl_command": "899",
+          "oracleai_abs_deg_exact": 283.57188676844123,
+          "jpl_obs_ecliptic_longitude_deg": 283.5718536,
+          "delta_deg": 3.316844123446572e-05
+        },
+        {
+          "body": "Плутон",
+          "jpl_command": "999",
+          "oracleai_abs_deg_exact": 225.29331248679512,
+          "jpl_obs_ecliptic_longitude_deg": 225.2932404,
+          "delta_deg": 7.2086795114501e-05
+        }
+      ],
+      "max_delta_jpl_deg": 0.00029343014784899424,
+      "max_delta_skyfield_deg": 0.000325218383977699
+    },
+    {
+      "case_id": "kazan_1990_date_only",
+      "input": {
+        "date": "1990-06-21",
+        "time": null,
+        "tz": "Europe/Moscow",
+        "lat": 55.79,
+        "lon": 49.12,
+        "time_known": false
+      },
+      "utc_instant": "1990-06-21T08:00:00+00:00",
+      "covers": "unknown_time",
+      "precision": "date_only",
+      "comparisons_skyfield_de421": [
+        {
+          "body": "Солнце",
+          "oracleai_abs_deg_exact": 89.69981407334991,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 89.69980428875928,
+          "delta_deg": 9.784590645267599e-06
+        },
+        {
+          "body": "Луна",
+          "oracleai_abs_deg_exact": 69.25559921340297,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 69.25528577417374,
+          "delta_deg": 0.00031343922921678313
+        },
+        {
+          "body": "Меркурий",
+          "oracleai_abs_deg_exact": 76.45357712098428,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 76.45357512093523,
+          "delta_deg": 2.0000490508209623e-06
+        },
+        {
+          "body": "Венера",
+          "oracleai_abs_deg_exact": 55.652684411909846,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 55.652694592110805,
+          "delta_deg": 1.0180200945342222e-05
+        },
+        {
+          "body": "Марс",
+          "oracleai_abs_deg_exact": 15.214735513326062,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 15.214781251217978,
+          "delta_deg": 4.57378919236362e-05
+        },
+        {
+          "body": "Юпитер",
+          "oracleai_abs_deg_exact": 107.16224037686332,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 107.16229119944634,
+          "delta_deg": 5.082258303445997e-05
+        },
+        {
+          "body": "Сатурн",
+          "oracleai_abs_deg_exact": 293.6737094085332,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 293.67368095409057,
+          "delta_deg": 2.8454442656311585e-05
+        },
+        {
+          "body": "Уран",
+          "oracleai_abs_deg_exact": 277.9347468221319,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 277.9347268409667,
+          "delta_deg": 1.998116522372584e-05
+        },
+        {
+          "body": "Нептун",
+          "oracleai_abs_deg_exact": 283.5680997387222,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 283.5680751224528,
+          "delta_deg": 2.4616269399757584e-05
+        },
+        {
+          "body": "Плутон",
+          "oracleai_abs_deg_exact": 225.2907192850637,
+          "skyfield_de421_ecliptic_of_date_longitude_deg": 225.29096781359036,
+          "delta_deg": 0.00024852852666867875
+        }
+      ],
+      "non_comparable": [
+        "ASC",
+        "MC",
+        "Placidus houses",
+        "true lunar nodes",
+        "True Lilith",
+        "retrograde flag",
+        "Chiron/asteroids"
+      ],
+      "comparisons_jpl_horizons": [
+        {
+          "body": "Солнце",
+          "jpl_command": "10",
+          "oracleai_abs_deg_exact": 89.69981407334991,
+          "jpl_obs_ecliptic_longitude_deg": 89.6997908,
+          "delta_deg": 2.327334991036878e-05
+        },
+        {
+          "body": "Луна",
+          "jpl_command": "301",
+          "oracleai_abs_deg_exact": 69.25559921340297,
+          "jpl_obs_ecliptic_longitude_deg": 69.2553125,
+          "delta_deg": 0.0002867134029713725
+        },
+        {
+          "body": "Меркурий",
+          "jpl_command": "199",
+          "oracleai_abs_deg_exact": 76.45357712098428,
+          "jpl_obs_ecliptic_longitude_deg": 76.4535582,
+          "delta_deg": 1.8920984274473085e-05
+        },
+        {
+          "body": "Венера",
+          "jpl_command": "299",
+          "oracleai_abs_deg_exact": 55.652684411909846,
+          "jpl_obs_ecliptic_longitude_deg": 55.6526549,
+          "delta_deg": 2.9511909843904505e-05
+        },
+        {
+          "body": "Марс",
+          "jpl_command": "499",
+          "oracleai_abs_deg_exact": 15.214735513326062,
+          "jpl_obs_ecliptic_longitude_deg": 15.2147184,
+          "delta_deg": 1.711332606646465e-05
+        },
+        {
+          "body": "Юпитер",
+          "jpl_command": "599",
+          "oracleai_abs_deg_exact": 107.16224037686332,
+          "jpl_obs_ecliptic_longitude_deg": 107.1622757,
+          "delta_deg": 3.532313667164999e-05
+        },
+        {
+          "body": "Сатурн",
+          "jpl_command": "699",
+          "oracleai_abs_deg_exact": 293.6737094085332,
+          "jpl_obs_ecliptic_longitude_deg": 293.6736572,
+          "delta_deg": 5.220853324772179e-05
+        },
+        {
+          "body": "Уран",
+          "jpl_command": "799",
+          "oracleai_abs_deg_exact": 277.9347468221319,
+          "jpl_obs_ecliptic_longitude_deg": 277.9347039,
+          "delta_deg": 4.292213191092742e-05
+        },
+        {
+          "body": "Нептун",
+          "jpl_command": "899",
+          "oracleai_abs_deg_exact": 283.5680997387222,
+          "jpl_obs_ecliptic_longitude_deg": 283.5680668,
+          "delta_deg": 3.293872219956029e-05
+        },
+        {
+          "body": "Плутон",
+          "jpl_command": "999",
+          "oracleai_abs_deg_exact": 225.2907192850637,
+          "jpl_obs_ecliptic_longitude_deg": 225.2906479,
+          "delta_deg": 7.138506367709851e-05
+        }
+      ],
+      "max_delta_jpl_deg": 0.0002867134029713725,
+      "max_delta_skyfield_deg": 0.00031343922921678313
+    }
+  ],
+  "note": "Identical-settings comparison: one date/time/place -> OracleAI engine vs two independent authorities. Deltas recorded as-is; no silent relabeling. Angular data (ASC/MC/houses) and node/Lilith/retrograde remain non-comparable and are tracked in docs/DOMAIN/ACCURACY_MATRIX.md. Date-only case uses the documented technical-noon convention (12:00 local); planets only."
+}
