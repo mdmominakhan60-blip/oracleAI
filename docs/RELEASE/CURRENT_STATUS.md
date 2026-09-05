@@ -34,7 +34,7 @@ The product boundary is explicit: chart and card calculations are deterministic 
 
 | ID | Gate | Evidence required | Current status |
 |---|---|---|---|
-| P0-001 | Telegram identity, onboarding and device journey | Real signed `initData`, invalid/tampered cases, real WebView/device evidence and owner isolation. Age policy since GAUNTLET v2: birth date is only an astronomy input, not an attestation; no age verification exists. | **EXTERNAL** |
+| P0-001 | Telegram identity, onboarding and device journey | Real signed `initData`, invalid/tampered cases, real WebView/device evidence and owner isolation. Age policy since GAUNTLET v2: birth date is only an astronomy input, not an attestation; no age verification exists. | **STAGING PARTIAL (BUS-106, 2026-09-06)** — сигнатурная матрица 10/11 PASS на staging (S2–S7 fail-closed, owner isolation O1–O3 PASS, логи без PII); F1 replay открыт (BUS-200), F2 DELETE-семантика (BUS-201); device-evidence с реальных Telegram-клиентов — external |
 | P0-002 | Payments | Provider sandbox invoice, duplicate webhook, refund, chargeback/error and reconciliation evidence. | **EXTERNAL** |
 | P0-003 | Live AI | Grounding/safety/language evaluation with approved provider plus p95 latency within the owner-approved target. | **STAGING/EXTERNAL** |
 | P0-004 | Operations | Encrypted backup/restore, storage permissions, migration and rollback rehearsal in disposable production-like infrastructure. | **STAGING/EXTERNAL** |

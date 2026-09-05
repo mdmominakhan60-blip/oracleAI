@@ -91,12 +91,13 @@ def main() -> int:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, executable_path=CHROMIUM_PATH,
                                     args=['--no-sandbox'])
+        context_args = {'ignore_https_errors': True}  # self-signed staging TLS
         context = browser.new_context(
             viewport={'width': args.width, 'height': args.height}, is_mobile=True,
             has_touch=True, device_scale_factor=args.dpr,
             user_agent='Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) '
                        'AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1',
-            locale='ru-RU',
+            locale='ru-RU', **context_args,
             extra_http_headers={'X-Dev-Key': os.environ['DEV_KEY']} if os.getenv('DEV_KEY') else None)
         context.add_init_script("localStorage.setItem('oracle_lang','ru'); "
                                 "localStorage.setItem('oracle_intro_seen','1'); "
