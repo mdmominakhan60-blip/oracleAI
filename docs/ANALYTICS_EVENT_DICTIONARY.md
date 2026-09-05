@@ -26,8 +26,9 @@
 | `first_question` | Первый завершённый обычный или crisis-safe вопрос с ответом. | `agent`, optional `safety=crisis` | caller surface | AI/Product | First question completion, first-value rate. |
 | `return_d1` | Open on or after UTC day +1 from first Mini App open; atomically recorded once. | `cohort_day`: `1` | `miniapp` | Product | D1 voluntary return. |
 | `return_d7` | Open on or after UTC day +7 from first Mini App open; atomically recorded once. | `cohort_day`: `7` | `miniapp` | Product | D7 voluntary return. |
+| `return_d30` | Open on or after UTC day +30 from first Mini App open; atomically recorded once. | `cohort_day`: `30` | `miniapp` | Product | D30 voluntary return. |
 
-D1/D7 — это milestone пользователя, а не количество открытий. Если пользовательница вернулась на восьмой день, оба milestone могут быть записаны при этом открытии; dashboard должен считать cohort completion, а не складывать rows как sessions.
+D1/D7/D30 — это milestone пользователя, а не количество открытий. Если пользовательница вернулась на 31-й день, сразу три milestone (`return_d1`, `return_d7`, `return_d30`) могут быть записаны при этом открытии; dashboard должен считать cohort completion (COUNT DISTINCT tg_id), а не складывать rows как sessions.
 
 ## Existing product events
 

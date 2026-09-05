@@ -36,6 +36,7 @@ E_FIRST_RITUAL = "first_ritual"
 E_FIRST_QUESTION = "first_question"
 E_RETURN_D1 = "return_d1"
 E_RETURN_D7 = "return_d7"
+E_RETURN_D30 = "return_d30"
 
 # Web-funnel events (BUS-116 / EXP-001). surface="web", tg_id=None — события
 # анонимные, в пользовательские воронки (DISTINCT tg_id) не попадают.

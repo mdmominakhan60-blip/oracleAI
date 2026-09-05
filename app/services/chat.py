@@ -427,7 +427,7 @@ async def thread_history(db, user, agent: str, limit: int = 60) -> dict:
 
 
 async def track_open(db, user, surface: str = "miniapp") -> None:
-    """Writes an open and one-time D1/D7 return milestones server-side."""
+    """Writes an open and one-time D1/D7/D30 return milestones server-side."""
     tg_id = user["tg_id"]
     await analytics.track_now(db, analytics_repo.E_MINIAPP_OPEN, tg_id,
                               surface=surface)
@@ -446,6 +446,7 @@ async def track_open(db, user, surface: str = "miniapp") -> None:
     for milestone, threshold in (
         (analytics.E_RETURN_D1, 1),
         (analytics.E_RETURN_D7, 7),
+        (analytics.E_RETURN_D30, 30),
     ):
         if age_days >= threshold:
             await analytics.track_once(

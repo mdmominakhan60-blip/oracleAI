@@ -64,6 +64,29 @@ async def test_track_open_records_d1_d7_once(db):
     assert counts[analytics.E_RETURN_D7] == 1
 
 
+async def test_track_open_records_d30_milestone(db):
+    """D30: на 31-й день milestone записывается один раз, повторы не дублируют."""
+    await users.ensure(db, 2002, "Б")
+    user = await users.get(db, 2002)
+    await chat.track_open(db, user)
+    old = datetime.now(timezone.utc) - timedelta(days=31)
+    await db.execute(
+        "UPDATE events SET day=?, created_at=? WHERE tg_id=? AND name=?",
+        (old.date().isoformat(), old.isoformat(), 2002, analytics.E_MINIAPP_OPEN),
+    )
+    await db.commit()
+    await chat.track_open(db, user)
+    await chat.track_open(db, user)
+    cur = await db.execute(
+        "SELECT name, COUNT(*) c FROM events WHERE tg_id=2002 AND name IN (?, ?) "
+        "GROUP BY name",
+        (analytics.E_RETURN_D30, analytics.E_MINIAPP_OPEN),
+    )
+    counts = {row["name"]: row["c"] for row in await cur.fetchall()}
+    assert counts[analytics.E_MINIAPP_OPEN] == 3
+    assert counts[analytics.E_RETURN_D30] == 1
+
+
 async def test_activation_funnel_uses_first_open_cohort(db):
     await analytics.track_now(
         db, analytics.E_MINIAPP_OPEN, 1001, surface="miniapp",
