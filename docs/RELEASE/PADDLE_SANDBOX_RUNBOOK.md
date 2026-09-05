@@ -73,25 +73,32 @@ curl -sk https://localhost:3443/health               # {"status":"ok"}
 ## 3. Повторная sandbox-сертификация (DevOps)
 
 Первичный прогон BUS-109 (42/42) шёл против **симулятора** (локальный
-aiohttp-сервер вместо Paddle API + генератор подписанных вебхуков). С
-реальными sandbox-ключами прогоняем **тот же сценарий против staging-эндпоинта
-реального провайдера**:
+aiohttp-сервер вместо Paddle API + генератор подписанных вебхуков).
+Для staging-прогона против реального провайдера — отдельный harness
+`infra/staging/payments_staging_cert.py` (добавлен BUS-134):
+
+- сетевой: HTTP против staging API + РЕАЛЬНЫЙ вызов `sandbox-api.paddle.com`
+  через `checkout_web_plan` (без симулятора и monkeypatch);
+- вебхуки подписываются реальным `PADDLE_WEBHOOK_SECRET` из .env.staging;
+- без dev-режима: staging работает в `APP_ENV=production` — сценарий не
+  использует `dev_user`/`X-Dev-Key` (в отличие от BUS-109);
+- сценарии: S0 смоук ключа (GET /event-types), S1 invoice (реальная
+  транзакция), S2 payment (реальный секрет), S3 duplicate, S4
+  refund/chargeback (журналирование, находка F1), S5 error paths,
+  reconciliation (`payments.charge_id` ↔ `webhook_events.event_id`).
 
 ```bash
 cd /home/softis/apps/oraclAI/oracleAI
-# 3.1 Против staging API (вебхуки на реальный staging Caddy):
-#     сертификат самоподписанный → httpx с verify=False, либо curl-проверка.
-#     Значения сессии берутся из .env.staging (секреты не в логи).
-DEV_KEY=<из .env.staging, если включён> \
-LLM_PROVIDER=off DATABASE_URL=<staging DATABASE_URL из .env.staging> \
-python3 scripts/payments_sandbox_cert.py
-# 3.2 Смоук реального сетевого пути (sandbox → staging API):
-curl -s "https://sandbox-api.paddle.com/event-types" \
-  -H "Authorization: Bearer $(grep ^PADDLE_API_KEY= infra/staging/.env.staging | cut -d= -f2-)" \
-  -o /dev/null -w '%{http_code}\n'    # 200 = ключ живой
+# infra/ не входит в образ → скрипт подхватывается из репо через stdin:
+docker exec -i oracleai-staging-staging-api-1 \
+  python3 - < infra/staging/payments_staging_cert.py
+# Без ключей fail-closed: "PADDLE_* не настроены: …". С ключами:
+# evidence появится в логах контейнера (/opt/oracle/logs/payments_staging_cert_*.{log,json})
+# — скопировать в docs/RELEASE/evidence/ и сослаться в TASKS.md (P0-002).
 ```
 
-Что проверяем на staging с реальным провайдером:
+Что проверяем на staging с реальным провайдером (покрыто harness'ом §3):
+- S0 смоук: ключ живой (GET /event-types, Bearer);
 - S1 invoice: `create_transaction` создаёт `txn_…` против **реального** Paddle
   sandbox (не симулятора);
 - S2 payment: реальный вебхук `transaction.completed` с подписью Paddle
@@ -99,7 +106,8 @@ curl -s "https://sandbox-api.paddle.com/event-types" \
 - S3 duplicate: повторная доставка не выдаёт второй раз;
 - S4 refund/chargeback: adjustment-события журналируются (текущее поведение
   до решения F1);
-- S5 error paths: битая/просроченная подпись, чужой transaction_id.
+- S5 error paths: битая/просроченная подпись, чужой transaction_id;
+- reconciliation: `payments.charge_id` ↔ `webhook_events.event_id`.
 
 Evidence складывается в `docs/RELEASE/evidence/` (log+json) и ссылается в
 `docs/RELEASE/TASKS.md` (P0-002) — по образцу
