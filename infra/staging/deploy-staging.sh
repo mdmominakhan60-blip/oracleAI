@@ -16,6 +16,9 @@ COMPOSE="docker compose -p oracleai-staging -f $STAGING_DIR/docker-compose.stagi
 
 RELEASE_ID="${1:-$(git -C "$REPO_ROOT" rev-parse --short HEAD)}"
 export IMAGE_TAG="$RELEASE_ID"
+# Экспорт обязателен: без него ${RELEASE_ID:?} в compose резолвится из .env.staging
+# (устаревшее значение) — контейнеры получают метку версии, не совпадающую с образом.
+export RELEASE_ID="$RELEASE_ID"
 
 [[ -f "$STAGING_DIR/.env.staging" ]] || { echo "Нет $STAGING_DIR/.env.staging — скопируй .env.staging.example и заполни" >&2; exit 1; }
 [[ -f "$REPO_ROOT/miniapp/dist/manifest.json" ]] || {
@@ -27,6 +30,8 @@ echo "=== [1/5] Build образа oracleai-staging:$IMAGE_TAG (без прер�
 $COMPOSE build --pull
 
 echo "=== [2/5] Up (создание/обновление; migrate-ran до api)"
+# Без --profile telegram: бот поднимается ТОЛЬКО через туннель-скрипт с его
+# guard'ами (placeholder/продовый токен → отказ; факт BUS-138 crash-loop'ов).
 $COMPOSE up -d
 
 echo "=== [3/5] Ожидание зелёного health-check staging-api"

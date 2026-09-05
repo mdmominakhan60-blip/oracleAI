@@ -47,12 +47,20 @@ echo "=== Rollback: $CURRENT → $TARGET (схема → $ALEMBIC_TARGET)"
 SECONDS=0
 
 echo "=== [1/5] Остановка app-сервисов (postgres/redis остаются)"
-$COMPOSE stop staging-bot staging-worker staging-beat staging-api
+# staging-bot под compose-профилем "telegram": явное имя в `stop`/`up -d`
+# АКТИВИРУЕТ профиль (факт BUS-138: rollback поднял бота с placeholder-токеном
+# → TokenValidationError crash-loop). Бот трогается только если был жив.
+WAS_BOT_RUNNING="$(docker inspect --format '{{.State.Running}}' oracleai-staging-staging-bot-1 2>/dev/null || true)"
+$COMPOSE stop staging-worker staging-beat staging-api
+[[ "$WAS_BOT_RUNNING" == "true" ]] && $COMPOSE stop staging-bot
+true
 
 echo "=== [2/5] alembic downgrade ИЗ ТЕКУЩЕГО (нового) образа — только если схема новее целевой"
 # downgrade гоняем из образа ТЕКУЩЕГО релиза: он знает миграции, которые создал.
-# IMAGE_TAG экспортируем явно, иначе compose run соберёт/потянет :latest.
+# IMAGE_TAG и RELEASE_ID экспортируем явно: без них ${RELEASE_ID:?} в compose
+# резолвится из .env.staging, а compose run пересоберёт :latest (уроки BUS-105).
 export IMAGE_TAG="$CURRENT"
+export RELEASE_ID="$CURRENT"
 DB_REV="$(docker compose -p oracleai-staging exec -T staging-postgres \
   psql -U "${POSTGRES_USER:-oracle_staging}" -d "${POSTGRES_DB:-oracle_staging}" -tAc \
   "SELECT version_num FROM alembic_version" 2>/dev/null || echo unknown)"
@@ -65,7 +73,15 @@ else
 fi
 
 echo "=== [3/5] Свап образа на предыдущий тег"
-$COMPOSE up -d --no-deps --no-build staging-api staging-bot staging-worker staging-beat
+# Переключение IMAGE_TAG/RELEASE_ID на TARGET обязательно: после downgrade-шага
+# они указывают на $CURRENT — иначе up -d пересоздаст контейнеры тем же новым
+# образом и откат кода станет тихим no-op (найдено репетицией BUS-108).
+export IMAGE_TAG="$TARGET"
+export RELEASE_ID="$TARGET"
+$COMPOSE up -d --no-deps --no-build staging-api staging-worker staging-beat
+# Бот возвращается только если был жив до отката; иначе его контейнер остаётся
+# вне стека (placeholder-токен → crash-loop, см. комментарий в [1/5]).
+[[ "$WAS_BOT_RUNNING" == "true" ]] && $COMPOSE up -d --no-deps --no-build staging-bot
 # beat не имеет healthcheck — ждём его стабильного старта вместе с остальными ниже.
 
 echo "=== [4/5] Ожидание зелёного health-check"
