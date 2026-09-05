@@ -61,6 +61,32 @@ if [[ -r "$PROD_ENV" ]]; then
   else
     ok "POSTGRES_PASSWORD staging отличается от продового"
   fi
+  # 3b. Paddle (BUS-134): в staging обязателен SANDBOX-ключ, и он не должен
+  # совпадать с продовым. Sandbox-ключ Paddle содержит маркер sdbx_; продовый —
+  # live_. Пустой PADDLE_API_KEY допустим (платежи на staging не настроены),
+  # но тогда предупреждаем отдельно ниже (пункт 5).
+  prod_paddle="$(grep -E '^PADDLE_API_KEY=' "$PROD_ENV" | cut -d= -f2- || true)"
+  staging_paddle="$(grep -E '^PADDLE_API_KEY=' "$ENV_STAGING" | cut -d= -f2- || true)"
+  if [[ -n "$staging_paddle" ]]; then
+    if [[ "$staging_paddle" == *"sdbx_"* ]]; then
+      ok "PADDLE_API_KEY staging — sandbox-ключ (sdbx_)"
+    else
+      fail_ "PADDLE_API_KEY staging не содержит маркер sdbx_ — подозрение на продовый ключ"
+    fi
+    if [[ -n "$prod_paddle" && "$prod_paddle" == "$staging_paddle" ]]; then
+      fail_ "PADDLE_API_KEY staging совпадает с продовым"
+    else
+      ok "PADDLE_API_KEY staging отличается от продового"
+    fi
+    staging_paddle_secret="$(grep -E '^PADDLE_WEBHOOK_SECRET=' "$ENV_STAGING" | cut -d= -f2- || true)"
+    if [[ -n "$staging_paddle_secret" ]]; then
+      ok "PADDLE_WEBHOOK_SECRET staging задан"
+    else
+      fail_ "PADDLE_WEBHOOK_SECRET пуст при заданном PADDLE_API_KEY — вебхуки не проверить"
+    fi
+  else
+    ok "PADDLE_API_KEY staging пуст — платежи не настроены (см. предупреждение в финале)"
+  fi
 else
   echo "SKIP: продовый .env не читается — сверка секретов невозможна вручную"
 fi
@@ -69,6 +95,19 @@ fi
 echo "--- compose-проект ---"
 proj="$(docker inspect oracleai-staging-staging-api-1 --format '{{index .Config.Labels "com.docker.compose.project"}}' 2>/dev/null || echo none)"
 [[ "$proj" == "oracleai-staging" ]] && ok "staging живёт в compose-проекте oracleai-staging" || fail_ "ожидался проект oracleai-staging, получен $proj"
+
+# 5. Платёжный контур: предупреждение (не fail) о неполной Paddle-конфигурации —
+# BUS-134. Refund/chargeback-политика F1 — решение CFO+Engineering Lead.
+echo "--- платежи (Paddle sandbox, BUS-134) ---"
+if [[ -n "$staging_paddle" ]]; then
+  if grep -qE '^PADDLE_CHECKOUT_URL=..' "$ENV_STAGING" && grep -qE '^PADDLE_PRICE_IDS=..' "$ENV_STAGING"; then
+    ok "PADDLE_CHECKOUT_URL и PADDLE_PRICE_IDS заданы — sandbox-платежи настроены"
+  else
+    echo "WARN: Paddle-ключ задан, но PADDLE_CHECKOUT_URL/PADDLE_PRICE_IDS пусты — checkout не заработает"
+  fi
+else
+  echo "WARN: PADDLE_API_KEY пуст — P0-002 external (BUS-134) не закрыт: ключи запрашивает board/user в Paddle Dashboard (sandbox)"
+fi
 
 echo
 [[ $fail -eq 0 ]] && { echo "ISOLATION: OK"; exit 0; } || { echo "ISOLATION: FAILED"; exit 1; }
