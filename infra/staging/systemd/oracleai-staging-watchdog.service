@@ -1,0 +1,30 @@
+# Watchdog-алертов staging (BUS-105): systemd user unit вместо nohup.
+# Почему: nohup-процесс из heartbeat-рана умирает вместе с процессной группой
+# рана (факт 2026-09-05: алерты оборвались на 01:28:11Z, crash-loop бота остался
+# незамеченным). systemd переживает раны и перезапускает при сбое.
+#
+# Установка:
+#   mkdir -p ~/.config/systemd/user
+#   cp infra/staging/systemd/oracleai-staging-watchdog.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now oracleai-staging-watchdog.service
+#   loginctl enable-linger "$(whoami)"   # чтобы unit жил без активной сессии
+#
+# Логи: journalctl --user -u oracleai-staging-watchdog -f
+
+[Unit]
+Description=OracleAI staging container-death watchdog (BUS-105)
+After=docker.service
+
+[Service]
+Type=simple
+ExecStart=%h/apps/oraclAI/oracleAI/infra/staging/staging-alert-watch.sh
+Restart=on-failure
+RestartSec=5
+# алерт-лог и watchdog.log пишет сам скрипт относительно своего каталога
+WorkingDirectory=%h/apps/oraclAI/oracleAI/infra/staging
+StandardOutput=append:%h/apps/oraclAI/oracleAI/infra/staging/watchdog.log
+StandardError=append:%h/apps/oraclAI/oracleAI/infra/staging/watchdog.log
+
+[Install]
+WantedBy=default.target

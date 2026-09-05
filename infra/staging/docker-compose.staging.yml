@@ -113,6 +113,9 @@ services:
 
   staging-bot:
     <<: *staging-app
+    # profile "telegram": вне дефолтного `up -d`, пока staging-токен бота
+    # не выдан (@BotFather) — иначе TelegramUnauthorizedError crash-loop и alert-шум.
+    profiles: ["telegram"]
     command: ["python", "-m", "app.bot.main"]
     stop_grace_period: 30s
     depends_on:

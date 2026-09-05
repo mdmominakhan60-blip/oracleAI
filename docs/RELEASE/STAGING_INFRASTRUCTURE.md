@@ -85,7 +85,8 @@ STAGING_ALEMBIC_TARGET=<revision> bash infra/staging/rollback-staging.sh [<PREVI
 
 - **Health-check'и** на всех сервисах (api — `/health` с проверкой БД, bot — хартбит в БД, worker — celery ping, caddy — HTTPS probe). `docker compose -p oracleai-staging ps` показывает статус.
 - **Логи**: `docker compose -p oracleai-staging logs -f --tail=100`; json-file с ротацией 10MB×5.
-- **Watchdog**: `staging-alert-watch.sh` слушает docker events (die) по лейблу проекта; при смерти контейнера пишет `[ts] ALERT container_died container=<name> exit_code=<n>` в `alerts.log` и (опционально) шлёт webhook (`STAGING_ALERT_WEBHOOK_URL` в .env.staging, формат `{"text": ...}`).
+- **Watchdog**: `staging-alert-watch.sh` слушает docker events (die) по лейблу проекта; при смерти контейнера с ненулевым (или неизвестным) exit code пишет `[ts] ALERT container_died container=<name> exit_code=<n>` в `alerts.log` и (опционально) шлёт webhook (`STAGING_ALERT_WEBHOOK_URL` в .env.staging, формат `{"text": ...}`). exit_code=0 (успешный one-shot job вроде staging-migrate) алертом не считается.
+- **Запуск watchdog — через systemd user unit** (`infra/staging/systemd/oracleai-staging-watchdog.service`), не через nohup из сессии: nohup-процесс из heartbeat-рана умирает вместе с процессной группой рана (факт 2026-09-05: алерты оборвались, crash-loop бота остался незамеченным). Установка: скопировать unit в `~/.config/systemd/user/`, `daemon-reload`, `enable --now`, `loginctl enable-linger`.
 - Прод-стек продолжает использовать Prometheus-алерты `infra/observability/alerts.yml` (routing по `name=~"infra-.*"`); staging не входит в продовый Prometheus — его события идут через watchdog.
 
 ## Статус репетиций (evidence, прогоны BUS-105 от 2026-09-05)
@@ -98,8 +99,9 @@ STAGING_ALEMBIC_TARGET=<revision> bash infra/staging/rollback-staging.sh [<PREVI
 | Rollback код-only (схема совпадает) | **PASS, 8s** | staging-r2 → staging-r1, health-check зелёный после свапа |
 | Rollback схемы (drill) | **PASS, ~15s roundtrip** | downgrade 0007→0006 (deck-колонка удалена) + upgrade 0006→0007 (восстановлена); обе операции транзакционны |
 | Watchdog-алерт | **PASS** | `docker kill staging-beat` → `[ts] ALERT container_died container=... exit_code=137` в alerts.log |
+| Watchdog как systemd unit (после приёмки) | **PASS** | unit `oracleai-staging-watchdog` enabled+running (linger=yes); drill: exit0-контейнер молчит, exit1 → алерт; nohup-вариант заменён (умирал вместе с процессной группой heartbeat-рана) |
 | Изоляция | **PASS (7/7)** | `check_staging_isolation.sh`: сети, порты, BOT_TOKEN, LLM-ключи, POSTGRES_PASSWORD, compose-проект |
-| Staging-бот с реальным токеном | **внешняя зависимость** | нужен человек: @BotFather → отдельный бот; с placeholder-токеном бот честно падает (TelegramUnauthorizedError), Docker его рестартит |
+| Staging-бот с реальным токеном | **внешняя зависимость** | нужен человек: @BotFather → отдельный бот. До этого бот выведен из дефолтного `up -d` через compose-профиль `telegram` (`docker compose -p oracleai-staging -f infra/staging/docker-compose.staging.yml --env-file infra/staging/.env.staging --profile telegram up -d`); с placeholder-токеном бот честно падает (TelegramUnauthorizedError) |
 | Restore drill P0-004 на staging | отдельная задача | P0-004 gate |
 
 ### Уроки прогонов (важно для будущего прод-deploy)
@@ -110,6 +112,9 @@ STAGING_ALEMBIC_TARGET=<revision> bash infra/staging/rollback-staging.sh [<PREVI
 4. **`compose run` без `IMAGE_TAG`** пересобирает/тянет `:latest` — всегда экспортируйте тег.
 5. **Caddy healthcheck**: `wget --no-check-certificate https://...` в `["CMD", ...]` парсится как единый URL (400 → вечный unhealthy); нужен `["CMD-SHELL", ...]`.
 6. **Первый старт Caddy**: выпуск self-signed сертификата занимает секунды — health-check с retry (30×2с) в deploy-скрипте обязателен.
+7. **Watchdog вне systemd — не watchdog.** Процесс, запущенный nohup из heartbeat-рана, умирает вместе с процессной группой рана; crash-loop остаётся незамеченным. Только systemd user unit с linger.
+8. **One-shot job'и (migrate) не должны алертить.** Успешный `staging-migrate` (exit 0) в die-событиях выглядит как смерть контейнера — фильтруйте exit_code=0 в watchdog, иначе каждый deploy создаёт ложный алерт.
+9. **Сервис с невалидным внешним токеном (staging-bot) — через compose `profiles`.** Пока токен от @BotFather не выдан, бот вне дефолтного `up -d` (`--profile telegram` включает) — иначе TelegramUnauthorizedError crash-loop и alert-шум.
 
 ## Ограничения и правила
 

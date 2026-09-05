@@ -36,5 +36,9 @@ while read -r ev; do
   container="$(echo "$ev" | grep -o '"Actor":{"ID":"[^"]*","Attributes":{[^}]*}' | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4)"
   # exitCode в событии — строка: "exitCode":"137" (фактическая находка BUS-105).
   exit_code="$(echo "$ev" | grep -o '"exitCode":"[0-9]*"' | head -1 | cut -d'"' -f4)"
+  # exit_code=0 — успешный one-shot job (staging-migrate), не инцидент.
+  if [[ "${exit_code:-unknown}" == "0" ]]; then
+    continue
+  fi
   log_alert "${container:-unknown}" "${exit_code:-unknown}"
 done
