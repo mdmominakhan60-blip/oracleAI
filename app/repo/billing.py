@@ -267,6 +267,18 @@ async def payment_charge_id(db, order_id: int) -> str | None:
     return row["charge_id"] if row else None
 
 
+async def had_prior_payment(db, tg_id: int) -> bool:
+    """Есть ли у покупателя ≥1 успешный платёж ДО текущего заказа (BUS-116).
+
+    Вызывается внутри транзакции apply_payment после mark_order_paid: текущий
+    заказ уже paid, поэтому порог ≥2 — это «повторная покупка».
+    """
+    cur = await db.execute(
+        "SELECT 1 FROM payments WHERE tg_id=:tg_id AND status='succeeded' "
+        "HAVING COUNT(*)>=2 LIMIT 1", {"tg_id": tg_id})
+    return await cur.fetchone() is not None
+
+
 async def user_orders(db, tg_id: int, limit: int = 50) -> list[dict]:
     cur = await db.execute(
         "SELECT * FROM orders WHERE tg_id=:tg_id ORDER BY id DESC LIMIT :limit",

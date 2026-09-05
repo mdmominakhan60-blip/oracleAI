@@ -14,6 +14,7 @@ import os
 import re
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -31,6 +32,7 @@ from ..core.observability import (
     reset_request_id,
     set_request_id,
 )
+from ..services import analytics as analytics_service
 from .deps import get_db
 from .routers import ROUTERS
 
@@ -381,6 +383,50 @@ def _public_template(name: str, request: Request) -> HTMLResponse:
     return HTMLResponse(body)
 
 
+def _web_source(request: Request) -> str:
+    """utm_source, иначе referrer-хост, иначе direct. Только allowlist-токен."""
+    source = request.query_params.get("utm_source")
+    if not source:
+        referrer = request.headers.get("referer", "")
+        if "://" in referrer:
+            host = urlsplit(referrer).netloc.rsplit(".", 2)[-2:]
+            if host and not host[0].isdigit():
+                source = ".".join(host)
+    return source or "direct"
+
+
+async def _public_page(name: str, page: str, request: Request,
+                       db=Depends(get_db)) -> HTMLResponse:
+    """Отдаёт публичную страницу и пишет web-событие воронки (BUS-116/EXP-001).
+
+    Трекинг никогда не влияет на ответ: analytics.track — фоновая запись,
+    ошибки логируются внутри сервиса. visitor дедуплицируется по дню в рамках
+    cookie-сессии; landing/content — считаем каждый показ.
+    """
+    response = _public_template(name, request)
+    if response.status_code == 404:
+        return response
+    source = analytics_service.safe_web_source(_web_source(request)) or "direct"
+    if page == "landing":
+        day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if request.cookies.get("sid_day") == day:
+            await analytics_service.track(
+                db, analytics_service.E_LANDING_VIEW, props={"page": page, "source": source},
+                surface="web")
+        else:
+            await analytics_service.track(
+                db, analytics_service.E_VISITOR, props={"source": source}, surface="web")
+            await analytics_service.track(
+                db, analytics_service.E_LANDING_VIEW, props={"page": page, "source": source},
+                surface="web")
+            response.set_cookie("sid_day", day, max_age=86400, samesite="lax")
+    else:
+        await analytics_service.track(
+            db, analytics_service.E_CONTENT_VIEW, props={"page": page, "source": source},
+            surface="web")
+    return response
+
+
 @app.get("/robots.txt", include_in_schema=False)
 async def robots_txt(request: Request):
     body = ("User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\nDisallow: /static\n\n"
@@ -404,35 +450,35 @@ async def sitemap_xml(request: Request):
 
 
 @app.get("/landing", include_in_schema=False)
-async def landing(request: Request):
+async def landing(request: Request, db=Depends(get_db)):
     """Публичный русскоязычный лендинг для поиска и шаринга ссылок."""
-    return _public_template("landing.html", request)
+    return await _public_page("landing.html", "landing", request, db)
 
 
 @app.get("/landing/en", include_in_schema=False)
-async def landing_en(request: Request):
+async def landing_en(request: Request, db=Depends(get_db)):
     """Англоязычная версия публичного лендинга."""
-    return _public_template("landing-en.html", request)
+    return await _public_page("landing-en.html", "landing", request, db)
 
 
 @app.get("/privacy", include_in_schema=False)
-async def privacy(request: Request):
-    return _public_template("privacy.html", request)
+async def privacy(request: Request, db=Depends(get_db)):
+    return await _public_page("privacy.html", "privacy", request, db)
 
 
 @app.get("/privacy/en", include_in_schema=False)
-async def privacy_en(request: Request):
-    return _public_template("privacy-en.html", request)
+async def privacy_en(request: Request, db=Depends(get_db)):
+    return await _public_page("privacy-en.html", "privacy", request, db)
 
 
 @app.get("/terms", include_in_schema=False)
-async def terms(request: Request):
-    return _public_template("terms.html", request)
+async def terms(request: Request, db=Depends(get_db)):
+    return await _public_page("terms.html", "terms", request, db)
 
 
 @app.get("/terms/en", include_in_schema=False)
-async def terms_en(request: Request):
-    return _public_template("terms-en.html", request)
+async def terms_en(request: Request, db=Depends(get_db)):
+    return await _public_page("terms-en.html", "terms", request, db)
 
 
 @app.get("/{filename}", include_in_schema=False)

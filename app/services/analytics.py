@@ -45,6 +45,21 @@ E_CREDIT_BALANCE_LOW = repo.E_CREDIT_BALANCE_LOW
 E_REPORT_DELIVERED = repo.E_REPORT_DELIVERED
 E_REFUND_REQUESTED = repo.E_REFUND_REQUESTED
 E_REFUND_COMPLETED = repo.E_REFUND_COMPLETED
+E_VISIT = repo.E_VISIT
+E_SIGNUP = repo.E_SIGNUP
+E_ACTIVATION = repo.E_ACTIVATION
+E_LANDING_VIEW = repo.E_LANDING_VIEW
+E_CONTENT_VIEW = repo.E_CONTENT_VIEW
+E_VISITOR = repo.E_VISITOR
+E_REPEAT_PAID = repo.E_REPEAT_PAID
+
+
+def safe_web_source(value: str | None) -> str | None:
+    """Публичная обёртка валидатора web-props (BUS-116): utm/referrer → токен.
+
+    API-слой вызывает отсюда, не из repo: layering presentation→services→repo.
+    """
+    return repo._safe_web_source(value)
 
 _MONETIZATION_EVENTS = {
     E_PAYWALL_VIEW, E_PAYWALL_CHOICE, E_CREDIT_PACK_CHECKOUT_STARTED,
@@ -144,6 +159,27 @@ async def track_once(db, name: str, tg_id: int, *,
         return await repo.track_once(db, name, tg_id, props=props, surface=surface)
     except Exception as e:  # noqa: BLE001
         log.warning("milestone %s не записан: %s", name, e)
+        return False
+
+
+async def track_funnel(db, *, name: str, session_id: str,
+                       tg_id: int | None = None, surface: str = "web",
+                       source: str = "direct", medium: str = "none",
+                       campaign: str | None = None, path: str | None = None,
+                       activation_action: str | None = None,
+                       signup_method: str | None = None) -> bool:
+    """Приём funnel-события (EXP-004) без риска для пользовательского пути.
+
+    Публичный эндпоинт: невалидное имя/surface/sid — не ошибка запроса, а
+    False; битые события видны по False в ответе, а не 500 на лендинге.
+    """
+    try:
+        return await repo.track_funnel(
+            db, name=name, session_id=session_id, tg_id=tg_id, surface=surface,
+            source=source, medium=medium, campaign=campaign, path=path,
+            activation_action=activation_action, signup_method=signup_method)
+    except Exception as e:  # noqa: BLE001
+        log.warning("funnel-событие %s не записано: %s", name, e)
         return False
 
 

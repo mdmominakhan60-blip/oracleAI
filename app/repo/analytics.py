@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date, datetime, timedelta, timezone
 
 from ..data.session import transaction, utcnow
@@ -36,6 +37,14 @@ E_FIRST_QUESTION = "first_question"
 E_RETURN_D1 = "return_d1"
 E_RETURN_D7 = "return_d7"
 
+# Web-funnel events (BUS-116 / EXP-001). surface="web", tg_id=None — события
+# анонимные, в пользовательские воронки (DISTINCT tg_id) не попадают.
+# Props ограничены allowlist'ом через _safe_web_prop: никаких free-form данных.
+E_LANDING_VIEW = "landing_view"
+E_CONTENT_VIEW = "content_view"
+E_VISITOR = "visitor"
+E_REPEAT_PAID = "repeat_purchase"
+
 # Monetization milestones. These names and props are server-owned; clients cannot
 # create arbitrary revenue events or attach payment/content data.
 E_PAYWALL_VIEW = "paywall_view"
@@ -47,6 +56,13 @@ E_CREDIT_BALANCE_LOW = "credit_balance_low"
 E_REPORT_DELIVERED = "report_delivered"
 E_REFUND_REQUESTED = "refund_requested"
 E_REFUND_COMPLETED = "refund_completed"
+
+# Funnel top-of-funnel events (EXP-004). Пишутся через API приёма (router
+# funnel.py) c анонимным session_id до первой идентификации клиента; props
+# строго категориальные, без PII — так же, как milestone-события выше.
+E_VISIT = "visit"
+E_SIGNUP = "signup"
+E_ACTIVATION = "activation"
 
 
 async def track(db, name: str, tg_id: int | None = None, *,
@@ -102,6 +118,106 @@ _COST_EVENT_KINDS = {"llm", "pdf", "voice", "tool", "delivery", "refund", "suppo
 _COST_CHANNELS = {"bot", "miniapp", "web", "system"}
 _COST_STATUSES = {"succeeded", "failed", "delivered", "refunded", "pending"}
 
+# Категориальные props funnel-событий (EXP-004). Allowlist в трёх местах:
+# ключи, значения utm/referrer-семейства и формат session_id. Ничего из этого
+# не принимает свободный текст пользователя — событие с PII не запишется.
+_FUNNEL_EVENT_NAMES = {E_VISIT, E_SIGNUP, E_ACTIVATION}
+_FUNNEL_SURFACES = {"web", "bot", "miniapp"}
+_FUNNEL_SOURCES = {"organic", "direct", "referral", "tg", "instagram",
+                   "reddit", "email", "paid", "unknown"}
+_FUNNEL_MEDIUMS = {"organic", "cpc", "social", "email", "referral", "none", "unknown"}
+_FUNNEL_ACTIVATION_ACTIONS = {"first_question", "first_ritual", "profile_complete",
+                              "daily_forecast"}
+_SESSION_ID_LIMIT = 64
+
+
+def _safe_session_id(value: str | None) -> str | None:
+    """sid генерирует клиент (uuid4/случайный токен) и шлёт обратно при retry."""
+    if value is None:
+        return None
+    value = str(value).strip()
+    if not value or len(value) > _SESSION_ID_LIMIT:
+        return None
+    if not all(char.isalnum() or char in "_-." for char in value):
+        return None
+    return value
+
+
+async def track_funnel(db, *, name: str, session_id: str, tg_id: int | None = None,
+                       surface: str = "web", source: str = "direct",
+                       medium: str = "none", campaign: str | None = None,
+                       path: str | None = None,
+                       activation_action: str | None = None,
+                       signup_method: str | None = None) -> bool:
+    """Идемпотентная запись funnel-события: одно (session_id, name) навсегда.
+
+    INSERT ... ON CONFLICT DO NOTHING — дедупликация на уровне БД: повторный
+    beacon/retry/перезапуск приёма не создаёт дублей. Возвращает True, только
+    если строка записана.
+    """
+    if name not in _FUNNEL_EVENT_NAMES:
+        return False
+    if surface not in _FUNNEL_SURFACES:
+        return False
+    safe_session = _safe_session_id(session_id)
+    if not safe_session:
+        return False
+    if source not in _FUNNEL_SOURCES:
+        source = "unknown"
+    if medium not in _FUNNEL_MEDIUMS:
+        medium = "unknown"
+
+    props: dict = {"source": source, "medium": medium}
+    if campaign:
+        # campaign из utm — короткий ascii-токен, всё прочее отбрасываем.
+        campaign = str(campaign).strip()
+        if campaign and len(campaign) <= 64 and all(
+                char.isalnum() or char in "_-." for char in campaign):
+            props["campaign"] = campaign
+    if path:
+        path = str(path).strip()
+        # Путь страницы без query: query несёт нефильтрованные данные и может
+        # содержать PII (email в utm и т.п.). Длина ограничена, разделители
+        # путей разрешены.
+        if path and len(path) <= 128 and all(
+                char.isalnum() or char in "/_-." for char in path):
+            props["path"] = path
+    if name == E_SIGNUP and signup_method:
+        method = str(signup_method).strip()
+        if method and len(method) <= 32 and all(char.isalnum() or char in "_"
+                                                for char in method):
+            props["signup_method"] = method
+    if name == E_ACTIVATION:
+        # action — обязательный prop: activation без ключевого действия
+        # бесполезен для KPI «активации ≥25% регистраций».
+        if not activation_action or activation_action not in _FUNNEL_ACTIVATION_ACTIONS:
+            return False
+        props["action"] = activation_action
+    if name in (E_SIGNUP, E_ACTIVATION) and tg_id is not None:
+        props["linked"] = "1"
+
+    now = datetime.now(timezone.utc)
+    async with transaction(db):
+        cur = await db.execute(
+            "INSERT INTO events(tg_id, name, props_json, surface, session_id, "
+            "day, created_at) VALUES(:tg_id, :name, :props_json, :surface, "
+            ":session_id, :day, :created_at) "
+            # Инференс частичного индекса требует явного предиката.
+            "ON CONFLICT (session_id, name) WHERE session_id IS NOT NULL "
+            "DO NOTHING",
+            {
+                "tg_id": tg_id,
+                "name": name,
+                "props_json": json.dumps(props, ensure_ascii=False),
+                "surface": surface,
+                "session_id": safe_session,
+                "day": now.strftime("%Y-%m-%d"),
+                "created_at": now.isoformat(),
+            },
+        )
+        inserted = (cur.rowcount or 0) > 0
+    return inserted
+
 
 def _safe_cost_token(value: str | None, *, limit: int = 96) -> str | None:
     if value is None:
@@ -112,6 +228,25 @@ def _safe_cost_token(value: str | None, *, limit: int = 96) -> str | None:
     if not all(char.isalnum() or char in "_-.:/" for char in value):
         return None
     return value
+
+
+# Web-funnel props (BUS-116): utm/referrer попадают в allowlist по ключу,
+# значения — короткие ascii-токены. Всё прочее отбрасывается, PII не пишется.
+_WEB_SOURCE_LIMIT = 48
+_ASCII_TOKEN_RE = re.compile(r"^[a-z0-9][a-z0-9_\-.]*$")
+
+
+def _safe_web_source(value: str | None, *, limit: int = _WEB_SOURCE_LIMIT) -> str | None:
+    if value is None:
+        return None
+    value = str(value).strip().lower()
+    if not value or len(value) > limit:
+        return None
+    # isalnum() пропускает юникод, а props должны быть ascii-токенами.
+    if not _ASCII_TOKEN_RE.match(value):
+        return None
+    return value
+
 
 
 async def record_product_cost_event(

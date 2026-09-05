@@ -329,6 +329,9 @@ async def pay_with_crystals(db, tg_id: int, sku: str, *,
                                    amount_stars=0)
         await analytics.track(db, analytics.E_PAID, tg_id,
                               props={"sku": sku, "crystals": price}, surface=surface)
+        if await repo.had_prior_payment(db, tg_id):
+            await analytics.track(db, analytics.E_REPEAT_PAID, tg_id,
+                                  props={"sku": sku, "crystals": price}, surface=surface)
         if v2:
             await monetization_repo.finish_usage(db, tg_id, order["payload"], status="succeeded")
     await analytics_service.track_monetization(
@@ -381,6 +384,11 @@ async def apply_payment(db, payload: str, *, charge_id: str | None = None,
                               props={"sku": order["sku"], "kind": order["kind"],
                                      "stars": order["amount_stars"]},
                               surface=order["surface"] or "bot")
+        if await repo.had_prior_payment(db, order["tg_id"]):
+            await analytics.track(db, analytics.E_REPEAT_PAID, order["tg_id"],
+                                  props={"sku": order["sku"], "kind": order["kind"],
+                                         "stars": order["amount_stars"]},
+                                  surface=order["surface"] or "bot")
         await _referral_revenue_bonus(db, order["tg_id"], order["amount_stars"] or 0)
     if order["kind"] == "crystals":
         await analytics_service.track_monetization(

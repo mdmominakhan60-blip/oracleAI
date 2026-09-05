@@ -515,7 +515,8 @@ CREATE TABLE IF NOT EXISTS events (
     tg_id      BIGINT,
     name       TEXT NOT NULL,
     props_json TEXT,
-    surface    TEXT DEFAULT 'bot',            -- bot|miniapp|admin|system
+    surface    TEXT DEFAULT 'bot',            -- bot|miniapp|admin|system|web
+    session_id TEXT,                          -- анонимный sid визита (EXP-004); NULL для событий без сессии
     day        TEXT,                          -- YYYY-MM-DD (UTC) для быстрых группировок
     created_at TEXT
 );
@@ -683,6 +684,9 @@ CREATE INDEX IF NOT EXISTS idx_task_jobs_status_available ON task_jobs(status, a
 CREATE INDEX IF NOT EXISTS idx_task_jobs_user_created ON task_jobs(tg_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_events_created_name
     ON events(created_at, name, tg_id);
+-- Идемпотентный приём funnel-событий (EXP-004): одно (session_id, name) на сессию.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_events_session_name
+    ON events(session_id, name) WHERE session_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_orders_user        ON orders(tg_id, status, created_at);
 CREATE INDEX IF NOT EXISTS idx_orders_status      ON orders(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_orders_status_paid ON orders(status, paid_at);

@@ -7,6 +7,7 @@ INSERT; `drain()` даёт тестам дождаться фоновых зап
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -104,3 +105,66 @@ async def test_touch_throttled_to_once_per_interval(db):
     await asyncio.sleep(0.02)
     u = await users.get(db, 1001)
     assert u["last_seen"] is not None, "после окна touch обязан записать"
+
+
+# ─────────────────── web-события воронки (BUS-116 / EXP-001) ───────────────────
+
+async def test_web_events_written_with_web_surface(db):
+    """landing_view/visitor/content_view пишутся анонимно с surface='web'."""
+    await analytics.track_now(db, analytics.E_VISITOR,
+                              props={"source": "organic"}, surface="web")
+    await analytics.track_now(db, analytics.E_LANDING_VIEW,
+                              props={"page": "landing", "source": "organic"},
+                              surface="web")
+    await analytics.track_now(db, analytics.E_CONTENT_VIEW,
+                              props={"page": "privacy", "source": "direct"},
+                              surface="web")
+    await analytics.drain()
+    cur = await db.execute(
+        "SELECT name, tg_id, surface, props_json FROM events "
+        "WHERE name IN (?, ?, ?)",
+        (analytics.E_VISITOR, analytics.E_LANDING_VIEW, analytics.E_CONTENT_VIEW))
+    rows = [dict(r) for r in await cur.fetchall()]
+    assert len(rows) == 3
+    assert all(r["tg_id"] is None for r in rows), "web-события анонимны"
+    assert all(r["surface"] == "web" for r in rows)
+    props = {r["name"]: json.loads(r["props_json"] or "{}") for r in rows}
+    assert props[analytics.E_LANDING_VIEW]["page"] == "landing"
+
+
+def test_safe_web_source_rejects_pii_and_injection():
+    """Валидатор source: только ascii-токены, всё прочее → None."""
+    assert analytics.safe_web_source("Google") == "google"
+    assert analytics.safe_web_source("t_me") == "t_me"
+    assert analytics.safe_web_source(None) is None
+    assert analytics.safe_web_source("") is None
+    assert analytics.safe_web_source("x" * 49) is None
+    assert analytics.safe_web_source("mail@example.com") is None
+    assert analytics.safe_web_source("'; DROP TABLE events;--") is None
+    assert analytics.safe_web_source("утм-скрипт") is None
+    assert analytics.safe_web_source("a b") is None
+
+
+async def test_repeat_purchase_event_after_second_payment(db, user):
+    """Вторая успешная оплата того же tg_id пишет repeat_purchase."""
+    from app.services import billing as svc
+
+    order1 = await svc.checkout_plan(db, user["tg_id"], "vip")
+    await svc.apply_payment(db, order1["payload"], charge_id="ch_1",
+                            amount_stars=order1["amount_stars"])
+    await analytics.drain()
+
+    cur = await db.execute(
+        "SELECT COUNT(*) c FROM events WHERE name=? AND tg_id=?",
+        (analytics.E_REPEAT_PAID, user["tg_id"]))
+    assert (await cur.fetchone())["c"] == 0, "первая оплата — ещё не repeat"
+
+    order2 = await svc.checkout_plan(db, user["tg_id"], "vip")
+    await svc.apply_payment(db, order2["payload"], charge_id="ch_2",
+                            amount_stars=order2["amount_stars"])
+    await analytics.drain()
+
+    cur = await db.execute(
+        "SELECT COUNT(*) c FROM events WHERE name=? AND tg_id=?",
+        (analytics.E_REPEAT_PAID, user["tg_id"]))
+    assert (await cur.fetchone())["c"] == 1, "вторая оплата — repeat_purchase"
