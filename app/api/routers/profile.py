@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -89,12 +89,18 @@ async def public_config(db=Depends(get_db)):
 
 
 @router.get("/me")
-async def me(user=Depends(touched_user), db=Depends(get_db)):
+async def me(user=Depends(touched_user), db=Depends(get_db),
+             x_session_id: str | None = Header(default=None, max_length=64)):
     """Всё, что нужно интерфейсу на старте: профиль, лимиты, тариф, фичи."""
     chart = users.chart_of(user)
     allowance = await limits.allowance(db, user, check_followup=False)
     canonical_entitlements = await entitlements.snapshot(db, user)
     await chat.track_open(db, user)
+    # Мост session→user (BUS-195): первый аутентифицированный вызов связывает
+    # анонимный sid лендинга/миниаппа с пользователем. Идентификаторы кладёт
+    # сервер; заголовок только предлагает sid, tg_id из клиента не берётся.
+    await analytics.track_session_link(db, session_id=x_session_id,
+                                       tg_id=user["tg_id"])
     flags = {f["code"]: bool(f["is_on"]) for f in await content.list_flags(db)}
     return {
         "tg_id": user["tg_id"],

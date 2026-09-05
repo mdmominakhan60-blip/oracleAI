@@ -65,6 +65,13 @@ E_VISIT = "visit"
 E_SIGNUP = "signup"
 E_ACTIVATION = "activation"
 
+# Мост session→user (BUS-176 §3 G2): серверная запись при первой
+# аутентифицированной идентификации анонимной сессии. Оба идентификатора — в
+# индексированные колонки (не в props): join воронки по индексу, tg_id в
+# дашборд-агрегаты не выводится. Клиентское событие с этим именем
+# отбрасывается allowlist'ом router funnel.py.
+E_SESSION_LINKED = "session_linked"
+
 
 async def track(db, name: str, tg_id: int | None = None, *,
                 props: dict | None = None, surface: str = "bot") -> None:
@@ -210,6 +217,41 @@ async def track_funnel(db, *, name: str, session_id: str, tg_id: int | None = No
                 "tg_id": tg_id,
                 "name": name,
                 "props_json": json.dumps(props, ensure_ascii=False),
+                "surface": surface,
+                "session_id": safe_session,
+                "day": now.strftime("%Y-%m-%d"),
+                "created_at": now.isoformat(),
+            },
+        )
+        inserted = (cur.rowcount or 0) > 0
+    return inserted
+
+
+async def track_session_link(db, *, session_id: str, tg_id: int,
+                             surface: str = "miniapp") -> bool:
+    """Мост session→user: одна строка session_linked на (session_id, tg_id).
+
+    Идентификаторы кладутся в колонки (tg_id — в авторскую колонку events,
+    не в props), поэтому SQL спеки §2 связывает visit-сессию с пользователем
+    простым join, а дедупликация достаётся существующим частичным индексом
+    миграции 0008. Невалидный sid — False, не исключение: вызов идёт из
+    аутентифицированного пути и не должен его ронять.
+    """
+    if tg_id is None:
+        return False
+    safe_session = _safe_session_id(session_id)
+    if not safe_session:
+        return False
+    now = datetime.now(timezone.utc)
+    async with transaction(db):
+        cur = await db.execute(
+            "INSERT INTO events(tg_id, name, surface, session_id, day, created_at) "
+            "VALUES(:tg_id, :name, :surface, :session_id, :day, :created_at) "
+            "ON CONFLICT (session_id, name) WHERE session_id IS NOT NULL "
+            "DO NOTHING",
+            {
+                "tg_id": tg_id,
+                "name": E_SESSION_LINKED,
                 "surface": surface,
                 "session_id": safe_session,
                 "day": now.strftime("%Y-%m-%d"),

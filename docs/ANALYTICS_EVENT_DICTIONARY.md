@@ -26,6 +26,7 @@
 | `first_question` | Первый завершённый обычный или crisis-safe вопрос с ответом. | `agent`, optional `safety=crisis` | caller surface | AI/Product | First question completion, first-value rate. |
 | `return_d1` | Open on or after UTC day +1 from first Mini App open; atomically recorded once. | `cohort_day`: `1` | `miniapp` | Product | D1 voluntary return. |
 | `return_d7` | Open on or after UTC day +7 from first Mini App open; atomically recorded once. | `cohort_day`: `7` | `miniapp` | Product | D7 voluntary return. |
+| `session_linked` | Серверная связка анонимной сессии с пользователем: первый аутентифицированный вызов (`GET /api/me`) с заголовком `X-Session-Id`. Записывается один раз на `(session_id, tg_id)`; оба идентификатора — в индексированные колонки `events.session_id`/`events.tg_id`, не в props. | none | `miniapp` | Product | Visit→paid conversion, source attribution of payers (bridge for the top-of-funnel join). |
 | `return_d30` | Open on or after UTC day +30 from first Mini App open; atomically recorded once. | `cohort_day`: `30` | `miniapp` | Product | D30 voluntary return. |
 
 D1/D7/D30 — это milestone пользователя, а не количество открытий. Если пользовательница вернулась на 31-й день, сразу три milestone (`return_d1`, `return_d7`, `return_d30`) могут быть записаны при этом открытии; dashboard должен считать cohort completion (COUNT DISTINCT tg_id), а не складывать rows как sessions.

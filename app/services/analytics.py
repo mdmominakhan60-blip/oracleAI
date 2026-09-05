@@ -49,6 +49,7 @@ E_REFUND_COMPLETED = repo.E_REFUND_COMPLETED
 E_VISIT = repo.E_VISIT
 E_SIGNUP = repo.E_SIGNUP
 E_ACTIVATION = repo.E_ACTIVATION
+E_SESSION_LINKED = repo.E_SESSION_LINKED
 E_LANDING_VIEW = repo.E_LANDING_VIEW
 E_CONTENT_VIEW = repo.E_CONTENT_VIEW
 E_VISITOR = repo.E_VISITOR
@@ -181,6 +182,24 @@ async def track_funnel(db, *, name: str, session_id: str,
             activation_action=activation_action, signup_method=signup_method)
     except Exception as e:  # noqa: BLE001
         log.warning("funnel-событие %s не записано: %s", name, e)
+        return False
+
+
+async def track_session_link(db, *, session_id: str | None, tg_id: int,
+                             surface: str = "miniapp") -> bool:
+    """Мост session→user (BUS-195): best-effort запись при идентификации.
+
+    Вызывается из аутентифицированного пути (/api/me): сбой записи не должен
+    ломать ответ, поэтому всё исключение гасится с логом. Дедуп на уровне БД —
+    один мост на сессию, повторы безвредны.
+    """
+    if not session_id:
+        return False
+    try:
+        return await repo.track_session_link(
+            db, session_id=session_id, tg_id=tg_id, surface=surface)
+    except Exception as e:  # noqa: BLE001
+        log.warning("session_linked %s не записан: %s", session_id, e)
         return False
 
 

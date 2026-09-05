@@ -159,3 +159,90 @@ async def test_api_validation_rejects_bad_payloads(client):
         "/api/funnel/events",
         json={"events": [{"name": "visit", "session_id": SID,
                           "props_json": '{"hack": 1}'}]})).status_code == 422
+
+
+# ─────────────────── мост session→user (BUS-176 §3 G2) ────────────────────────
+
+SID_LINK = "sess-bridg0000000000001"
+
+
+def as_user(user) -> dict:
+    return {"dev_user": user["tg_id"]}
+
+
+async def _linked_rows(db, sid: str = SID_LINK) -> list:
+    cur = await db.execute(
+        "SELECT tg_id, name, session_id, props_json FROM events "
+        "WHERE name=:name AND session_id=:sid",
+        {"name": analytics_repo.E_SESSION_LINKED, "sid": sid})
+    return await cur.fetchall()
+
+
+async def test_track_session_link_writes_once_per_session(db):
+    """Мост идемпотентен: повтор идентификации той же сессии не создаёт дубль."""
+    assert await analytics_repo.track_session_link(
+        db, session_id=SID_LINK, tg_id=1001) is True
+    assert await analytics_repo.track_session_link(
+        db, session_id=SID_LINK, tg_id=1001) is False
+    rows = await _linked_rows(db)
+    assert len(rows) == 1
+    assert rows[0]["tg_id"] == 1001
+    assert rows[0]["session_id"] == SID_LINK
+    # tg_id живёт в колонке, не в props (анти-reidentification, спека §4).
+    assert rows[0]["props_json"] is None
+
+
+async def test_track_session_link_rejects_bad_sid_and_missing_tg(db):
+    """Невалидный sid и отсутствие tg_id — False без записи, не исключение."""
+    assert await analytics_repo.track_session_link(
+        db, session_id="bad sid!", tg_id=1001) is False
+    assert await analytics_repo.track_session_link(
+        db, session_id="x" * 65, tg_id=1001) is False
+    assert await analytics_repo.track_session_link(
+        db, session_id=SID_LINK, tg_id=None) is False
+    cur = await db.execute(
+        "SELECT COUNT(*) c FROM events WHERE name=:name",
+        {"name": analytics_repo.E_SESSION_LINKED})
+    assert (await cur.fetchone())["c"] == 0
+
+
+async def test_api_me_links_session_via_header(client, db, user):
+    """/api/me с X-Session-Id пишет мост: join сессии к пользователю работает."""
+    response = await client.get("/api/me", params=as_user(user))
+    assert response.status_code == 200
+    assert await _linked_rows(db, SID_LINK) == []
+    response = await client.get(
+        "/api/me", params=as_user(user),
+        headers={"X-Session-Id": SID_LINK})
+    assert response.status_code == 200
+    rows = await _linked_rows(db)
+    assert len(rows) == 1 and rows[0]["tg_id"] == user["tg_id"]
+
+    # SQL спеки §2: visit-сессия соединяется с пользователем через мост.
+    await analytics_repo.track_funnel(
+        db, name=analytics_repo.E_VISIT, session_id=SID_LINK)
+    cur = await db.execute(
+        "SELECT COUNT(*) c FROM events visit JOIN events bridge "
+        "ON bridge.session_id = visit.session_id AND bridge.tg_id IS NOT NULL "
+        "WHERE visit.name=:visit AND bridge.name=:bridge",
+        {"visit": analytics_repo.E_VISIT,
+         "bridge": analytics_repo.E_SESSION_LINKED})
+    assert (await cur.fetchone())["c"] == 1
+
+
+async def test_api_me_without_sid_writes_nothing(client, db, user):
+    """/api/me без заголовка — ответ обычный, мост не пишется."""
+    response = await client.get("/api/me", params=as_user(user))
+    assert response.status_code == 200
+    cur = await db.execute(
+        "SELECT COUNT(*) c FROM events WHERE name=:name",
+        {"name": analytics_repo.E_SESSION_LINKED})
+    assert (await cur.fetchone())["c"] == 0
+
+
+async def test_api_me_rejects_oversized_sid(client, db, user):
+    """Слишком длинный sid отбрасывается валидатором, ответ не ломается."""
+    response = await client.get(
+        "/api/me", params=as_user(user),
+        headers={"X-Session-Id": "x" * 100})
+    assert response.status_code == 422
