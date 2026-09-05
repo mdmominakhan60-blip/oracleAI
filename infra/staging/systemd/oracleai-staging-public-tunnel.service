@@ -1,0 +1,24 @@
+# Публичный HTTPS-туннель staging (BUS-138): cloudflared quick-tunnel.
+# systemd user unit — nohup из heartbeat-ранов запрещён (см. память
+# devops-engineer: nohup умирает с процессной группой рана).
+# Установка — см. комментарии в infra/staging/staging-public-tunnel.sh.
+# Логи: journalctl --user -u oracleai-staging-public-tunnel -f
+
+[Unit]
+Description=OracleAI staging public HTTPS tunnel (BUS-138, cloudflared quick-tunnel)
+After=docker.service
+# Туннель нужен только при живом staging-Caddy; при его старте пересоздаём
+# URL-обновление через Restart самого туннеля (Caddy не зависит от туннеля).
+
+[Service]
+Type=simple
+ExecStart=%h/apps/oraclAI/oracleAI/infra/staging/staging-public-tunnel.sh
+Restart=on-failure
+RestartSec=10
+WorkingDirectory=%h/apps/oraclAI/oracleAI/infra/staging
+EnvironmentFile=%h/apps/oraclAI/oracleAI/infra/staging/.env.staging
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
