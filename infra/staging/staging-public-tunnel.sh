@@ -81,7 +81,17 @@ if [[ "$NEW_URL" != "$PREV_URL" ]]; then
   SVC="staging-api"
   case "$BOT_VAL" in
     *placeholder*|*PLACEHOLDER*|*changeme*|"000000:AAA"*) : ;;
-    ?*) COMPOSE_EXTRA=(--profile telegram); SVC="staging-api staging-bot" ;;
+    ?*)
+      # Fail-closed: продовый токен в staging = конфликт getUpdates двух
+      # poller'ов + утечка пром-трафика в staging (факт BUS-138, 2026-09-06:
+      # вписали продовый @oraclAi_bot). Токен staging обязан отличаться от
+      # продового; иначе бот не поднимаем, только journal.
+      PROD_VAL="$(grep '^BOT_TOKEN=' "${ORACLEAI_ROOT:-$(dirname "$(dirname "$STAGING_DIR")")}/.env" 2>/dev/null | head -1 | cut -d= -f2- || true)"
+      if [[ -n "$PROD_VAL" && "$BOT_VAL" == "$PROD_VAL" ]]; then
+        echo "$(date -u +%FT%TZ) tunnel: ОТКАЗ поднимать staging-bot — BOT_TOKEN совпадает с продовым (изоляция). Впиши отдельный токен staging-бота." >&2
+      else
+        COMPOSE_EXTRA=(--profile telegram); SVC="staging-api staging-bot"
+      fi ;;
   esac
   docker compose -p oracleai-staging \
     -f "$STAGING_DIR/docker-compose.staging.yml" \
