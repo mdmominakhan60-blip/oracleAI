@@ -1,0 +1,42 @@
+# Caddy edge для staging. TLS — самоподписанный сертификат (tls internal):
+# staging-домен не проходит валидацию Let's Encrypt (внутренняя сеть),
+# клиентские проверки идут с --no-check-certificate / отключённой верификацией.
+#
+# Отличие от продового Caddyfile: site-адрес из STAGING_DOMAIN, tls internal.
+# Защиты те же: /metrics закрыт, лимиты тела, security-заголовки.
+
+{$STAGING_DOMAIN} {
+	tls internal
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	# Prometheus скрейпит staging-api:8080/metrics по внутренней сети; наружу не отдаём.
+	handle /metrics {
+		respond 404
+	}
+
+	handle /api/webhooks/* {
+		request_body {
+			max_size 512KB
+		}
+		reverse_proxy staging-api:8080
+	}
+
+	handle {
+		# Должно совпадать с app/core/palm.py MAX_IMAGE_BYTES (8 MB).
+		request_body {
+			max_size 8MB
+		}
+		reverse_proxy staging-api:8080 {
+			health_uri /health
+			health_interval 30s
+		}
+	}
+}

@@ -1,0 +1,203 @@
+# OracleAI staging stack — полностью изолирован от прод-стека (compose-проект `infra`).
+# Поднимается так (из корня репо продукта):
+#   docker compose -p oracleai-staging -f infra/staging/docker-compose.staging.yml --env-file infra/staging/.env.staging up -d --build
+#
+# Изоляция от прода:
+#   - отдельный compose-проект (-p oracleai-staging): имена контейнеров/томов/сетей не пересекаются;
+#   - отдельная сеть oracle_staging_internal (прод живёт в oracle_internal);
+#   - порты 3443/8443 (прод-Caddy занимает 80/443; 3080 — HTTP-редирект);
+#   - отдельная БД и тома staging_*;
+#   - секреты из infra/staging/.env.staging (в .gitignore), продовый .env не читается.
+#
+# ВАЖНО: не добавляйте общий том или сеть с прод-стеком — это ломает изоляцию (критерий BUS-105).
+
+x-staging-logging: &staging-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-staging-app: &staging-app
+  # IMAGE_TAG задаёт deploy-скрипт (=RELEASE_ID, обычно git SHA) и rollback-скрипт
+  # (предыдущий тег). Тегированные образы — основа отката по коду.
+  # build: задан ТОЛЬКО на staging-migrate (общий образ собирается один раз);
+  # у остальных app-сервисов его нет — иначе 5 параллельных сборок одного тега
+  # гоняются и падают с "AlreadyExists" при тегировании.
+  image: oracleai-staging:${IMAGE_TAG:-latest}
+  env_file:
+    - ./.env.staging
+  environment: &staging-env
+    # production-like staging: APP_ENV=production обязателен — fail-closed валидация
+    # API принимает только dev|test|production. Изоляция от прода инфраструктурная.
+    APP_ENV: production
+    DATA_DIR: /opt/oracle/data
+    DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
+    REDIS_URL: redis://staging-redis:6379/0
+    CELERY_ENABLED: "1"
+    CELERY_TASK_ALWAYS_EAGER: "0"
+    PGVECTOR_ENABLED: "1"
+    RELEASE_ID: ${RELEASE_ID:?RELEASE_ID must be set}
+  networks:
+    - oracle_staging_internal
+  init: true
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging: *staging-logging
+
+services:
+  staging-postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-oracle_staging}
+      POSTGRES_USER: ${POSTGRES_USER:-oracle_staging}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - staging_pg_data:/var/lib/postgresql/data
+      - ../postgres-init.sql:/docker-entrypoint-initdb.d/10-pgvector.sql:ro
+    networks:
+      - oracle_staging_internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging: *staging-logging
+
+  staging-redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - staging_redis_data:/data
+    networks:
+      - oracle_staging_internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *staging-logging
+
+  staging-migrate:
+    <<: *staging-app
+    # Сборка образа oracleai-staging:$IMAGE_TAG происходит ЗДЕСЬ (единственный
+    # сервис с build:). Остальные app-сервисы используют готовый образ через
+    # build: !reset null.
+    build:
+      context: ../..
+      dockerfile: infra/Dockerfile
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      staging-postgres:
+        condition: service_healthy
+    restart: "no"
+
+  staging-api:
+    <<: *staging-app
+    command: ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]
+    depends_on:
+      staging-migrate:
+        condition: service_completed_successfully
+      staging-redis:
+        condition: service_healthy
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  staging-bot:
+    <<: *staging-app
+    command: ["python", "-m", "app.bot.main"]
+    stop_grace_period: 30s
+    depends_on:
+      staging-migrate:
+        condition: service_completed_successfully
+      staging-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "/opt/oracle/scripts/healthcheck.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  staging-worker:
+    <<: *staging-app
+    command: ["celery", "-A", "app.queue:celery_app", "worker", "--loglevel=INFO", "--queues=llm,maintenance", "--concurrency=2"]
+    environment:
+      <<: *staging-env
+    depends_on:
+      staging-migrate:
+        condition: service_completed_successfully
+      staging-redis:
+        condition: service_healthy
+    stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.queue:celery_app inspect ping -d celery@$$HOSTNAME >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  staging-beat:
+    <<: *staging-app
+    command: ["celery", "-A", "app.queue:celery_app", "beat", "--loglevel=INFO"]
+    environment:
+      <<: *staging-env
+    depends_on:
+      staging-migrate:
+        condition: service_completed_successfully
+      staging-redis:
+        condition: service_healthy
+    stop_grace_period: 30s
+
+  staging-caddy:
+    image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    environment:
+      STAGING_DOMAIN: ${STAGING_DOMAIN:-localhost}
+    command: caddy run --config /etc/caddy/staging.Caddyfile
+    ports:
+      - "${STAGING_HTTPS_PORT:-3443}:443"
+      - "${STAGING_HTTP_PORT:-3080}:80"
+    volumes:
+      - ./staging.Caddyfile:/etc/caddy/staging.Caddyfile:ro
+      - staging_caddy_data:/data
+      - staging_caddy_config:/config
+    networks:
+      - oracle_staging_internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      staging-api:
+        condition: service_healthy
+    healthcheck:
+      # CMD-SHELL: busybox wget в caddy-alpine; --no-check-certificate отдельно,
+      # иначе вся строка парсится как URL (фактическая ошибка 400 → вечный unhealthy).
+      test: ["CMD-SHELL", "wget -q -O /dev/null --no-check-certificate https://localhost:443/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging: *staging-logging
+
+volumes:
+  staging_pg_data:
+    name: oracleai-staging_pg_data
+  staging_redis_data:
+    name: oracleai-staging_redis_data
+  staging_caddy_data:
+    name: oracleai-staging_caddy_data
+  staging_caddy_config:
+    name: oracleai-staging_caddy_config
+
+networks:
+  oracle_staging_internal:
+    name: oracle_staging_internal
+    driver: bridge

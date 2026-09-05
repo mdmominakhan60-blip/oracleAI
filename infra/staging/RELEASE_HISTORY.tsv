@@ -1,0 +1,3 @@
+2026-09-05T01:19:39Z	deploy	staging-r1	0007_add_tarot_deck
+2026-09-05T01:20:17Z	deploy	staging-r2	0007_add_tarot_deck
+2026-09-05T01:23:44Z	rollback	staging-r1	0007_add_tarot_deck
