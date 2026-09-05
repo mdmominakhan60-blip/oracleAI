@@ -1,6 +1,7 @@
 import { $, get, state, fail, actions, setViewVisibility } from './core/runtime.js';
 import { adminShellTemplate } from './layout/template.js';
 import { DashboardFeature } from './features/dashboard.js';
+import { AnalyticsFeature } from './features/analytics.js';
 import { UsersFeature } from './features/users.js';
 import { CommerceFeature } from './features/commerce.js';
 import { EngagementFeature } from './features/engagement.js';
@@ -19,6 +20,7 @@ export class AdminApplication {
     this.mountLayout();
     this.features = {
       dashboard: new DashboardFeature(),
+      analytics: new AnalyticsFeature(),
       users: new UsersFeature(),
       commerce: new CommerceFeature(),
       engagement: new EngagementFeature(),
@@ -30,6 +32,7 @@ export class AdminApplication {
     this.features.logs.init();
     this.loaders = {
       dashboard: () => this.features.dashboard.load(),
+      analytics: () => this.features.analytics.load(),
       users: () => this.features.users.load(),
       orders: () => this.features.commerce.loadOrders(),
       catalog: () => this.features.commerce.loadCatalog(),
@@ -91,7 +94,7 @@ export class AdminApplication {
   }
 
   applyNavigationPermissions() {
-    const requirements = { users: 'users:read', orders: 'dashboard', catalog: 'catalog', promo: 'promo', broadcasts: 'broadcast', content: 'content:read', settings: 'settings:read', audit: 'dashboard', reconciliation: 'dashboard', logs: 'dashboard', horoscopes: 'content:read', costs: 'dashboard', safety: 'users:read' };
+    const requirements = { analytics: 'dashboard', users: 'users:read', orders: 'dashboard', catalog: 'catalog', promo: 'promo', broadcasts: 'broadcast', content: 'content:read', settings: 'settings:read', audit: 'dashboard', reconciliation: 'dashboard', logs: 'dashboard', horoscopes: 'content:read', costs: 'dashboard', safety: 'users:read' };
     document.querySelectorAll('.nav-item').forEach((button) => {
       const permission = requirements[button.dataset.view];
       if (permission && !state.can(permission)) button.classList.add('hidden');

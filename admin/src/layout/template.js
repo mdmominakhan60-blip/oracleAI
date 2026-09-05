@@ -15,6 +15,7 @@ export const adminShellTemplate = String.raw`
     <div class="brand"><span>🔮</span><b>Оракул</b></div>
     <nav id="nav" aria-label="Разделы панели">
       <button class="nav-item active" data-view="dashboard"><i>📊</i>Дашборд</button>
+      <button class="nav-item" data-view="analytics"><i>🔭</i>Аналитика</button>
       <button class="nav-item" data-view="users"><i>👥</i>Клиентки</button>
       <button class="nav-item" data-view="orders"><i>💳</i>Заказы</button>
       <button class="nav-item" data-view="reconciliation"><i>🧾</i>Сверка платежей</button>
@@ -101,6 +102,77 @@ export const adminShellTemplate = String.raw`
           <div id="sources" class="table-wrap"></div></div>
         <div class="card"><div class="card-head"><h3>Кто приводит</h3></div>
           <div id="referrers" class="table-wrap"></div></div>
+      </div>
+    </section>
+
+    <!-- АНАЛИТИКА -->
+    <section class="view" id="view-analytics">
+      <div class="card">
+        <div class="card-head"><h3>Аудитория</h3>
+          <span class="muted small">Нажми на карточку, чтобы отфильтровать список ниже</span></div>
+        <div id="anx-segments" class="segment-grid" role="group" aria-label="Сегменты аудитории"></div>
+      </div>
+
+      <div class="row-2">
+        <div class="card">
+          <div class="card-head"><h3>Воронка активации Mini App</h3>
+            <span id="anx-activation-cohort" class="muted small"></span></div>
+          <div id="anx-activation"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>CRM-воронка</h3>
+            <span class="muted small">период: <span id="anx-funnel-days"></span> дн.</span></div>
+          <div id="anx-funnel"></div>
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div class="card">
+          <div class="card-head"><h3>Удержание по когортам</h3></div>
+          <div id="anx-retention" class="table-wrap"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>События монетизации</h3>
+            <span class="muted small">от пейволла до доставки разбора</span></div>
+          <div id="anx-money-funnel" class="table-wrap"></div>
+        </div>
+      </div>
+
+      <div id="anx-rev-kpi" class="kpi-grid"></div>
+
+      <div class="row-3">
+        <div class="card"><div class="card-head"><h3>Выручка по SKU</h3></div>
+          <div id="anx-rev-sku" class="table-wrap"></div></div>
+        <div class="card"><div class="card-head"><h3>Активные тарифы</h3></div>
+          <div id="anx-tiers" class="table-wrap"></div></div>
+        <div class="card"><div class="card-head"><h3>Кристаллы</h3>
+          <span id="anx-crystal-sub" class="muted small"></span></div>
+          <div id="anx-crystals" class="table-wrap"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Клиентки</h3>
+          <span class="muted small">клик по строке — профиль с событиями и платежами</span></div>
+        <div class="toolbar">
+          <label class="sr-only" for="anx-q">Поиск клиенток в аналитике</label>
+          <input id="anx-q" class="input" aria-label="Поиск клиенток" placeholder="Имя, @username или id…">
+          <label class="sr-only" for="anx-segment">Сегмент клиенток</label>
+          <select id="anx-segment" class="input slim" aria-label="Сегмент клиенток"></select>
+          <label class="sr-only" for="anx-order">Сортировка клиенток</label>
+          <select id="anx-order" class="input slim" aria-label="Сортировка клиенток">
+            <option value="created_at">Сначала новые</option>
+            <option value="last_seen">По активности</option>
+            <option value="ltv">По деньгам</option>
+            <option value="name">По имени</option>
+          </select>
+          <span id="anx-total" class="muted"></span>
+        </div>
+        <div id="anx-users-table" class="table-wrap"></div>
+        <div class="pager">
+          <button id="anx-prev" class="btn ghost">← Назад</button>
+          <span id="anx-page" class="muted"></span>
+          <button id="anx-next" class="btn ghost">Вперёд →</button>
+        </div>
       </div>
     </section>
 

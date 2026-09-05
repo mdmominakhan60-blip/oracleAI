@@ -1,0 +1,245 @@
+import {
+  $, esc, num, pct, usd, date, get, state, actions, table, bindRows,
+  fillSegmentSelect, fail,
+} from '../core/runtime.js';
+import { segmentLabel } from './users.js';
+
+// BUS-178: аналитический раздел — срезы воронки/retention/revenue + сегменты аудитории.
+// Источники — существующие агрегаты /api/admin/dashboard и /api/admin/users.
+
+const ACTIVATION_LABELS = {
+  first_ritual: 'Первая практика',
+  first_question: 'Первый вопрос',
+  d1_return: 'Возврат D1',
+  d7_return: 'Возврат D7',
+};
+
+const MONEY_EVENTS = [
+  ['paywall_view', 'Увидели пейволл'],
+  ['paywall_choice', 'Выбрали оффер'],
+  ['invoice_created', 'Создан счёт'],
+  ['paid', 'Оплатили'],
+  ['first_paid_action', 'Первая оплата'],
+  ['subscription_lifecycle', 'События подписки'],
+  ['credit_pack_checkout_started', 'Чекаут кристаллов'],
+  ['credit_pack_paid', 'Кристаллы оплачены'],
+  ['credit_spent', 'Кристаллы потрачены'],
+  ['report_delivered', 'Разбор доставлен'],
+  ['refund_completed', 'Возврат завершён'],
+];
+
+// Карточки-сегменты: показываем только те коды, чей размер можно честно
+// посчитать из overview без отдельного counts-эндпоинта.
+function segmentCards(overview) {
+  const total = overview?.users_total ?? 0;
+  return [
+    ['all', 'Все клиентки', total],
+    ['onboarded', 'Прошли знакомство', overview?.onboarded],
+    ['not_onboarded', 'Не дошли до конца', Math.max(0, total - (overview?.onboarded ?? 0))],
+    ['active_sub', 'С подпиской', overview?.subs_active],
+    ['expired', 'Без активной подписки', Math.max(0, total - (overview?.subs_active ?? 0))],
+    ['paying', 'Платящие', overview?.payers],
+    ['never_paid', 'Ни разу не платили', Math.max(0, total - (overview?.payers ?? 0))],
+    ['active_7d', 'Активны за неделю', overview?.wau],
+  ];
+}
+
+export class AnalyticsFeature {
+  constructor() {
+    this.q = '';
+    this.segment = 'all';
+    this.order = 'created_at';
+    this.offset = 0;
+    this.limit = 50;
+    this.searchTimer = null;
+    this.bound = false;
+  }
+
+  bind() {
+    if (this.bound) return;
+    this.bound = true;
+    $('anx-q').addEventListener('input', (event) => {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = setTimeout(() => {
+        this.q = event.target.value.trim();
+        this.offset = 0;
+        this.loadUsers().catch(fail);
+      }, 350);
+    });
+    $('anx-segment').addEventListener('change', (event) => {
+      this.segment = event.target.value;
+      this.offset = 0;
+      this.highlightSegments();
+      this.loadUsers().catch(fail);
+    });
+    $('anx-order').addEventListener('change', (event) => {
+      this.order = event.target.value;
+      this.loadUsers().catch(fail);
+    });
+    $('anx-prev').addEventListener('click', () => {
+      this.offset = Math.max(0, this.offset - this.limit);
+      this.loadUsers().catch(fail);
+    });
+    $('anx-next').addEventListener('click', () => {
+      this.offset += this.limit;
+      this.loadUsers().catch(fail);
+    });
+    $('anx-segments').addEventListener('click', (event) => {
+      const card = event.target.closest('[data-segment]');
+      if (!card) return;
+      this.segment = card.dataset.segment;
+      $('anx-segment').value = this.segment;
+      this.offset = 0;
+      this.highlightSegments();
+      this.loadUsers().catch(fail);
+    });
+  }
+
+  async load() {
+    this.bind();
+    await Promise.all([this.loadMetrics(), this.loadUsers()]);
+  }
+
+  async loadMetrics() {
+    const path = state.demo
+      ? `/api/admin/dashboard/demo?days=${state.period}`
+      : `/api/admin/dashboard?days=${state.period}`;
+    const dash = await get(path);
+    this.renderActivation(dash.activation);
+    this.renderFunnel(dash.funnel);
+    this.renderRetention(dash.retention);
+    this.renderMoney(dash);
+    this.renderSegments(dash.overview);
+  }
+
+  renderActivation(activation) {
+    const steps = activation?.steps || [];
+    $('anx-activation-cohort').textContent = activation?.cohort
+      ? `когорта: ${num(activation.cohort)} открытий Mini App за ${num(activation.days ?? state.period)} дн.`
+      : '';
+    $('anx-activation').innerHTML = steps.length
+      ? steps.map((step) => {
+          const label = ACTIVATION_LABELS[step.event] || step.step;
+          return `<div class="funnel-step"><div class="funnel-top"><span>${esc(label)}</span><span>${num(step.value)} · ${pct(step.of_cohort)}</span></div><div class="funnel-bar"><div class="funnel-fill" style="width:${Math.max(1, step.of_cohort)}%"></div></div></div>`;
+        }).join('')
+      : '<div class="muted small">Открытий Mini App за период пока нет</div>';
+  }
+
+  renderFunnel(funnel) {
+    const days = $('anx-funnel-days');
+    if (days) days.textContent = String(state.period);
+    $('anx-funnel').innerHTML = (funnel || []).length
+      ? funnel.map((step, index) => {
+          const previous = index ? funnel[index - 1].value : step.value;
+          const drop = previous ? Math.round((1 - step.value / previous) * 100) : 0;
+          return `<div class="funnel-step"><div class="funnel-top"><span>${esc(step.step)}</span><span>${num(step.value)} · ${pct(step.of_total)}${index && drop > 0 ? `<span class="funnel-drop">−${drop}%</span>` : ''}</span></div><div class="funnel-bar"><div class="funnel-fill" style="width:${Math.max(1, step.of_total)}%"></div></div></div>`;
+        }).join('')
+      : '<div class="muted small">Данных за период нет</div>';
+  }
+
+  renderRetention(retention) {
+    $('anx-retention').innerHTML = table([
+      { title: 'Когорта', render: (row) => date(row.cohort) },
+      { title: 'Людей', num: true, render: (row) => num(row.size) },
+      { title: 'D1', num: true, render: (row) => pct(row.d1) },
+      { title: 'D3', num: true, render: (row) => pct(row.d3) },
+      { title: 'D7', num: true, render: (row) => pct(row.d7) },
+      { title: 'D14', num: true, render: (row) => pct(row.d14) },
+      { title: 'D30', num: true, render: (row) => pct(row.d30) },
+    ], retention || [], { empty: 'Когорт пока нет — нужны первые недели' });
+  }
+
+  renderMoney(dash) {
+    const v2 = dash.monetization_v2;
+    if (!v2) {
+      $('anx-rev-kpi').innerHTML = '<div class="empty">v2-монетизация недоступна (демо-режим)</div>';
+      ['anx-rev-sku', 'anx-tiers', 'anx-money-funnel', 'anx-crystals']
+        .forEach((id) => { $(id).innerHTML = '<div class="empty">Нет данных</div>'; });
+      $('anx-crystal-sub').textContent = '';
+      return;
+    }
+    const rev = v2.revenue || {};
+    const sub = v2.subscription || {};
+    const cogs = v2.cogs || {};
+    const kpis = [
+      { label: 'Gross, Stars', value: num(rev.gross_stars), sub: usd(rev.gross_stars), cls: 'accent' },
+      { label: 'Оплаченных заказов', value: num(rev.paid_orders), sub: `возвратов: ${num(rev.refunded_orders)}`, cls: '' },
+      { label: 'Доля возвратов', value: pct(rev.refund_rate_pct), sub: 'от оплаченных заказов', cls: (rev.refund_rate_pct ?? 0) > 5 ? 'bad' : 'good' },
+      { label: 'Новых плательщиков', value: num(sub.new_paid_users), sub: `за ${num(v2.window_days ?? state.period)} дн.`, cls: '' },
+      { label: 'Повторных плательщиков', value: num(sub.repeat_payers), sub: 'больше одной оплаты', cls: '' },
+      { label: 'Переменные расходы', value: `$${(cogs.total_variable_cost_usd ?? 0).toFixed(2)}`, sub: `${num((cogs.by_kind || []).reduce((sum, item) => sum + (item.events || 0), 0))} событий`, cls: '' },
+    ];
+    $('anx-rev-kpi').innerHTML = kpis.map((item) =>
+      `<div class="kpi ${item.cls}"><div class="kpi-label">${esc(item.label)}</div><div class="kpi-value">${item.value}</div><div class="kpi-sub">${esc(item.sub)}</div></div>`).join('');
+
+    $('anx-rev-sku').innerHTML = table([
+      { title: 'SKU', render: (row) => esc(row.sku) },
+      { title: 'Заказов', num: true, render: (row) => num(row.orders) },
+      { title: 'Stars', num: true, render: (row) => num(row.stars) },
+    ], rev.by_sku || [], { empty: 'Оплаченных заказов за период нет' });
+
+    const tiers = Object.entries(sub.active_by_tier || {});
+    $('anx-tiers').innerHTML = tiers.length
+      ? table([
+          { title: 'Тариф', render: (row) => esc(row[0]) },
+          { title: 'Активных', num: true, render: (row) => num(row[1]) },
+        ], tiers)
+      : '<div class="empty">Активных подписок нет</div>';
+
+    const funnelCounts = v2.funnel || {};
+    const base = funnelCounts.paywall_view || 0;
+    $('anx-money-funnel').innerHTML = table([
+      { title: 'Событие', render: (row) => esc(row.label) },
+      { title: 'Раз', num: true, render: (row) => num(row.value) },
+      { title: 'От пейволла', num: true, render: (row) => (base ? pct((row.value * 100) / base) : '—') },
+    ], MONEY_EVENTS.map(([key, label]) => ({ key, label, value: funnelCounts[key] ?? 0 })));
+
+    const crystals = v2.crystals || {};
+    $('anx-crystal-sub').textContent = `в обороте: ${num(crystals.outstanding)} ✦ · повторных покупок: ${num(crystals.repeat_purchase_users)}`;
+    $('anx-crystals').innerHTML = table([
+      { title: 'Источник', render: (row) => esc(row.source) },
+      { title: 'Выдано', num: true, render: (row) => num(row.granted) },
+      { title: 'Потрачено', num: true, render: (row) => num(row.spent) },
+    ], crystals.by_source || [], { empty: 'Движений кристаллов за период нет' });
+  }
+
+  renderSegments(overview) {
+    if (!overview) { $('anx-segments').innerHTML = ''; return; }
+    $('anx-segments').innerHTML = segmentCards(overview).map(([code, label, value]) =>
+      `<button type="button" class="segment-card${this.segment === code ? ' active' : ''}" data-segment="${esc(code)}" aria-pressed="${this.segment === code}"><span class="segment-value">${num(value)}</span><span class="segment-label">${esc(label)}</span></button>`).join('');
+  }
+
+  highlightSegments() {
+    $('anx-segments').querySelectorAll('.segment-card').forEach((card) => {
+      const active = card.dataset.segment === this.segment;
+      card.classList.toggle('active', active);
+      card.setAttribute('aria-pressed', String(active));
+    });
+  }
+
+  async loadUsers() {
+    const query = new URLSearchParams({
+      q: this.q, segment: this.segment, order: this.order,
+      limit: String(this.limit), offset: String(this.offset),
+    });
+    const data = await get(`/api/admin/users?${query}`);
+    fillSegmentSelect($('anx-segment'), data.segments || [], segmentLabel);
+    $('anx-segment').value = this.segment;
+    this.highlightSegments();
+    $('anx-total').textContent = `найдено: ${num(data.total)}`;
+    $('anx-page').textContent = `${data.total ? this.offset + 1 : 0}–${Math.min(this.offset + this.limit, data.total)} из ${num(data.total)}`;
+    $('anx-prev').disabled = this.offset === 0;
+    $('anx-next').disabled = this.offset + this.limit >= data.total;
+    const element = $('anx-users-table');
+    element.innerHTML = table([
+      { title: 'Клиентка', render: (row) => `<b>${esc(row.name || '—')}</b><div class="muted small">${row.username ? '@' + esc(row.username) : row.tg_id}</div>` },
+      { title: 'Тариф', render: (row) => (row.sub_active ? `<span class="badge on">${esc(row.sub_level)}</span>` : '<span class="badge off">нет</span>') },
+      { title: 'Теги', render: (row) => (row.tags || []).map((tag) => `<span class="badge tag">${esc(tag)}</span>`).join(' ') },
+      { title: '✦', num: true, render: (row) => num(row.crystals) },
+      { title: 'Stars', num: true, render: (row) => num(row.ltv_stars) },
+      { title: 'Была', render: (row) => date(row.last_seen, true) },
+      { title: 'Пришла', render: (row) => date(row.created_at) },
+    ], data.items, { onRow: true, empty: 'Никого не нашлось' });
+    bindRows(element, data.items, (row) => actions.openUser(row.tg_id));
+  }
+}

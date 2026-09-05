@@ -1,3 +1,19 @@
+/* ── аналитика: сегменты аудитории ── */
+.segment-grid {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+.segment-card {
+  display: grid; gap: 2px; padding: 10px 12px; text-align: left;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: var(--radius); color: var(--ink); font: inherit; cursor: pointer;
+}
+.segment-card:hover { border-color: var(--line-strong); }
+.segment-card.active { background: var(--gold-dim); border-color: var(--gold); }
+.segment-card.active .segment-label { color: var(--ink); }
+.segment-value { font-size: 19px; font-weight: 600; }
+.segment-label { font-size: 11px; color: var(--muted); }
+
 /* ── список контента ── */
 .list { max-height: 620px; overflow-y: auto; }
 .list-item {
