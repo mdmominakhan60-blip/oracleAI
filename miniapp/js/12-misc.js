@@ -44,7 +44,7 @@
     return `<div class="soft-empty ${tone ? 'soft-empty--' + tone : ''}">
       <div class="soft-empty__orb" aria-hidden="true">${icon}</div>
       ${eyebrow ? `<span class="soft-empty__eyebrow">${eyebrow}</span>` : ''}
-      <div class="soft-empty__title">${title}</div>
+      <h1 class="soft-empty__title">${title}</h1>
       <div class="soft-empty__copy">${copy}</div>
       ${action ? `<div class="soft-empty__action">${action}</div>` : ''}
     </div>`;
@@ -516,7 +516,7 @@
       if (main) main.innerHTML = `<div class="screen" data-account-deleted>
         <div class="soft-empty soft-empty--quiet" data-state="success">
           <div class="soft-empty__orb" aria-hidden="true">✦</div>
-          <div class="soft-empty__title">${esc(profileT('deleteAccountDone'))}</div>
+          <h1 class="soft-empty__title">${esc(profileT('deleteAccountDone'))}</h1>
           <div class="soft-empty__copy">${esc(profileT('deleteAccountDoneCopy'))}</div>
         </div>
       </div>`;

@@ -107,7 +107,7 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
     main.innerHTML = `<div class="screen" data-auth-required>
       <div class="soft-empty soft-empty--recovery" data-state="error">
         <div class="soft-empty__orb" aria-hidden="true">⌁</div>
-        <div class="soft-empty__title">${esc(title)}</div>
+        <h1 class="soft-empty__title">${esc(title)}</h1>
         <div class="soft-empty__copy">${esc(copy)}</div>
         <div class="soft-empty__action" data-auth-actions><button class="btn btn-primary" type="button" data-auth-retry>${esc(retry)}</button></div>
       </div>

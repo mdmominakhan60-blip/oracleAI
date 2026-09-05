@@ -357,7 +357,8 @@
   animation: popIn .3s var(--ease);
 }
 .modal h3 { font-family: var(--font-serif); color: var(--gold); font-size: 17px; margin-bottom: 6px; }
-.modal .m-close { float: right; border: none; background: none; color: var(--text-dim); font-size: 18px; cursor: pointer; }
+/* A-7 (WCAG 2.5.8): тап-цель ≥44px — раздуваем хит-зону отрицательными margin, визуальный глиф не растёт */
+.modal .m-close { float: right; border: none; background: none; color: var(--text-dim); font-size: 18px; cursor: pointer; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; margin: -8px -12px 0 0; padding: 0; }
 @keyframes popIn { from { opacity:0; transform: translateY(14px) scale(.97);} to { opacity:1; transform:none; } }
 
 /* точка уведомления */

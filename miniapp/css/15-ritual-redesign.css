@@ -892,7 +892,8 @@ button, .btn, .nav-btn, .chip, .ask-chip, .tool, .dock-item, .moon-toggle, .moon
   line-height: 1.15;
   text-transform: uppercase;
 }
-.soft-empty__title { color: var(--text-main); font-size: 14px; font-weight: 700; line-height: 1.25; }
+/* R-1: title теперь h1 — сбрасываем браузерный margin, чтобы сохранить вертикальный ритм div-версии */
+.soft-empty__title { color: var(--text-main); font-size: 14px; font-weight: 700; line-height: 1.25; margin: 0; }
 .soft-empty__copy { max-width: 280px; color: var(--text-soft); font-size: 12px; line-height: 1.47; }
 .soft-empty__action { margin-top: 3px; }
 .soft-empty__action .btn { min-height: 37px; padding: 8px 12px; font-size: 12px; }
