@@ -271,6 +271,28 @@ async def test_promo_grants_plan_days(db, free_user):
     assert fresh["source"] == "promo:etsy-test", "канал привлечения не записан"
 
 
+async def test_winback_trial_grant_no_crystals(db, free_user):
+    """BUS-197 WB2: promo plan_code='trial' находит is_public=0 план
+    через _apply_grant и НЕ начисляет кристаллы (crystals_grant=0)."""
+    codes = await growth.create_codes(db, 1, kind="plan_days", days=7,
+                                      plan_code="trial", batch="winback_test",
+                                      max_uses=1, valid_days=14)
+    plan = await repo.get_plan(db, "trial")
+    assert plan["code"] == "trial", "get_plan не нашёл seed-план trial"
+    result = await svc.redeem_promo(db, free_user["tg_id"], codes[0])
+    assert result and result["granted"]["kind"] == "plan"
+    assert result["granted"]["plan"]["code"] == "trial"
+    assert result["granted"]["crystals"] == 0, "trial начислил кристаллы"
+    fresh = await users.get(db, free_user["tg_id"])
+    assert users.sub_active(fresh)
+    assert fresh["source"] == "promo:winback_test"
+    ledger = await db.execute(
+        "SELECT COUNT(*) AS n FROM crystal_ledger "
+        "WHERE tg_id=:tg AND reason != 'welcome'", {"tg": free_user["tg_id"]})
+    row = await ledger.fetchone()
+    assert row["n"] == 0, f"trial начислил кристаллы: {row['n']} записей не-welcome"
+
+
 async def test_promo_cannot_be_used_twice(db, user, free_user):
     codes = await growth.create_codes(db, 1, days=30, max_uses=1)
     assert await svc.redeem_promo(db, user["tg_id"], codes[0])
