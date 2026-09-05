@@ -176,13 +176,15 @@
 
 **Ограничение:** аутентифицированные экраны (home/chat/profile/payment) на staging недоступны без подписанного Telegram `initData` — `DEV_MODE=0`, QA-бэкдор `dev_user` отключён (fail-closed, корректно). Поэтому прогоном покрыт только shell + экран auth-required; полный прогон разделов 1–8 — на реальных устройствах (Telegram WebView).
 
-**Перепрогон после патча модалей (2026-09-05, коммит 509d588):** те же условия; violations — 1 (`page-has-heading-one` = R-1, не приземлился), incomplete — те же 8 (разобраны в R-2), passes 27. Регрессий от патча A-3/A-5/A-6 на покрытой области нет. Smoke фокус-менеджмента: `scripts/bus133_modal_focus_smoke.mjs` — 20/20.
+**Перепрогон после патча модалей (2026-09-05, коммит 509d588):** те же условия; violations — 1 (`page-has-heading-one` = R-1, ещё не приземлён), incomplete — те же 8 (разобраны в R-2), passes 27. Регрессий нет. Smoke фокус-менеджмента: `scripts/bus133_modal_focus_smoke.mjs` — 20/20.
+
+**Финальный перепрогон после хвоста BUS-133 (2026-09-05, коммит f175c2b: R-1 h1 + A-7 44px, бандл e3b27e8f/6e0c33bc на staging):** violations — **0**; incomplete — 8 (те же классы, R-2; цель `h1` — тот же известный PASS 18.58:1); passes 30. Smoke повторно — 20/20. A-7 подтверждён в отдаваемом CSS: `.m-close` min 44×44, хит-зона отрицательным margin, глиф не изменился. Shell-область на staging чиста.
 
 | Результат | Детали |
 |---|---|
-| axe violations | 1: `page-has-heading-one` (moderate) — R-1 ниже |
+| axe violations | ~~1~~ → **0** (R-1 закрыт коммитом f175c2b; история прогона: 1 → 0) |
 | axe incomplete | 8× `color-contrast` — разобраны вручную (все PASS/декоративные, R-2) |
-| axe passes | 27 |
+| axe passes | 27 → 30 (после f175c2b: h1-заголовки появились в passes) |
 
 | ID | Приоритет | Находка | Evidence | Действие |
 |---|---|---|---|---|
