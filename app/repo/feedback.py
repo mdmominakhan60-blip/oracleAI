@@ -13,6 +13,7 @@
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 
 from ..data.session import utcnow
@@ -89,21 +90,20 @@ def normalize_answers(items: list[dict]) -> tuple[list[dict], str]:
                 continue
             entry["score"] = score
         elif question in TEXT_QUESTIONS:
-            # Текстовые вопросы (dream) не имеют choice-кнопок — валиден сам
-            # текст; без него ответ не несёт информации.
+            # Q4 (dream) — свободный текст: выбор не предполагается; текст
+            # хранится только в free_text (схема 0009: answers_json —
+            # категориальные коды + score; в events текст не попадает).
             text = str(item.get("text") or "").strip()[:4000]
-            if not text:
-                continue
-            entry["text"] = True
-            dream_text = text
+            if text:
+                dream_text = text
         else:
             choice = str(item.get("choice") or "")[:32]
             if choice not in ALLOWED_CHOICES.get(question, set()):
                 continue
             entry["choice"] = choice
-            # Свой вариант по Q2/Q5 ('other') — в free_text: событие остаётся
-            # категориальным (privacy-правило словаря).
-            if question in ("blocker", "next") and choice == "other":
+            # Свой вариант по Q2/Q5 ('other') — запасной текст в free_text:
+            # событие остаётся категориальным (privacy-правило словаря).
+            if choice == "other":
                 other_text = other_text or str(item.get("text") or "").strip()[:4000]
         answers.append(entry)
     free_text = dream_text or other_text

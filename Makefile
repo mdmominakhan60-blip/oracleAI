@@ -2,7 +2,7 @@
 # любой вызов compose из чистого шелла падает ("required variable ... missing").
 COMPOSE := docker compose --env-file .env -f infra/docker-compose.yml
 
-.PHONY: init up down restart ps logs observability build migrate selfcheck docs-check shell worker-scale up-local-llm backup restore backup-drill test p004-audit config
+.PHONY: init up down restart ps logs observability build migrate selfcheck docs-check shell worker-scale up-local-llm backup restore backup-drill test p004-audit config ensure-mcp-role
 
 init:
 	@test -f .env || cp .env.example .env
@@ -69,6 +69,17 @@ ensure-test-role:
 	$(COMPOSE) run --rm --entrypoint "" \
 		-e POSTGRES_ADMIN_DATABASE_URL=postgresql://oracle:$(POSTGRES_PASSWORD)@postgres:5432/postgres \
 		api python scripts/ensure_test_role.py
+
+# BUS-277: read-only роль для MCP-сервера (второй слой защиты поверх
+# default_transaction_read_only). Пароль роли — независимый секрет
+# ORACLEAI_MCP_ROLE_PASSWORD в .env (не POSTGRES_PASSWORD).
+ensure-mcp-role:
+	@test -f .env && grep -q '^ORACLEAI_MCP_ROLE_PASSWORD=' .env || \
+		{ echo "ORACLEAI_MCP_ROLE_PASSWORD не задан в .env (сгенерируй: openssl rand -hex 24)"; exit 1; }
+	$(COMPOSE) run --rm --entrypoint "" \
+		-e POSTGRES_ADMIN_DATABASE_URL=postgresql://$${POSTGRES_USER:-oracle}:$$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)@postgres:5432/postgres \
+		-e ORACLEAI_MCP_ROLE_PASSWORD=$$(grep '^ORACLEAI_MCP_ROLE_PASSWORD=' .env | cut -d= -f2-) \
+		api python scripts/ensure_mcp_role.py
 
 test:
 	$(CURDIR)/.venv/bin/python scripts/check_test_env.py || python3 scripts/check_test_env.py
