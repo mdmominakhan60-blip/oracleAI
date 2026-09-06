@@ -6,6 +6,8 @@
 """
 from __future__ import annotations
 
+import csv
+import io
 import json
 import logging
 import re
@@ -13,7 +15,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from ...config import settings
 from ...core import product_cost
@@ -685,9 +687,12 @@ async def refund(order_id: int, ctx=Depends(require("grants")), db=Depends(get_d
 
 @router.get("/promo")
 async def promo_list(batch: str | None = None, unused: bool = False,
+                     code: str | None = None,
                      ctx=Depends(require("promo")), db=Depends(get_db)):
+    """`code` — точный поиск кода (CS-сценарий BUS-317 G2), комбинируется с batch."""
     return {"batches": await growth.batch_stats(db),
-            "codes": await growth.list_codes(db, batch=batch, unused_only=unused)}
+            "codes": await growth.list_codes(db, batch=batch, unused_only=unused,
+                                             code=code)}
 
 
 @router.get("/promo/redemptions")
@@ -696,6 +701,62 @@ async def promo_redemptions(batch: str | None = None,
                             ctx=Depends(require("promo")), db=Depends(get_db)):
     """Кто и когда активировал купоны."""
     return await growth.list_redemptions(db, batch=batch, limit=limit)
+
+
+@router.get("/promo/export")
+async def promo_export(batch: str = Query(min_length=1, max_length=40),
+                       ctx=Depends(require("promo")), db=Depends(get_db)):
+    """CSV партии для загрузки в карточку маркетплейса (BUS-317 G1).
+
+    Одна строка = один код, колонки expires/sku — опциональные по аудиту
+    BUS-289. Паттерн reconciliation/export: no-store + audit-лог.
+    """
+    codes = await growth.batch_codes(db, batch)
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(["code", "kind", "days", "plan_code", "crystals", "sku",
+                     "batch", "max_uses", "used_count", "expires_at", "is_active"])
+    for row in codes:
+        writer.writerow([row["code"], row["kind"] or "", row["days"] or 0,
+                         row["plan_code"] or "", row["crystals"] or 0,
+                         row["sku"] or "", row["batch"] or "",
+                         row["max_uses"] or 1, row["used_count"] or 0,
+                         row["expires_at"] or "", row["is_active"] if
+                         row["is_active"] is not None else 1])
+    await admin_repo.audit(db, ctx.tg_id, "promo.export", target=batch,
+                           payload={"count": len(codes)})
+    filename = f"promo-{re.sub(r'[^A-Za-z0-9_.-]', '_', batch)}.csv"
+    return Response(content=buf.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"',
+                             "Cache-Control": "no-store", "Pragma": "no-cache",
+                             "X-Content-Type-Options": "nosniff"})
+
+
+class PromoStateIn(BaseModel):
+    batch: str | None = Field(default=None, max_length=40)
+    code: str | None = Field(default=None, min_length=1, max_length=40)
+    active: bool
+
+    @model_validator(mode="after")
+    def _one_target(self) -> "PromoStateIn":
+        if (self.batch is None) == (self.code is None):
+            raise ValueError("нужен ровно один таргет: batch или code")
+        return self
+
+
+@router.post("/promo/state")
+async def promo_set_state(item: PromoStateIn, ctx=Depends(require("promo")),
+                          db=Depends(get_db)):
+    """Отзыв (is_active=0) или возврат в строй партии/кода — kill switch (G3)."""
+    changed = await growth.set_codes_active(
+        db, batch=item.batch, code=item.code, active=item.active)
+    await admin_repo.audit(
+        db, ctx.tg_id, "promo.set_state",
+        target=item.batch or item.code or "",
+        payload={"active": item.active, "changed": changed})
+    if not changed:
+        raise HTTPException(404, "партия или код не найдены")
+    return {"changed": changed}
 
 
 class PromoBatchIn(BaseModel):

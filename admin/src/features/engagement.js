@@ -1,10 +1,18 @@
-import { $, esc, num, date, get, post, state, actions, table, bindRows, fillSegmentSelect, toast, fail } from '../core/runtime.js';
+import { $, esc, num, date, get, post, state, actions, table, bindRows, fillSegmentSelect, toast, fail, downloadAdminFile, can } from '../core/runtime.js';
 import { segmentLabel } from './users.js';
 
 export class EngagementFeature {
   constructor() {
     $('promo-unused').addEventListener('change', () => this.loadPromo().catch(fail));
     $('promo-create').addEventListener('click', (event) => this.createPromo(event));
+    $('promo-export').addEventListener('click', () => {
+      if (!state.promoBatch) { toast('Выберите партию (клик по строке «Партии»)', true); return; }
+      downloadAdminFile(`/api/admin/promo/export?batch=${encodeURIComponent(state.promoBatch)}`, `promo-${state.promoBatch}.csv`).catch(fail);
+    });
+    $('promo-code-search').addEventListener('input', () => {
+      clearTimeout(this._searchTimer);
+      this._searchTimer = setTimeout(() => this.loadPromo().catch(fail), 300);
+    });
     $('bc-preview').addEventListener('click', () => this.previewBroadcast().catch(fail));
     $('bc-create').addEventListener('click', (event) => this.createBroadcast(event));
   }
@@ -14,12 +22,20 @@ export class EngagementFeature {
     const query = new URLSearchParams();
     if ($('promo-unused').checked) query.set('unused', 'true');
     if (state.promoBatch) query.set('batch', state.promoBatch);
+    const codeQuery = $('promo-code-search').value.trim().toUpperCase();
+    if (codeQuery) query.set('code', codeQuery);
     const [data, redemptions] = await Promise.all([get(`/api/admin/promo?${query}`), get('/api/admin/promo/redemptions?limit=300')]);
     $('promo-batches').innerHTML = table([
       { title: 'Партия', render: (row) => `<code>${esc(row.batch)}</code>${state.promoBatch === row.batch ? '<span class="badge on">фильтр</span>' : ''}` },
       { title: 'Кодов', num: true, render: (row) => num(row.total) }, { title: 'Активировано', num: true, render: (row) => num(row.used) },
       { title: 'Конверсия', num: true, render: (row) => `${row.total ? ((row.used * 100) / row.total).toFixed(1) : '0.0'}%` }, { title: 'Создана', render: (row) => date(row.created_at) },
+      { title: 'Активна', render: (row) => can('promo') ? `<label class="switch"><input type="checkbox" ${+row.inactive_count === 0 ? 'checked' : ''} data-promo-batch-toggle="${esc(row.batch)}"><span></span></label>` : '' },
     ], data.batches, { onRow: true, empty: 'Партий пока нет' });
+    $('promo-batches').querySelectorAll('input[data-promo-batch-toggle]').forEach((element) => element.addEventListener('change', async () => {
+      const batch = element.dataset.promoBatchToggle;
+      if (!element.checked && !confirm(`Отозвать всю партию «${batch}»? Все её неиспользованные коды станут неактивными.`)) { element.checked = true; return; }
+      try { await post('/api/admin/promo/state', { batch, active: element.checked }); toast(element.checked ? 'Партия возвращена в строй' : 'Партия отозвана'); } catch (error) { fail(error); element.checked = !element.checked; }
+    }));
     bindRows($('promo-batches'), data.batches, (row) => { state.promoBatch = state.promoBatch === row.batch ? '' : row.batch; $('promo-batch-hint').textContent = state.promoBatch ? `фильтр: партия «${state.promoBatch}» (клик по партии ещё раз — снять)` : ''; this.loadPromo().catch(fail); });
     const redemptionByCode = new Map(redemptions.map((row) => [row.code, row]));
     $('promo-codes').innerHTML = table([
@@ -28,7 +44,13 @@ export class EngagementFeature {
       { title: 'Партия', render: (row) => esc(row.batch || '—') }, { title: 'Использован', num: true, render: (row) => `${row.used_count || 0}/${row.max_uses || 1}` },
       { title: 'Кем', render: (row) => { const redemption = redemptionByCode.get(row.code); return redemption ? `<b>${esc(redemption.name || redemption.tg_id)}</b>${redemption.username ? ` <span class="muted small">@${esc(redemption.username)}</span>` : ''}` : '—'; } },
       { title: 'Когда', render: (row) => { const redemption = redemptionByCode.get(row.code); return redemption ? date(redemption.created_at, true) : '—'; } }, { title: 'Действует до', render: (row) => date(row.expires_at) },
-    ], data.codes, { onRow: true, empty: 'Кодов нет' });
+      { title: 'Активен', render: (row) => can('promo') ? `<label class="switch"><input type="checkbox" ${row.is_active === 0 ? '' : 'checked'} data-promo-toggle="${esc(row.code)}" ${row.is_active === 0 && (row.used_count || 0) >= (row.max_uses || 1) ? 'disabled' : ''}><span></span></label>` : (row.is_active === 0 ? '<span class="badge bad">отозван</span>' : '') },
+    ], data.codes, { onRow: true, empty: codeQuery && !data.codes.length ? `Код «${esc(codeQuery)}» не найден` : 'Кодов нет' });
+    $('promo-codes').querySelectorAll('[data-promo-toggle]').forEach((element) => element.addEventListener('change', async () => {
+      const code = element.dataset.promoToggle;
+      if (!element.checked && !confirm(`Отозвать код ${code}? Покупатель не сможет его активировать.`)) { element.checked = true; return; }
+      try { await post('/api/admin/promo/state', { code, active: element.checked }); toast(element.checked ? 'Код возвращён в строй' : 'Код отозван'); } catch (error) { fail(error); element.checked = !element.checked; }
+    }));
     bindRows($('promo-codes'), data.codes, (row) => row.used_by && actions.openUser?.(row.used_by));
     $('promo-redemptions').innerHTML = table([
       { title: 'Когда', render: (row) => date(row.created_at, true) }, { title: 'Кто', render: (row) => `<b>${esc(row.name || row.tg_id)}</b>${row.username ? `<div class="muted small">@${esc(row.username)}</div>` : ''}` },

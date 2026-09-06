@@ -355,6 +355,7 @@ CREATE TABLE IF NOT EXISTS promo_codes (
     expires_at TEXT,
     created_by BIGINT,
     created_at TEXT,
+    is_active  BIGINT DEFAULT 1,              -- 0 = отозван (kill switch, BUS-317)
     used_by    BIGINT,                       -- legacy: первый активировавший
     used_at    TEXT
 );

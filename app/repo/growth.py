@@ -55,9 +55,9 @@ async def get_code(db, code: str):
 async def redeem(db, code: str, tg_id: int) -> dict | None:
     """Активирует код. Возвращает описание выдачи или None.
 
-    Проверки (срок, лимит использований, повторная активация одним человеком)
-    и инкремент счётчика — в одной транзакции: иначе код с `max_uses=1`,
-    отправленный двумя сообщениями подряд, активировался бы дважды.
+    Проверки (срок, лимит использований, отзыв кода, повторная активация
+    одним человеком) и инкремент счётчика — в одной транзакции: иначе код с
+    `max_uses=1`, отправленный двумя сообщениями подряд, активировался бы дважды.
     """
     code = (code or "").strip().upper()
     if not code:
@@ -70,6 +70,8 @@ async def redeem(db, code: str, tg_id: int) -> dict | None:
             return None
         if promo["expires_at"] and promo["expires_at"] <= utcnow():
             return None
+        if promo["is_active"] == 0:
+            return None                          # отозван (kill switch, G3)
         max_uses = promo["max_uses"] or 1
         if (promo["used_count"] or 0) >= max_uses:
             return None
@@ -121,6 +123,7 @@ async def batch_stats(db) -> list[dict]:
     cur = await db.execute(
         "SELECT COALESCE(batch,'(без партии)') batch, COUNT(*) total, "
         "SUM(CASE WHEN COALESCE(used_count,0) > 0 THEN 1 ELSE 0 END) used, "
+        "SUM(CASE WHEN COALESCE(is_active,1)=0 THEN 1 ELSE 0 END) inactive_count, "
         "MIN(created_at) created_at FROM promo_codes GROUP BY batch "
         "ORDER BY created_at DESC")
     return [dict(r) for r in await cur.fetchall()]
@@ -187,7 +190,7 @@ async def redeemed_winback_since(db, tg_id: int, since: datetime) -> bool:
 
 
 async def list_codes(db, *, batch: str | None = None, unused_only: bool = False,
-                     limit: int = 200) -> list[dict]:
+                     code: str | None = None, limit: int = 200) -> list[dict]:
     sql = ["SELECT * FROM promo_codes WHERE 1=1"]
     params: dict = {}
     if batch:
@@ -195,9 +198,40 @@ async def list_codes(db, *, batch: str | None = None, unused_only: bool = False,
         params["batch"] = batch
     if unused_only:
         sql.append("AND COALESCE(used_count,0)=0")
+    if code:
+        sql.append("AND code=:code")          # точный код, CS-поиск (G2)
+        params["code"] = (code or "").strip().upper()
     sql.append("ORDER BY created_at DESC, code LIMIT :limit")
     params["limit"] = limit
     cur = await db.execute(" ".join(sql), params)
+    return [dict(r) for r in await cur.fetchall()]
+
+
+async def set_codes_active(db, *, batch: str | None = None,
+                           code: str | None = None, active: bool) -> int:
+    """Отзыв/возврат в строй партии или одного кода (kill switch, G3).
+
+    Ровно один из аргументов batch/code задан — endpoint валидирует,
+    repo-функция не оставляет шанс обновить «всё сразу».
+    """
+    assert (batch is None) != (code is None), "нужен batch или code"
+    async with transaction(db):
+        cur = await db.execute(
+            "UPDATE promo_codes SET is_active=:active WHERE batch=:batch"
+            if batch else
+            "UPDATE promo_codes SET is_active=:active WHERE code=:code",
+            {"active": 1 if active else 0,
+             "batch": batch, "code": (code or "").strip().upper()})
+        return cur.rowcount
+
+
+async def batch_codes(db, batch: str) -> list[dict]:
+    """Коды партии в стабильном порядке — для CSV-экспорта (G1)."""
+    cur = await db.execute(
+        "SELECT code, kind, days, plan_code, crystals, sku, batch, "
+        "max_uses, used_count, expires_at, created_at, is_active "
+        "FROM promo_codes WHERE batch=:batch ORDER BY created_at, code",
+        {"batch": batch})
     return [dict(r) for r in await cur.fetchall()]
 
 

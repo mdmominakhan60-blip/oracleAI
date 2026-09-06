@@ -319,7 +319,9 @@ export const adminShellTemplate = String.raw`
       <div class="card">
         <div class="card-head"><h3>Коды</h3>
           <span id="promo-batch-hint" class="muted small"></span>
+          <input id="promo-code-search" class="input slim" aria-label="Поиск кода" placeholder="точный код…" style="width:180px">
           <label class="check"><input type="checkbox" id="promo-unused"> только неиспользованные</label>
+          <button id="promo-export" class="btn tiny ghost" type="button">CSV партии</button>
         </div>
         <div id="promo-codes" class="table-wrap"></div>
       </div>
