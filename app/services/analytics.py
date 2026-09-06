@@ -340,7 +340,7 @@ async def rollup(db, day: str | None = None) -> dict:
 #: а не ноль, иначе виджет врёт о динамике.
 _DELTA_SEGMENTS = {
     "sleeping_14d", "active_7d", "cancelled_recent", "expiring_3d",
-    "sleeping_14d_push",
+    "sleeping_14d_push", "cancelled_5_7d",
 }
 
 
@@ -359,6 +359,8 @@ async def audience_segments(db) -> dict:
     # а не только одна из границ (иначе прошлое завышено/занижено → дельта врёт).
     month_ago_past = (now - timedelta(days=37)).isoformat()   # 30-дн. окно на -7д
     in_3d_past = (now - timedelta(days=4)).isoformat()        # «истекает в 3д» на -7д
+    five_days_ago_past = (now - timedelta(days=12)).isoformat()  # WB2-окно [5,7]д на -7д
+    seven_days_ago_past = (now - timedelta(days=14)).isoformat()
 
     segments = []
     for name in users_repo.SEGMENTS:
@@ -380,6 +382,11 @@ async def audience_segments(db) -> dict:
                 past_where = ("(sub_until IS NOT NULL AND sub_until <= :from "
                               "AND sub_until >= :month_ago)")
                 params = {"from": week_ago, "month_ago": month_ago_past}
+            elif name == "cancelled_5_7d":
+                past_where = ("(sub_until IS NOT NULL AND sub_until <= :upper "
+                              "AND sub_until >= :lower)")
+                params = {"upper": five_days_ago_past,
+                          "lower": seven_days_ago_past}
             else:  # expiring_3d: (now-7d, now-4d], не (now-7d, now+3d]
                 past_where = ("sub_until > :from AND sub_until <= :in_3d")
                 params = {"from": week_ago, "in_3d": in_3d_past}

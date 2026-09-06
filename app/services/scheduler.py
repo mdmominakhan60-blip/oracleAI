@@ -25,7 +25,7 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from ..config import settings
-from ..data.session import transaction
+from ..data.session import transaction, utcnow
 
 from ..core import agent as agent_core
 from ..core import astro

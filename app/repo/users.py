@@ -303,6 +303,18 @@ SEGMENTS = {
     # Композит §1.5(2): спящая + push_on; без push — таргет broadcast.
     "sleeping_14d_push":
         "((last_seen IS NULL OR last_seen < :two_weeks_ago) AND morning_push = 1)",
+    # winback_90d: redemption winback-батча за 90 дней (BUS-262 §1).
+    # JOIN-ключ — promo_redemptions.code = promo_codes.code (TEXT).
+    "winback_90d":
+        "EXISTS (SELECT 1 FROM promo_redemptions r "
+        "JOIN promo_codes c ON c.code = r.code "
+        "WHERE r.tg_id = users.tg_id AND c.batch LIKE 'winback_%' "
+        "AND r.created_at >= :three_months_ago)",
+    # WB2-окно 5-7д: подписка истекла в этом окне (BUS-262 §2).
+    # Отдельный предикат: существующий cancelled_recent = 30д (BUS-169/232).
+    "cancelled_5_7d":
+        "(sub_until IS NOT NULL AND sub_until <= :now "
+        "AND sub_until >= :seven_days_ago AND sub_until <= :five_days_ago)",
 }
 
 
@@ -314,6 +326,9 @@ def _segment_params() -> dict:
         "two_weeks_ago": (now - timedelta(days=14)).isoformat(),
         "in_3d": (now + timedelta(days=3)).isoformat(),
         "month_ago": (now - timedelta(days=30)).isoformat(),
+        "three_months_ago": (now - timedelta(days=90)).isoformat(),
+        "five_days_ago": (now - timedelta(days=5)).isoformat(),
+        "seven_days_ago": (now - timedelta(days=7)).isoformat(),
     }
 
 
