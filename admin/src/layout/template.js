@@ -187,7 +187,7 @@ export const adminShellTemplate = String.raw`
       <div class="card">
         <div class="card-head"><h3>События монетизации</h3>
           <span class="anx-dq-wrap">
-            <span class="muted small">от пейволла до доставки разбора</span>
+            <span class="muted small">счётчики событий — не воронка; «от пейволла» может быть >100%</span>
             <span id="anx-money-dq" class="anx-dq"></span>
           </span>
         </div>
