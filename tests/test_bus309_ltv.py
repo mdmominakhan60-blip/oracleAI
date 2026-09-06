@@ -12,10 +12,16 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.repo import analytics as analytics_repo, users
-from app.repo.ltv_tier import (
+pytest.importorskip("httpx", reason="httpx нужен для тестов API")
+from httpx import ASGITransport, AsyncClient  # noqa: E402
+
+from app.api.deps import get_db  # noqa: E402
+from app.api.main import app  # noqa: E402
+from app.repo import analytics as analytics_repo, users  # noqa: E402
+from app.repo.ltv_tier import (  # noqa: E402
     attention_queue, channel_closed, ltv_tier, user_card_ltv,
 )
+from tests.conftest import TEST_DEV_KEY  # noqa: E402
 
 
 def _now() -> datetime:
@@ -362,3 +368,65 @@ async def test_attention_queue_reason_data_fields(db):
     assert "next_plan" in rd
     assert "deep_link" in rd
     assert rd["limit_hits_count"] >= 3
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# API: GET /api/admin/attention-queue, user_card["ltv"]
+# ──────────────────────────────────────────────────────────────────────────────
+
+BASE_URL = "http://test"
+HEADERS = {"X-Dev-Key": TEST_DEV_KEY}
+
+
+@pytest.fixture
+async def admin_client(db):
+    app.dependency_overrides[get_db] = lambda: db
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url=BASE_URL,
+                           headers=HEADERS) as http:
+        yield http
+    app.dependency_overrides.clear()
+
+
+def _admin_params(**extra):
+    return {"dev_user": 1, **extra}
+
+
+async def test_api_attention_queue_dashboard_ok(admin_client, db):
+    await _ensure(db, 3401, ltv_stars=200, last_seen=_iso(days_ago=20))
+    res = await admin_client.get("/api/admin/attention-queue",
+                                 params=_admin_params())
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert {"items", "counts", "overdue", "limit", "truncated"} <= set(body)
+    assert body["limit"] == 50
+    assert any(c["tg_id"] == 3401 and c["rule"] == "q2" and c["playbook"] == "pb-1"
+               for c in body["items"])
+
+
+async def test_api_attention_queue_requires_dashboard(admin_client, db):
+    """dev_user без записи в admins → роль None → 403 (dev_user=1 — owner)."""
+    res = await admin_client.get("/api/admin/attention-queue",
+                                 params={"dev_user": 777001})
+    assert res.status_code == 403, res.text
+
+
+async def test_api_user_card_contains_ltv(admin_client, db):
+    # 3421 — VIP с высоким ltv: поднимает топ-20% порог, 3411 остаётся в B.
+    await _ensure(db, 3421, ltv_stars=900)
+    await _ensure(db, 3411, ltv_stars=150)
+    await db.execute(
+        "INSERT INTO orders(tg_id, kind, sku, title, amount_stars, amount_crystals, "
+        "status, paid_at, created_at) VALUES "
+        "(:t, 'plan', 'vip', 'v1', 150, 0, 'paid', :d, :d)",
+        {"t": 3411, "d": _iso(-5)})
+    res = await admin_client.get("/api/admin/users/3411",
+                                 params=_admin_params())
+    assert res.status_code == 200, res.text
+    ltv = res.json()["ltv"]
+    assert ltv["tier"] == "B"
+    assert ltv["payments_count"] == 1
+    assert ltv["avg_check_stars"] == 150
+    assert ltv["next_best_action"] is None
+    assert isinstance(ltv["timeline"], list)
+    assert ltv["channel_closed"] is False
