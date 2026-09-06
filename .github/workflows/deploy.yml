@@ -38,7 +38,11 @@ jobs:
         run: |
           set -euo pipefail
           cp .env.example .env
-          docker compose -f infra/docker-compose.yml config >/tmp/oracleai-compose.yml
+          # Compose resolves env_file: ../.env and ${VAR:?} interpolation only via
+          # --env-file when the compose file lives in a subdirectory; empty required
+          # values are filled with placeholders — this step checks syntax, not secrets.
+          sed -i 's#^DATABASE_URL=$#DATABASE_URL=postgresql+asyncpg://placeholder:placeholder@postgres:5432/placeholder#; s#^POSTGRES_PASSWORD=$#POSTGRES_PASSWORD=placeholder#; s#^GRAFANA_ADMIN_PASSWORD=$#GRAFANA_ADMIN_PASSWORD=placeholder#' .env
+          docker compose --env-file .env -f infra/docker-compose.yml config >/tmp/oracleai-compose.yml
           rm -f .env
 
       - name: Prepare SSH trust
@@ -83,7 +87,7 @@ jobs:
             echo "Deployment failed; attempting rollback to ${PREVIOUS_SHA:-none}" >&2
             if [ -n "$PREVIOUS_SHA" ]; then
               git checkout --detach "$PREVIOUS_SHA" || true
-              docker compose -f "$COMPOSE_FILE" up -d --build --remove-orphans || true
+              docker compose --env-file .env -f "$COMPOSE_FILE" up -d --build --remove-orphans || true
             fi
           }
           trap rollback ERR
@@ -104,24 +108,24 @@ jobs:
             exit 1
           }
 
-          docker compose -f "$COMPOSE_FILE" config >/tmp/oracleai-compose-resolved.yml
-          docker compose -f "$COMPOSE_FILE" pull --ignore-pull-failures
-          docker compose -f "$COMPOSE_FILE" up -d --build --remove-orphans
+          docker compose --env-file .env -f "$COMPOSE_FILE" config >/tmp/oracleai-compose-resolved.yml
+          docker compose --env-file .env -f "$COMPOSE_FILE" pull --ignore-pull-failures
+          docker compose --env-file .env -f "$COMPOSE_FILE" up -d --build --remove-orphans
 
           for attempt in $(seq 1 36); do
-            if docker compose -f "$COMPOSE_FILE" exec -T api curl -fsS http://127.0.0.1:8080/api/health >/tmp/oracleai-health.json; then
+            if docker compose --env-file .env -f "$COMPOSE_FILE" exec -T api curl -fsS http://127.0.0.1:8080/api/health >/tmp/oracleai-health.json; then
               break
             fi
             if [ "$attempt" -eq 36 ]; then
-              docker compose -f "$COMPOSE_FILE" ps
-              docker compose -f "$COMPOSE_FILE" logs --no-color --tail=120 api migrate worker beat caddy
+              docker compose --env-file .env -f "$COMPOSE_FILE" ps
+              docker compose --env-file .env -f "$COMPOSE_FILE" logs --no-color --tail=120 api migrate worker beat caddy
               exit 1
             fi
             sleep 5
           done
 
           grep -q '"ok"[[:space:]]*:[[:space:]]*true' /tmp/oracleai-health.json
-          docker compose -f "$COMPOSE_FILE" ps
+          docker compose --env-file .env -f "$COMPOSE_FILE" ps
           docker image prune -f
           trap - ERR
           echo "Deployment ${DEPLOY_SHA} is healthy"

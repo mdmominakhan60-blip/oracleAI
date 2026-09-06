@@ -123,7 +123,7 @@ async def test_winback2_not_sent_if_sub_active(db):
     await _fresh_batch(db)
     await users.ensure(db, 4104, "Активная")
     until = (datetime.now(timezone.utc) + timedelta(days=10)).isoformat()
-    user = await _expired_user(db, 4104, days_ago=7)
+    await _expired_user(db, 4104, days_ago=7)
     await users.update(db, 4104, sub_until=until)   # продлилась
     fresh = await users.get(db, 4104)
     bot = RecordingBot()
@@ -260,7 +260,7 @@ async def test_winback2_seed_content_ru_en(db):
         "SELECT body FROM content_items WHERE kind='copy' AND code='winback2'")
     row = await ru.fetchone()
     assert row and "{code}" in row["body"], "seed ru-текст без {code}"
-    from app.repo.content import get_text, DEFAULT_EN_CONTENT
+    from app.repo.content import DEFAULT_EN_CONTENT
     en = DEFAULT_EN_CONTENT[("copy", "winback2")]["body"]
     assert "{code}" in en
     assert "14" in en and "7 days" in en, "сроки 14д/7д не названы в EN"
