@@ -18,6 +18,7 @@ import asyncpg
 
 _POSTGRES_SCHEME = re.compile(r"^postgresql(?:\+[^:]+)?$", re.IGNORECASE)
 _PROTECTED_DATABASES = {"postgres", "template0", "template1"}
+_ALLOWED_SUFFIX = "_test"
 
 
 def _asyncpg_dsn(url: str) -> str:
@@ -29,8 +30,15 @@ def _asyncpg_dsn(url: str) -> str:
 
 def _database_name(url: str) -> str:
     name = urlsplit(_asyncpg_dsn(url)).path.removeprefix("/")
-    if not name or name in _PROTECTED_DATABASES or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
-        raise ValueError("refusing to reset an invalid or protected database name")
+    if not name or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+        raise ValueError("refusing to reset an invalid database name")
+    if name in _PROTECTED_DATABASES:
+        raise ValueError(f"refusing to reset protected database '{name}'")
+    if not name.endswith(_ALLOWED_SUFFIX):
+        raise ValueError(
+            f"refusing to reset database '{name}': "
+            f"reset_test_database only works on databases ending in '{_ALLOWED_SUFFIX}'"
+        )
     return name
 
 
@@ -79,11 +87,15 @@ async def reset(database_url: str, admin_url: str | None = None) -> str:
 
 
 def main() -> int:
+    if os.getenv("ALLOW_DB_RESET") != "1":
+        raise SystemExit(
+            "refusing to reset: set ALLOW_DB_RESET=1 to confirm you are targeting a test database"
+        )
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--database-url",
-        default=os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL", ""),
-        help="target PostgreSQL URL; defaults to TEST_DATABASE_URL or DATABASE_URL",
+        default=os.getenv("TEST_DATABASE_URL", ""),
+        help="target PostgreSQL URL; defaults to TEST_DATABASE_URL only",
     )
     parser.add_argument(
         "--admin-database-url",
@@ -92,7 +104,7 @@ def main() -> int:
     )
     args = parser.parse_args()
     if not args.database_url:
-        parser.error("--database-url, TEST_DATABASE_URL, or DATABASE_URL is required")
+        parser.error("--database-url or TEST_DATABASE_URL is required; DATABASE_URL is never used as a fallback")
     name = asyncio.run(reset(args.database_url, args.admin_database_url))
     print(f"recreated PostgreSQL test database: {name}")
     return 0

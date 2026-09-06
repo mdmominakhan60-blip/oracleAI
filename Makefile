@@ -68,6 +68,7 @@ backup-drill:
 test:
 	$(CURDIR)/.venv/bin/python scripts/check_test_env.py || python3 scripts/check_test_env.py
 	$(COMPOSE) run --rm --entrypoint "" -e DEV_MODE=1 -e DEV_KEY=test-dev-key \
+		-e ALLOW_DB_RESET=1 \
 		-e DATABASE_URL=postgresql+asyncpg://oracle:oracle@postgres:5432/oracle_test \
 		-v $(CURDIR)/tests:/opt/oracle/tests \
 		-v $(CURDIR)/infra:/opt/oracle/infra \
