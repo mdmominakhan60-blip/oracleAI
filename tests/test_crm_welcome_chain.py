@@ -137,16 +137,19 @@ async def test_chain_one_touch_per_run(db):
 
 
 async def test_chain_progresses_to_d7(db):
-    """Суточные прогоны через d3-и d7-сроки: d1 → d3 → d7, каждый в свой."""
+    """Прогоны через d3-и d7-сроки: d1 → d3 → d7, каждый в свой.
+
+    Guardrail 1/7д (BUS-262) разводит шаги по ISO-неделям, поэтому прогоны
+    разнесены на 8 суток — иначе d3/d7 блокировались бы неделей d1."""
     now = datetime.now(timezone.utc)
-    # onboard_done за 7.5 суток: все три срока в прошлом, но касания
-    # размазываются по прогонам (одно за прогон).
+    # onboard_done за 8 суток: все три срока в прошлом, касания
+    # размазываются по неделям (одно за прогон).
     user = await _user(db, 6113, onboard_done=now - timedelta(days=8))
     bot = RecordingBot()
     for _ in range(3):
         await scheduler._welcome_chain(bot, db, user, now_utc=now)
         user = await users.get(db, 6113)
-        now += timedelta(days=1)
+        now += timedelta(days=8)
     await scheduler._welcome_chain(bot, db, user, now_utc=now)
 
     keys = [await comms.already_sent(db, 6113, "welcome_chain", k)
@@ -227,9 +230,12 @@ async def test_welcome_top_first_step_empty_base(db):
 
 
 async def test_chain_d7_substitutes_top_first_step(db):
-    """d7 с реальными событиями: {top_first_step} заменён агрегатом."""
+    """d7 с реальными событиями: {top_first_step} заменён агрегатом.
+
+    Прогоны разнесены на 8 суток: guardrail 1/7д (BUS-262) держит шаги
+    в разных ISO-неделях."""
     now = datetime.now(timezone.utc)
-    user = await _user(db, 6131, onboard_done=now - timedelta(days=11))
+    user = await _user(db, 6131, onboard_done=now - timedelta(days=25))
     await db.execute(
         "INSERT INTO events(tg_id, name, day, created_at) "
         "VALUES(6132, 'first_question', '2026-09-05', :c)",
@@ -239,7 +245,7 @@ async def test_chain_d7_substitutes_top_first_step(db):
     for _ in range(4):
         await scheduler._welcome_chain(bot, db, user, now_utc=now)
         user = await users.get(db, 6131)
-        now += timedelta(days=1)
+        now += timedelta(days=8)
     await scheduler._welcome_chain(bot, db, user, now_utc=now)
 
     d7_text = next(t for _, t, _ in bot.sent if "вопрос" in t or "week" in t)

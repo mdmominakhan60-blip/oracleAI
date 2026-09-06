@@ -648,7 +648,11 @@ async def _welcome_chain(bot, db, user, now_utc: datetime) -> None:
     """Одно касание за прогон: W1 → W3, срок каждого — от onboard_done.
 
     Если отправка d1 запоздала (сутки простоя), d3 уйдёт лишь в свой срок —
-    касания не слипаются в один день. Стоп «действие совершено» дважды:
+    касания не слипаются в один день. Guardrail 1/7д (BUS-262) дополнительно
+    разводит шаги по ISO-неделям: d1, d3, d7 уходят в три разные недели,
+    цепочка растягивается максимум на три.
+
+    Стоп «действие совершено» дважды:
     отбором (юзер покидает аудиторию между прогонами) и здесь, в момент
     отправки, — юзер мог достичь first-ценности, пока sweep идёт по партии
     (аудитория снимается один раз в начале прогона). «Кнопка нажата» без
@@ -975,6 +979,9 @@ async def _reactivate_chain(bot, db, user, now_utc: datetime) -> None:
         fresh = await _reactivate_fresh_last_seen(db, tg_id)
         if fresh and fresh > seen_at:
             return
+        # Guardrail 1/7д (BUS-262): R1 — маркетинговое касание, слот недели.
+        if not await _guardrail_ok(db, tg_id, now_utc):
+            return
         template = await content.get_text(db, "copy", "reactivate_r1",
                                           default="", lang=lang)
         if not template:
@@ -987,7 +994,8 @@ async def _reactivate_chain(bot, db, user, now_utc: datetime) -> None:
                     .replace("{name}", name)
                     .replace("{practice_title}", title)
                     .replace("{day_index}", str(day_index)))
-            await _send_once(bot, db, tg_id, "reactivate", r1_key, text)
+            if await _send_once(bot, db, tg_id, "reactivate", r1_key, text):
+                await _mark_guardrail(db, tg_id, now_utc)
         else:
             # Fallback-каркас без персонализации (утверждённый текст r2).
             fallback = await content.get_text(db, "copy", "reactivate_r2",
@@ -999,8 +1007,9 @@ async def _reactivate_chain(bot, db, user, now_utc: datetime) -> None:
             text = fallback.replace("{name}", name)
             # Fallback идёт под отдельным ключом: R2 за ним не follows —
             # «другая ценность» уже доставлена, дубль не нужен.
-            await _send_once(bot, db, tg_id, "reactivate",
-                             f"{r1_key}:fallback", text)
+            if await _send_once(bot, db, tg_id, "reactivate",
+                                f"{r1_key}:fallback", text):
+                await _mark_guardrail(db, tg_id, now_utc)
         return
 
     # R1 ушёл. R2: +7 дней после R1, ответа (last_seen newer R1) нет.
@@ -1023,7 +1032,13 @@ async def _reactivate_chain(bot, db, user, now_utc: datetime) -> None:
         log.warning("reactivate: нет шаблона copy/reactivate_r2 — пропуск")
         return
     text = template.replace("{name}", name)
-    await _send_once(bot, db, tg_id, "reactivate", r2_key, text)
+    # R2 шлётся минимум через 7д после R1 → новая ISO-неделя, guardrail
+    # свободен; проверка на месте для симметрии с welcome_chain и на случай
+    # будущих изменений REACTIVATE_R2_DELAY.
+    if not await _guardrail_ok(db, tg_id, now_utc):
+        return
+    if await _send_once(bot, db, tg_id, "reactivate", r2_key, text):
+        await _mark_guardrail(db, tg_id, now_utc)
 
 
 

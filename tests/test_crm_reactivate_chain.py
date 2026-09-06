@@ -17,6 +17,7 @@ from unittest.mock import patch
 
 import pytest
 
+from app.data.session import transaction, utcnow
 from app.repo import comms, users
 from app.services import scheduler
 
@@ -192,9 +193,11 @@ async def test_chain_r2_sent_7d_after_r1(db):
         {"at": _iso(r1_time), "tg_id": 7301, "key": r1_key})
     await db.commit()
 
+    # R2 шлём позже чем через 7д после R1 → новая ISO-неделя: guardrail,
+    # занятый R1 в прошлой неделе, цепочку не стопит (BUS-262).
     bot2 = RecordingBot()
     await scheduler._reactivate_chain(bot2, db, user,
-                                     now_utc=now + timedelta(hours=1))
+                                     now_utc=now + timedelta(days=8, hours=1))
     assert len(bot2.sent) == 1
     assert bot2.sent[0][0] == 7301
     r2_key = f"r2:{user['last_seen'][:7]}"
@@ -349,6 +352,74 @@ async def test_chain_r2_dedup(db):
     await scheduler._reactivate_chain(bot3, db, user,
                                      now_utc=now + timedelta(days=9))
     assert len(bot3.sent) == 0
+
+
+# ─────────────────────── guardrail 1/7д (BUS-262) ────────────────────────────
+
+async def test_guardrail_marks_on_r1_personalized(db):
+    """Успешный R1 резервирует guardrail-слот текущей ISO-недели."""
+    now = datetime(2026, 9, 7, 10, 0, tzinfo=timezone.utc)  # понедельник, W37
+    user = await _sleeping_user(db, 7601, last_seen=now - timedelta(days=16))
+    await db.execute(
+        "INSERT INTO practices(tg_id, code, day_index, started_at) "
+        "VALUES(:tg_id, 'mantra_gayatri', 5, :now)",
+        {"tg_id": 7601, "now": _iso(now - timedelta(days=20))})
+    await db.commit()
+
+    await scheduler._reactivate_chain(RecordingBot(), db, user, now_utc=now)
+    assert await comms.already_sent(db, 7601, "guardrail",
+                                    now.strftime("%G-W%V"))
+
+
+async def test_guardrail_marks_on_r1_fallback(db):
+    """Fallback-R1 (без практики) тоже резервирует guardrail-слот."""
+    now = datetime(2026, 9, 7, 10, 0, tzinfo=timezone.utc)
+    user = await _sleeping_user(db, 7602, last_seen=now - timedelta(days=16))
+
+    await scheduler._reactivate_chain(RecordingBot(), db, user, now_utc=now)
+    assert await comms.already_sent(db, 7602, "guardrail",
+                                    now.strftime("%G-W%V"))
+
+
+async def test_guardrail_marks_on_r2(db):
+    """Успешный R2 резервирует guardrail-слот своей ISO-недели."""
+    now = datetime(2026, 9, 7, 10, 0, tzinfo=timezone.utc)
+    user = await _sleeping_user(db, 7603, last_seen=now - timedelta(days=16))
+    await db.execute(
+        "INSERT INTO practices(tg_id, code, day_index, started_at) "
+        "VALUES(:tg_id, 'mantra_gayatri', 5, :now)",
+        {"tg_id": 7603, "now": _iso(now - timedelta(days=20))})
+    await db.commit()
+
+    bot = RecordingBot()
+    await scheduler._reactivate_chain(bot, db, user, now_utc=now)
+    r1_key = f"r1:{user['last_seen'][:7]}"
+    await db.execute(
+        "UPDATE deliveries SET created_at=:at WHERE tg_id=:tg_id AND kind='reactivate' AND key=:key",
+        {"at": _iso(now - timedelta(days=7, hours=1)), "tg_id": 7603, "key": r1_key})
+    await db.commit()
+
+    week2 = now + timedelta(days=8, hours=1)  # новая ISO-неделя
+    await scheduler._reactivate_chain(RecordingBot(), db, user, now_utc=week2)
+    assert await comms.already_sent(db, 7603, "guardrail",
+                                    week2.strftime("%G-W%V"))
+
+
+async def test_guardrail_blocks_reactivate_in_busy_week(db):
+    """Слот недели занят чужим маркетингом (welcome) → R1 молчит."""
+    now = datetime(2026, 9, 7, 10, 0, tzinfo=timezone.utc)
+    user = await _sleeping_user(db, 7604, last_seen=now - timedelta(days=16))
+
+    week_key = now.strftime("%G-W%V")
+    async with transaction(db):
+        await db.execute(
+            "INSERT INTO deliveries(tg_id, kind, key, created_at) "
+            "VALUES(:tg_id, 'guardrail', :key, :created_at)",
+            {"tg_id": 7604, "key": week_key, "created_at": utcnow()})
+
+    await scheduler._reactivate_chain(RecordingBot(), db, user, now_utc=now)
+    assert not await comms.already_sent(db, 7604, "reactivate",
+                                        f"r1:{user['last_seen'][:7]}")
 
 
 # ─────────────────────────── суточный sweep ───────────────────────────────────
