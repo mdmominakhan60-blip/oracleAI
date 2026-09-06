@@ -65,11 +65,18 @@ backup-drill:
 	python3 scripts/check_p004_infrastructure.py
 	bash -n infra/backup-postgres.sh infra/restore-postgres.sh
 
+ensure-test-role:
+	$(COMPOSE) run --rm --entrypoint "" \
+		-e POSTGRES_ADMIN_DATABASE_URL=postgresql://oracle:$(POSTGRES_PASSWORD)@postgres:5432/postgres \
+		api python scripts/ensure_test_role.py
+
 test:
 	$(CURDIR)/.venv/bin/python scripts/check_test_env.py || python3 scripts/check_test_env.py
 	$(COMPOSE) run --rm --entrypoint "" -e DEV_MODE=1 -e DEV_KEY=test-dev-key \
 		-e ALLOW_DB_RESET=1 \
-		-e DATABASE_URL=postgresql+asyncpg://oracle:oracle@postgres:5432/oracle_test \
+		-e TEST_DATABASE_URL=postgresql+asyncpg://oracle_test:$(POSTGRES_PASSWORD)@postgres:5432/oracle_test \
+		-e DATABASE_URL=postgresql+asyncpg://oracle_test:$(POSTGRES_PASSWORD)@postgres:5432/oracle_test \
+		-e POSTGRES_ADMIN_DATABASE_URL=postgresql://oracle:$(POSTGRES_PASSWORD)@postgres:5432/postgres \
 		-v $(CURDIR)/tests:/opt/oracle/tests \
 		-v $(CURDIR)/infra:/opt/oracle/infra \
 		-v $(CURDIR)/data:/opt/oracle/data:ro \

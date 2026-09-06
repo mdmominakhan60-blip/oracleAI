@@ -15,9 +15,19 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+# BUS-304: fail-closed до любого подключения — прод-DATABASE_URL в окружении
+# (наследие .env в агентских ранах) роняет pytest сразу, не на первом тесте.
+from scripts.test_env_guard import ensure_test_environment  # noqa: E402
+
 # Allow an isolated test database to override a developer’s default DATABASE_URL.
 if os.getenv("TEST_DATABASE_URL"):
     os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
+
+
+def pytest_configure(config):
+    problem = ensure_test_environment()
+    if problem:
+        raise pytest.UsageError(problem)
 
 # Выключаем провайдеров до импорта настроек: иначе тесты полезут в сеть.
 os.environ["LLM_PROVIDER"] = "off"
