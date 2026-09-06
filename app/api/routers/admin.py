@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.responses import Response
@@ -93,6 +95,103 @@ async def demo_dashboard(days: int = Query(default=30, ge=1, le=365),
     if ctx.role != "owner":
         raise HTTPException(403, "демо-режим доступен только владельцу")
     return await analytics_svc.demo_dashboard(days=days)
+
+
+# ────────────── аналитика владельца (BUS-176 §4, BUS-229) ─────────────────────
+
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_MIN_PERIOD = date(2024, 1, 1)
+
+
+def _owner_period(from_: str | None, to: str | None) -> tuple[date, date]:
+    """Валидация окна периода (§4.5): ISO-формат, from ≤ to, ≤ 365 дней.
+
+    from/to опциональны: без них — последние 30 дней. Дата-нижняя граница
+    отсекает опечатки вида 0024-09-01, которые лексикографика бы пропустила.
+    """
+    today = datetime.now(timezone.utc).date()
+    try:
+        d_from = date.fromisoformat(from_) if from_ else today - timedelta(days=29)
+        d_to = date.fromisoformat(to) if to else today
+    except ValueError as exc:
+        raise HTTPException(422, "период ожидается в формате YYYY-MM-DD") from exc
+    if d_from < _MIN_PERIOD or d_to < _MIN_PERIOD:
+        raise HTTPException(422, "период вне допустимого диапазона")
+    if d_from > d_to:
+        raise HTTPException(422, "from должен быть не позже to")
+    if (d_to - d_from).days > 365:
+        raise HTTPException(422, "окно анализа не может превышать 365 дней")
+    return d_from, d_to
+
+
+def _no_store(payload) -> Response:
+    return Response(content=json.dumps(payload, ensure_ascii=False),
+                    media_type="application/json",
+                    headers={"Cache-Control": "no-store", "Pragma": "no-cache"})
+
+
+@router.get("/analytics/funnel")
+async def analytics_funnel(from_: str | None = Query(default=None, alias="from"),
+                           to: str | None = None,
+                           source: str | None = Query(default=None, max_length=48),
+                           surface: str | None = Query(default=None, max_length=16),
+                           campaign: str | None = Query(default=None, max_length=64),
+                           ctx=Depends(require("dashboard")), db=Depends(get_db)):
+    """Visit-based воронка (§4.1): сессии сверху, пользователи снизу."""
+    d_from, d_to = _owner_period(from_, to)
+    if source and source not in analytics_repo._FUNNEL_SOURCES:
+        raise HTTPException(422, f"неизвестный источник: {source}")
+    if surface and surface not in analytics_repo._FUNNEL_SURFACES:
+        raise HTTPException(422, f"неизвестная поверхность: {surface}")
+    if campaign and not re.fullmatch(r"[A-Za-z0-9_\-.]{1,64}", campaign):
+        raise HTTPException(422, "campaign — ascii-токен до 64 символов")
+    payload = await analytics_repo.owner_funnel(
+        db, date_from=d_from.isoformat(), date_to=d_to.isoformat(),
+        source=source, surface=surface, campaign=campaign)
+    return _no_store(payload)
+
+
+@router.get("/analytics/retention")
+async def analytics_retention(from_: str | None = Query(default=None, alias="from"),
+                              to: str | None = None,
+                              granularity: str = Query(default="day"),
+                              ctx=Depends(require("dashboard")), db=Depends(get_db)):
+    """Milestone-когорты по первому miniapp_open (§4.2); d30 — activity_fallback."""
+    d_from, d_to = _owner_period(from_, to)
+    if granularity not in ("day", "week"):
+        raise HTTPException(422, "granularity — day или week")
+    payload = await analytics_repo.owner_retention(
+        db, date_from=d_from.isoformat(), date_to=d_to.isoformat(),
+        granularity=granularity)
+    return _no_store(payload)
+
+
+@router.get("/analytics/revenue")
+async def analytics_revenue(from_: str | None = Query(default=None, alias="from"),
+                            to: str | None = None,
+                            sku: str | None = Query(default=None, max_length=40),
+                            ctx=Depends(require("dashboard")), db=Depends(get_db)):
+    """Gross-деньги в Stars (§4.3); net остаётся null до settlement-входов."""
+    d_from, d_to = _owner_period(from_, to)
+    if sku and not re.fullmatch(r"[A-Za-z0-9_\-.]{1,40}", sku):
+        raise HTTPException(422, "sku — ascii-токен до 40 символов")
+    payload = await analytics_repo.owner_revenue(
+        db, date_from=d_from.isoformat(), date_to=d_to.isoformat(), sku=sku)
+    return _no_store(payload)
+
+
+@router.get("/analytics/segments")
+async def analytics_segments(by: str = Query(default="source"),
+                             from_: str | None = Query(default=None, alias="from"),
+                             to: str | None = None,
+                             ctx=Depends(require("dashboard")), db=Depends(get_db)):
+    """Сегменты аудитории (§4.4); сегменты <5 users агрегируются в other."""
+    d_from, d_to = _owner_period(from_, to)
+    if by not in ("source", "tier", "surface", "lifecycle"):
+        raise HTTPException(422, "by — один из source|tier|surface|lifecycle")
+    payload = await analytics_repo.owner_segments(
+        db, by=by, date_from=d_from.isoformat(), date_to=d_to.isoformat())
+    return _no_store(payload)
 
 
 @router.get("/payment-health")

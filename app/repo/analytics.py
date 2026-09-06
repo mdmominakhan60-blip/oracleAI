@@ -995,3 +995,464 @@ async def latency_percentiles(db, days: int = 30) -> dict:
         "status": "full",
         "calls": calls,
     }
+
+
+# ─────────────── владелец: воронка / retention / деньги / сегменты ───────────
+# BUS-176 §4 (BUS-229). Все функции PostgreSQL-only и возвращают только
+# агрегаты: tg_id наружу не идёт (fail-closed, словарь событий).
+# Окно дат — по индексированной колонке events.day (TEXT ISO, лексикографика);
+# для orders.paid_at — префикс-сравнение [from, to+1d), как в monetization_kpis.
+
+_FUNNEL_STEPS = [
+    ("visit", "visit", "session"),
+    ("signup", "signup", "session"),
+    ("activation", "activation", "session"),
+    ("paywall_view", "paywall_view", "user"),
+    ("checkout", "invoice_created/credit_pack_checkout_started", "user"),
+    ("paid", "orders.paid", "user"),
+    ("report_delivered", "report_delivered", "user"),
+]
+
+
+def _props_filters(source: str | None, surface: str | None,
+                   campaign: str | None) -> str:
+    """WHERE-фрагмент по категориальным props funnel-событий (алиас e).
+
+    props_json — TEXT; для funnel-событий track_funnel всегда пишет валидный
+    JSON или NULL, каст ::jsonb безопасен (NULL->>'k' -> NULL).
+    """
+    parts = []
+    if source:
+        parts.append("AND e.props_json::jsonb->>'source' = :f_source")
+    if surface:
+        parts.append("AND e.surface = :f_surface")
+    if campaign:
+        parts.append("AND e.props_json::jsonb->>'campaign' = :f_campaign")
+    return " ".join(parts)
+
+
+async def owner_funnel(db, *, date_from: str, date_to: str,
+                       source: str | None = None, surface: str | None = None,
+                       campaign: str | None = None) -> dict:
+    """Visit-based воронка по спеке BUS-176 §4.1.
+
+    Когорта — visit-сессии окна (§2.1 правило 4), не registrations-юзеры.
+    Этапы visit/signup/activation — DISTINCT session_id; этапы от paywall
+    глубже — DISTINCT tg_id через мост session_linked (G2): смена unit —
+    задокументированный стык. Фильтры source/surface/campaign применяются
+    к props событийных шагов и к users.source для user-шагов; campaign
+    наследуется user-шагами от visit-когорты.
+    """
+    params: dict = {"from": date_from, "to": date_to}
+    if source:
+        params["f_source"] = source
+    if surface:
+        params["f_surface"] = surface
+    if campaign:
+        params["f_campaign"] = campaign
+    ev = _props_filters(source, surface, campaign)
+    user_source = "AND u.source = :f_source" if source else ""
+    user_surface = "AND e.surface = :f_surface" if surface else ""
+
+    sql = f"""
+    WITH visit_sessions AS (
+        SELECT DISTINCT e.session_id FROM events e
+        WHERE e.name='visit' AND e.day >= :from AND e.day <= :to
+          AND e.session_id IS NOT NULL {ev}
+    ),
+    visit_users AS (
+        SELECT DISTINCT e.tg_id FROM events e
+        JOIN visit_sessions v ON e.session_id = v.session_id
+        WHERE e.name = 'session_linked' AND e.tg_id IS NOT NULL
+    ),
+    user_scope AS (
+        SELECT u.tg_id FROM users u JOIN visit_users vu ON vu.tg_id = u.tg_id
+        WHERE 1=1 {user_source}
+    )
+    SELECT
+        (SELECT COUNT(*) FROM visit_sessions) AS visit,
+        (SELECT COUNT(DISTINCT e.session_id) FROM events e
+         JOIN visit_sessions v ON e.session_id = v.session_id
+         WHERE e.name='signup' AND e.day >= :from AND e.day <= :to {ev}) AS signup,
+        (SELECT COUNT(DISTINCT e.session_id) FROM events e
+         JOIN visit_sessions v ON e.session_id = v.session_id
+         WHERE e.name='activation' AND e.day >= :from AND e.day <= :to {ev}) AS activation,
+        (SELECT COUNT(DISTINCT e.tg_id) FROM events e
+         JOIN user_scope s ON s.tg_id = e.tg_id
+         WHERE e.name='paywall_view' AND e.day >= :from AND e.day <= :to
+         {user_surface}) AS paywall_view,
+        (SELECT COUNT(DISTINCT e.tg_id) FROM events e
+         JOIN user_scope s ON s.tg_id = e.tg_id
+         WHERE e.name IN ('invoice_created', 'credit_pack_checkout_started')
+         AND e.day >= :from AND e.day <= :to {user_surface}) AS checkout,
+        (SELECT COUNT(DISTINCT o.tg_id) FROM orders o
+         JOIN user_scope s ON s.tg_id = o.tg_id
+         WHERE o.status='paid' AND o.paid_at >= :from
+           AND o.paid_at < :to_exclusive) AS paid,
+        (SELECT COUNT(DISTINCT e.tg_id) FROM events e
+         JOIN user_scope s ON s.tg_id = e.tg_id
+         WHERE e.name='report_delivered' AND e.day >= :from AND e.day <= :to
+         {user_surface}) AS report_delivered
+    """
+    to_exclusive = (date.fromisoformat(date_to) + timedelta(days=1)).isoformat()
+    cur = await db.execute(sql, {**params, "to_exclusive": to_exclusive})
+    row = dict(await cur.fetchone())
+
+    steps = []
+    prev = None
+    for step, event, unit in _FUNNEL_STEPS:
+        value = int(row[step] or 0)
+        steps.append({
+            "step": step, "event": event, "value": value, "unit": unit,
+            # Нулевой знаменатель → 0.0 (§2.1 правило 3), не null.
+            "of_prev": round(value * 100 / prev, 1) if prev else
+            (None if prev is None else 0.0),
+            "of_start": round(value * 100 / int(row["visit"] or 0), 1)
+            if row["visit"] else 0.0,
+        })
+        prev = value or None
+
+    visit_n = int(row["visit"] or 0)
+    top_n = visit_n + int(row["signup"] or 0) + int(row["activation"] or 0)
+    deep_n = int(row["paywall_view"] or 0) + int(row["paid"] or 0)
+    if top_n and deep_n:
+        quality = {"status": "full", "note": None}
+    elif deep_n:
+        quality = {"status": "unreliable",
+                   "note": "visit/signup/activation не деплоированы (BUS-144); "
+                           "верх воронки пуст при непустом низе"}
+    elif top_n:
+        quality = {"status": "partial",
+                   "note": "низ воронки пуст в окне — событий paywall/paid нет"}
+    else:
+        quality = {"status": "no_data",
+                   "note": "в окне нет событий воронки"}
+
+    return {
+        "period": {"from": date_from, "to": date_to},
+        "filters": {"source": source, "surface": surface,
+                    "campaign": campaign},
+        "steps": steps,
+        "data_quality": quality,
+    }
+
+
+async def owner_retention(db, *, date_from: str, date_to: str,
+                          granularity: str = "day") -> dict:
+    """Milestone-когорты по дню первого miniapp_open (BUS-176 §4.2).
+
+    d1/d7 — milestone return_d1/return_d7 (COUNT DISTINCT tg_id: поздний
+    возврат пишет оба milestone в один день). d30 до G1 (BUS-196) —
+    activity_fallback: любая событийная активность в [d0+30, d0+31).
+    matured — календарная зрелость окна; для week-когорт — только когда
+    прошла вся неделя (иначе свежая неделя занизит rate). Когорты старше
+    120 дней отдают null: events подчистит ретеншен.
+    """
+    if granularity == "week":
+        d0_expr = "to_char(date_trunc('week', c.d0::date), 'YYYY-MM-DD')"
+    else:
+        d0_expr = "c.d0"
+    sql = f"""
+    WITH cohort AS (
+        SELECT e.tg_id, MIN(e.day) AS d0 FROM events e
+        WHERE e.name='miniapp_open' AND e.tg_id IS NOT NULL
+          AND e.day >= :from AND e.day <= :to
+        GROUP BY e.tg_id
+    ),
+    cohort_g AS (
+        SELECT {d0_expr} AS bucket, c.tg_id, c.d0 FROM cohort c
+    ),
+    marks AS (
+        SELECT g.bucket, g.tg_id,
+            MAX(CASE WHEN e.name='return_d1' THEN 1 ELSE 0 END) AS d1,
+            MAX(CASE WHEN e.name='return_d7' THEN 1 ELSE 0 END) AS d7,
+            MAX(CASE WHEN e.day::date BETWEEN g.d0::date + 30
+                                          AND g.d0::date + 30
+                     THEN 1 ELSE 0 END) AS d30_activity
+        FROM cohort_g g LEFT JOIN events e ON e.tg_id = g.tg_id
+        GROUP BY g.bucket, g.tg_id
+    )
+    SELECT bucket, COUNT(*) AS size,
+           COALESCE(SUM(d1), 0) AS d1, COALESCE(SUM(d7), 0) AS d7,
+           COALESCE(SUM(d30_activity), 0) AS d30
+    FROM marks GROUP BY bucket ORDER BY bucket
+    """
+    cur = await db.execute(sql, {"from": date_from, "to": date_to})
+    rows = [dict(r) for r in await cur.fetchall()]
+
+    today = date.today()
+    retention_horizon = today - timedelta(days=120)
+
+    def matured_for(bucket: str, day_n: int) -> bool:
+        b = date.fromisoformat(bucket)
+        if granularity == "week":
+            return today >= b + timedelta(days=6 + day_n)
+        return today >= b + timedelta(days=day_n)
+
+    def mark(bucket: str, size: int, value: int, day_n: int) -> dict:
+        if not matured_for(bucket, day_n):
+            return {"value": None, "rate": None, "matured": False}
+        if date.fromisoformat(bucket) < retention_horizon:
+            return {"value": None, "rate": None, "matured": True}
+        return {"value": value,
+                "rate": round(value * 100 / size, 1) if size else 0.0,
+                "matured": True}
+
+    cohorts = []
+    for row in rows:
+        bucket, size = row["bucket"], int(row["size"])
+        cohorts.append({
+            "day": bucket,
+            "size": size,
+            "d1": mark(bucket, size, int(row["d1"] or 0), 1),
+            "d7": mark(bucket, size, int(row["d7"] or 0), 7),
+            **{"d30": {
+                **mark(bucket, size, int(row["d30"] or 0), 30),
+                "method": "activity_fallback", "event": None,
+            }},
+        })
+
+    pruned = [c["day"] for c in cohorts if c["d1"]["value"] is None
+              and c["d1"]["matured"]]
+    quality = {"status": "full", "note": None}
+    if pruned:
+        quality = {"status": "partial",
+                   "note": "когорты старше 120 дней: события подчистены "
+                           f"ретеншеном ({len(pruned)} когорт)"}
+    return {
+        "period": {"from": date_from, "to": date_to},
+        "cohort_anchor": "miniapp_open",
+        "granularity": granularity,
+        "cohorts": cohorts,
+        "data_quality": quality,
+    }
+
+
+async def owner_revenue(db, *, date_from: str, date_to: str,
+                        sku: str | None = None) -> dict:
+    """Gross-деньги в Stars (BUS-176 §4.3): семантика monetization_kpis.
+
+    gross — payments.succeeded; orders/payers/by_sku — orders.paid по paid_at.
+    Net revenue не считается (fail-closed словаря): null до settlement-входов.
+    """
+    params: dict = {"from": date_from, "to": date_to}
+    sku_filter = ""
+    if sku:
+        params["sku"] = sku
+        sku_filter = "AND COALESCE(sku, kind) = :sku"
+
+    gross = await _scalar(
+        db, "SELECT COALESCE(SUM(amount_stars),0) FROM payments "
+            "WHERE status='succeeded' AND created_at >= :from "
+            "AND created_at < :to_exclusive",
+        {**params,
+         "to_exclusive": (date.fromisoformat(date_to) + timedelta(days=1)).isoformat()})
+    payers = await _scalar(
+        db, "SELECT COUNT(DISTINCT tg_id) FROM payments "
+            "WHERE status='succeeded' AND created_at >= :from "
+            "AND created_at < :to_exclusive",
+        {**params,
+         "to_exclusive": (date.fromisoformat(date_to) + timedelta(days=1)).isoformat()})
+    paid_orders = await _scalar(
+        db, f"SELECT COUNT(*) FROM orders WHERE status='paid' "
+            f"AND paid_at >= :from AND paid_at < :to_exclusive {sku_filter}",
+        {**params,
+         "to_exclusive": (date.fromisoformat(date_to) + timedelta(days=1)).isoformat()})
+    refunded = await _scalar(
+        db, f"SELECT COUNT(*) FROM orders WHERE status='refunded' "
+            f"AND created_at >= :from AND created_at < :to_exclusive {sku_filter}",
+        {**params,
+         "to_exclusive": (date.fromisoformat(date_to) + timedelta(days=1)).isoformat()})
+    repeat = await _scalar(
+        db, "SELECT COUNT(*) FROM (SELECT tg_id FROM payments "
+            "WHERE status='succeeded' AND created_at >= :from "
+            "AND created_at < :to_exclusive GROUP BY tg_id HAVING COUNT(*)>=2) "
+            "AS repeat_users",
+        {**params,
+         "to_exclusive": (date.fromisoformat(date_to) + timedelta(days=1)).isoformat()})
+
+    cur = await db.execute(
+        f"SELECT substr(paid_at,1,10) AS day, COALESCE(SUM(amount_stars),0) AS gross, "
+        f"COUNT(*) AS orders, COUNT(DISTINCT tg_id) AS payers "
+        f"FROM orders WHERE status='paid' AND paid_at >= :from "
+        f"AND paid_at < :to_exclusive {sku_filter} "
+        f"GROUP BY substr(paid_at,1,10) ORDER BY day",
+        {**params,
+         "to_exclusive": (date.fromisoformat(date_to) + timedelta(days=1)).isoformat()})
+    by_day = {r["day"]: dict(r) for r in await cur.fetchall()}
+
+    timeseries = []
+    d = date.fromisoformat(date_from)
+    last = date.fromisoformat(date_to)
+    while d <= last:
+        key = d.isoformat()
+        row = by_day.get(key)
+        timeseries.append({
+            "day": key,
+            "gross_stars": int(row["gross"] or 0) if row else 0,
+            "orders": int(row["orders"] or 0) if row else 0,
+            "payers": int(row["payers"] or 0) if row else 0,
+        })
+        d += timedelta(days=1)
+
+    cur = await db.execute(
+        f"SELECT COALESCE(sku, kind) AS sku, COUNT(*) AS orders, "
+        f"COUNT(DISTINCT tg_id) AS payers, "
+        f"COALESCE(SUM(amount_stars),0) AS gross_stars "
+        f"FROM orders WHERE status='paid' AND paid_at >= :from "
+        f"AND paid_at < :to_exclusive {sku_filter} "
+        f"GROUP BY COALESCE(sku, kind) ORDER BY gross_stars DESC, orders DESC",
+        {**params,
+         "to_exclusive": (date.fromisoformat(date_to) + timedelta(days=1)).isoformat()})
+    by_sku = [{**dict(r), "gross_stars": int(r["gross_stars"] or 0)}
+              for r in await cur.fetchall()]
+
+    return {
+        "period": {"from": date_from, "to": date_to},
+        "totals": {
+            "gross_booking_stars": int(gross),
+            "paid_orders": int(paid_orders),
+            "payers": int(payers),
+            "arppu_stars": round(gross / payers, 2) if payers else 0.0,
+            "repeat_payer_rate": round(repeat * 100 / payers, 1) if payers else 0.0,
+            "refund_rate": round(refunded * 100 / paid_orders, 1)
+            if paid_orders else 0.0,
+            "net_revenue_estimate": None,
+            "net_revenue_note": "requires settlement inputs (CFO)",
+        },
+        "timeseries": timeseries,
+        "by_sku": by_sku,
+        "data_quality": {"status": "full", "note": None},
+    }
+
+
+_LIFECYCLE_DEFS = [
+    ("new", "u.created_at >= :cutoff_new"),
+    ("onboarded", "u.onboarded = 1"),
+    ("paying", "u.sub_until > :now"),
+    ("churned", "u.last_seen IS NOT NULL AND u.last_seen < :cutoff_churned"),
+    ("dormant", "(u.last_seen IS NULL OR u.last_seen < :cutoff_dormant)"),
+]
+
+
+async def owner_segments(db, *, by: str, date_from: str | None = None,
+                         date_to: str | None = None) -> dict:
+    """Сегменты аудитории (BUS-176 §4.4). by=source|tier|surface|lifecycle.
+
+    payers = ltv_stars > 0 (паттерн source_split §2.4). Анти-reid: сегменты
+    < 5 users агрегируются в other. В lifecycle сегменты-признаки могут
+    пересекаться, поэтому sum(share_pct) > 100 — это честно и задокументировано.
+    """
+    if by == "surface":
+        # Событийный разрез: окно по events.day, users = DISTINCT tg_id.
+        params: dict = {}
+        window_sql = ""
+        if date_from:
+            window_sql += "AND e.day >= :window_from "
+            params["window_from"] = date_from
+        if date_to:
+            window_sql += "AND e.day <= :window_to "
+            params["window_to"] = date_to
+        cur = await db.execute(
+            "SELECT COALESCE(e.surface, 'bot') AS key, COUNT(*) AS events, "
+            "COUNT(DISTINCT e.tg_id) AS users, "
+            "COUNT(DISTINCT CASE WHEN u.ltv_stars > 0 THEN e.tg_id END) AS payers "
+            "FROM events e LEFT JOIN users u ON u.tg_id = e.tg_id "
+            f"WHERE e.tg_id IS NOT NULL {window_sql}"
+            "GROUP BY COALESCE(e.surface, 'bot') ORDER BY events DESC",
+            params)
+        rows = [dict(r) for r in await cur.fetchall()]
+    else:
+        params = {"now": utcnow(),
+                  "cutoff_new": _ago(7),
+                  "cutoff_churned": _ago(14),
+                  "cutoff_dormant": _ago(30)}
+        window_sql = ""
+        if date_from:
+            window_sql += "AND u.created_at >= :window_from "
+            params["window_from"] = date_from
+        if date_to:
+            window_sql += "AND u.created_at < :window_to "
+            params["window_to"] = (date.fromisoformat(date_to) + timedelta(days=1)).isoformat()
+
+        if by == "source":
+            cur = await db.execute(
+                "SELECT COALESCE(NULLIF(u.source, ''), 'unknown') AS key, "
+                "COUNT(*) AS users, "
+                "SUM(CASE WHEN u.ltv_stars > 0 THEN 1 ELSE 0 END) AS payers, "
+                "COALESCE(SUM(u.ltv_stars), 0) AS ltv_stars "
+                "FROM users u WHERE u.status <> 'deleted' " + window_sql +
+                "GROUP BY COALESCE(NULLIF(u.source, ''), 'unknown') "
+                "ORDER BY users DESC",
+                params)
+            rows = [dict(r) for r in await cur.fetchall()]
+        elif by == "tier":
+            cur = await db.execute(
+                "SELECT COALESCE(s.tier_code, 'free') AS key, COUNT(*) AS users, "
+                "SUM(CASE WHEN u.ltv_stars > 0 THEN 1 ELSE 0 END) AS payers, "
+                "COALESCE(SUM(u.ltv_stars), 0) AS ltv_stars, "
+                "SUM(CASE WHEN u.sub_until > :now THEN 1 ELSE 0 END) AS active_subs "
+                "FROM users u LEFT JOIN subscription_state s ON s.tg_id = u.tg_id "
+                "WHERE u.status <> 'deleted' " + window_sql +
+                "GROUP BY COALESCE(s.tier_code, 'free') ORDER BY users DESC",
+                params)
+            rows = [dict(r) for r in await cur.fetchall()]
+        elif by == "lifecycle":
+            # Один проход по users: сегменты — признаки (§2.4), могут
+            # пересекаться; payers/ltv считаются в том же проходе через CASE.
+            payer_cases = ", ".join(
+                f"COUNT(CASE WHEN ({cond}) AND u.ltv_stars > 0 THEN 1 END) "
+                f"AS seg_{name}_payers, "
+                f"COALESCE(SUM(CASE WHEN ({cond}) AND u.ltv_stars > 0 "
+                f"THEN u.ltv_stars END), 0) AS seg_{name}_ltv"
+                for name, cond in _LIFECYCLE_DEFS)
+            user_cases = ", ".join(
+                f"COUNT(CASE WHEN {cond} THEN 1 END) AS seg_{name}"
+                for name, cond in _LIFECYCLE_DEFS)
+            cur = await db.execute(
+                "SELECT " + user_cases + ", " + payer_cases +
+                " FROM users u WHERE u.status <> 'deleted' " + window_sql,
+                params)
+            agg = dict(await cur.fetchone())
+            rows = [{"key": name,
+                     "users": int(agg[f"seg_{name}"] or 0),
+                     "payers": int(agg[f"seg_{name}_payers"] or 0),
+                     "ltv_stars": int(agg[f"seg_{name}_ltv"] or 0)}
+                    for name, _cond in _LIFECYCLE_DEFS]
+        else:
+            raise ValueError(f"unsupported segment dimension: {by}")
+
+    total = sum(int(r["users"] or 0) for r in rows)
+    small = [r for r in rows if int(r["users"] or 0) < 5]
+    big = [r for r in rows if int(r["users"] or 0) >= 5]
+    if small:
+        merged = {"key": "other", "users": 0, "payers": 0, "ltv_stars": 0}
+        if by == "surface":
+            merged["events"] = 0
+        if by == "tier":
+            merged["active_subs"] = 0
+        for r in small:
+            merged["users"] += int(r.get("users") or 0)
+            merged["payers"] += int(r.get("payers") or 0)
+            merged["ltv_stars"] += int(r.get("ltv_stars") or 0)
+            if by == "surface":
+                merged["events"] += int(r.get("events") or 0)
+            if by == "tier":
+                merged["active_subs"] += int(r.get("active_subs") or 0)
+        rows = big + [merged]
+    for r in rows:
+        r["users"] = int(r["users"] or 0)
+        r["payers"] = int(r.get("payers") or 0)
+        r["ltv_stars"] = int(r.get("ltv_stars") or 0)
+        r["share_pct"] = round(r["users"] * 100 / total, 1) if total else 0.0
+        if by in ("source", "tier", "surface"):
+            r["payer_rate_pct"] = (round(r["payers"] * 100 / r["users"], 1)
+                                   if r["users"] else 0.0)
+
+    return {
+        "period": {"from": date_from, "to": date_to},
+        "by": by,
+        "total": total,
+        "segments": rows,
+        "data_quality": {"status": "full", "note": None},
+    }
