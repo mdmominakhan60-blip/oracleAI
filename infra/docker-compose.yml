@@ -195,6 +195,34 @@ services:
     restart: unless-stopped
     logging: *observability-logging
 
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    command:
+      - "--web.listen-address=0.0.0.0:9093"
+      - "--storage.path=/alertmanager"
+      - "--log.level=debug"
+    env_file:
+      - ../.env
+    volumes:
+      # BUS-302: entrypoint генерирует конфиг из env (токен/chat_id не в git),
+      # yml в репо — только справочник шаблона сообщения.
+      - ./observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./observability/alertmanager-entrypoint.sh:/etc/alertmanager/alertmanager-entrypoint.sh:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - oracle_internal
+    depends_on:
+      loki:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9093/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    logging: *observability-logging
+    entrypoint: ["/bin/sh", "/etc/alertmanager/alertmanager-entrypoint.sh"]
+
   prometheus:
     image: prom/prometheus:v3.14.0
     command:
@@ -395,6 +423,7 @@ volumes:
   prometheus_data:
   grafana_data:
   alloy_data:
+  alertmanager_data:
 
 networks:
   oracle_internal:

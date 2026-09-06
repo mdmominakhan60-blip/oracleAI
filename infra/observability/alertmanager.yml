@@ -1,0 +1,40 @@
+global:
+  resolve_timeout: 5m
+  http_config: {}
+
+# Единый receiver: Telegram канал оператора.
+# chat_id берётся из ADMIN_ID в .env (operator OracleAI).
+# Если нужен отдельный бот для алертов — заведите новый @BotFather-бот и
+# положите его токен в ALERT_BOT_TOKEN, сюда прокидывается через env-файл.
+route:
+  receiver: telegram-operator
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: telegram-operator
+    telegram_configs:
+      - bot_token: ${ALERT_BOT_TOKEN:-${BOT_TOKEN}}
+        chat_id: ${ALERT_CHAT_ID:-${ADMIN_ID}}
+        parse_mode: HTML
+        message: |
+          <b>{{ .CommonLabels.alertname }}</b>
+          {{ range .Alerts }}
+            {{- if .Labels.severity }}<i>{{ .Labels.severity }}</i>{{ end }}
+            {{- if .Annotations.summary }}
+              {{ .Annotations.summary }}
+            {{- end }}
+            {{- if .Annotations.description }}
+              {{ .Annotations.description }}
+            {{- end }}
+            {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}
+          {{ end }}
+
+# inhibit: critical тонет warning по тому же job (защита от alert-storm)
+inhibit_rules:
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: ["job"]

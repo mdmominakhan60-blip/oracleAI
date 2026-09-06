@@ -1,0 +1,42 @@
+[
+  {
+    "job": "alloy",
+    "health": "up",
+    "lastScrape": "2026-09-06T09:37:31.580686085Z"
+  },
+  {
+    "job": "cadvisor",
+    "health": "up",
+    "lastScrape": "2026-09-06T09:37:30.085603392Z"
+  },
+  {
+    "job": "node-exporter",
+    "health": "up",
+    "lastScrape": "2026-09-06T09:37:30.017185047Z"
+  },
+  {
+    "job": "oracleai-api",
+    "health": "up",
+    "lastScrape": "2026-09-06T09:37:39.305522001Z"
+  },
+  {
+    "job": "oracleai-bot",
+    "health": "up",
+    "lastScrape": "2026-09-06T09:37:35.874585955Z"
+  },
+  {
+    "job": "oracleai-staging-api",
+    "health": "up",
+    "lastScrape": "2026-09-06T09:37:40.736339848Z"
+  },
+  {
+    "job": "oracleai-staging-bot",
+    "health": "up",
+    "lastScrape": "2026-09-06T09:37:30.786667342Z"
+  },
+  {
+    "job": "prometheus",
+    "health": "up",
+    "lastScrape": "2026-09-06T09:37:39.454671701Z"
+  }
+]

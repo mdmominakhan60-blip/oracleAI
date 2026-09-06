@@ -13,6 +13,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 from aiogram.types import BotCommand, MenuButtonWebApp, WebAppInfo
+from prometheus_client import start_http_server
 
 from ..config import settings
 from ..core import flood, sentry
@@ -151,6 +152,9 @@ async def main() -> None:
     for warning in settings.ready:
         log.warning("проверь конфигурацию: %s", warning)
     sentry.init()
+    # BUS-302: экспорт метрик бота (scheduler-гороскопы, LLM-каунтеры llm.py).
+    # Без этого реестр бота никто не скрейпит и OracleAILLMFailureRateHigh слеп.
+    start_http_server(9101)
     db = await connect()
     bot = Bot(settings.bot_token,
               default=DefaultBotProperties(parse_mode=ParseMode.HTML),
