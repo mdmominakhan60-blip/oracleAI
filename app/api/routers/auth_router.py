@@ -46,6 +46,13 @@ REPLAY_STORE = Counter(
     "Replay-store outcomes at init-data mint: fail-open/fail-closed on Redis errors.",
     ("result",),
 )
+# Пре-инициализация детей обязательна: prometheus_client создаёт ряд только при
+# первом .inc(), а increase()/rate() игнорируют переход "серии не было → N"
+# (нет предыдущей точки). Без этого алерт молчал бы на первом инциденте после
+# рестарта API — ровно тот случай, ради которого он существует (проверено на
+# staging 2026-09-06: счётчик=2, increase(...[10m])=0, алерт inactive).
+REPLAY_STORE.labels(result="open")
+REPLAY_STORE.labels(result="closed")
 
 router = APIRouter(prefix="/api", tags=["auth"])
 

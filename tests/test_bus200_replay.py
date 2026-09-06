@@ -270,3 +270,12 @@ class TestReplayStoreMetric:
         after = _replay_store_sample("closed")
         assert after is not None
         assert after - before == 1
+
+    async def test_counter_children_preinitialized(self):
+        # Увеличение с нуля должно быть видно rate()/increase(): prometheus_client
+        # создаёт ряд только при .inc(), а без предыдущей точки рост 0→N алерт
+        # не видит (проверено на staging: счётчик=2, increase=0, алерт inactive).
+        # Оба детей обязаны существовать сразу после импорта модуля.
+        from app.api.routers import auth_router  # noqa: F401 — импорт регистрирует
+        assert _replay_store_sample("open") == 0.0
+        assert _replay_store_sample("closed") == 0.0
