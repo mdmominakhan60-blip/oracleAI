@@ -1,0 +1,14 @@
+      metric      | value 
+------------------+-------
+ segment_size_now |     0
+(1 row)
+
+      metric      | value | n 
+------------------+-------+---
+ ttfv_median_days |       | 0
+(1 row)
+
+ metric | cohort_day | onboarded_total | with_first_value | pct 
+--------+------------+-----------------+------------------+-----
+(0 rows)
+
