@@ -123,6 +123,9 @@ services:
     profiles: ["telegram"]
     command: ["python", "-m", "app.bot.main"]
     stop_grace_period: 30s
+    extra_hosts:
+      # BUS-270: LLM-вызовы делает и бот (гороскопы/чат-фичи) — см. staging-api.
+      - "host.docker.internal:host-gateway"
     depends_on:
       staging-migrate:
         condition: service_completed_successfully
