@@ -90,8 +90,6 @@ async def ltv_tier(db, tg_id: int) -> dict | None:
 
     ltv_stars = int(user.get("ltv_stars") or 0)
     created_at = user.get("created_at")
-    sub_level = user.get("sub_level") or "free"
-    onboarded = int(user.get("onboarded") or 0)
 
     # ── платежи ─────────────────────────────────────────────────────────────
     payments_count, avg_check = await _payment_stats(db, tg_id)
