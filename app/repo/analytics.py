@@ -55,6 +55,8 @@ E_CREDIT_PACK_CHECKOUT_STARTED = "credit_pack_checkout_started"
 E_CREDIT_PACK_PAID = "credit_pack_paid"
 E_CREDIT_SPENT = "credit_spent"
 E_CREDIT_BALANCE_LOW = "credit_balance_low"
+E_POST_LIMIT = "post_limit_sent"
+E_LOW_BALANCE_SENT = "low_balance_sent"
 E_REPORT_DELIVERED = "report_delivered"
 E_REFUND_REQUESTED = "refund_requested"
 E_REFUND_COMPLETED = "refund_completed"
@@ -72,6 +74,13 @@ E_ACTIVATION = "activation"
 # дашборд-агрегаты не выводится. Клиентское событие с этим именем
 # отбрасывается allowlist'ом router funnel.py.
 E_SESSION_LINKED = "session_linked"
+
+# Day-7 опрос (BUS-170 rev 5 §5, словарь 8d33f33). Props категориальные:
+# survey_code, delivery_key, bonus_granted, question_count, bonus_kind,
+# amount — score и свободный текст в события не пишутся (privacy-правило).
+E_FEEDBACK_SURVEY_SENT = "feedback_survey_sent"
+E_FEEDBACK_SURVEY_COMPLETED = "feedback_survey_completed"
+E_SURVEY_GRANT_ISSUED = "survey_grant_issued"
 
 
 async def track(db, name: str, tg_id: int | None = None, *,

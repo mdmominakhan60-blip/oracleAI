@@ -235,6 +235,108 @@ async def batch_codes(db, batch: str) -> list[dict]:
     return [dict(r) for r in await cur.fetchall()]
 
 
+# ────────────── операторские подарки (BUS-310, BUS-284 §4) ───────────────────
+
+async def reserve_op_gift(db, days: int) -> str | None:
+    """Резервирует неиспользованный код из партии op_* на days дней.
+
+    Партии op_{tier}_{YYYY-MM} выпускаются заранее под правом promo;
+    endpoint подарка только выдаёт готовые коды. Выбор свежей партии месяца
+    (ORDER BY batch DESC) вместо произвольной — атрибуция отчёта §5 остаётся
+    предсказуемой. Служебная запись в deliveries(tg_id=0) резервирует код,
+    не создавая ложного касания конкретной клиентки; факт выдачи конкретной
+    клиентке пишет endpoint отдельной записью (tg_id, op_gift).
+    """
+    async with transaction(db):
+        cur = await db.execute(
+            "SELECT c.code FROM promo_codes c "
+            "WHERE c.batch LIKE 'op\\_%' ESCAPE '\\' "
+            "AND c.days=:days AND c.kind='plan_days' AND c.plan_code='trial' "
+            "AND COALESCE(c.used_count,0)=0 AND COALESCE(c.is_active,1)=1 "
+            "AND (c.expires_at IS NULL OR c.expires_at > :now) "
+            "AND NOT EXISTS (SELECT 1 FROM deliveries d "
+            "  WHERE d.kind='op_gift_code' AND d.key=c.code) "
+            "ORDER BY c.batch DESC, c.code LIMIT 1 "
+            "FOR UPDATE OF c SKIP LOCKED",
+            {"days": days, "now": utcnow()})
+        row = await cur.fetchone()
+        if not row:
+            return None
+        code = row["code"]
+        cur = await db.execute(
+            "INSERT INTO deliveries(tg_id, kind, key, created_at) "
+            "VALUES(0, 'op_gift_code', :code, :created_at) "
+            "ON CONFLICT (tg_id, kind, key) DO NOTHING",
+            {"code": code, "created_at": utcnow()})
+        if not cur.rowcount:
+            return None
+        return code
+
+
+async def last_op_gift_at(db, tg_id: int) -> str | None:
+    """ISO-дата последнего операторского подарка клиентки (анти-абьюз §4.1.3).
+
+    Источник — запись выдачи в deliveries: момент выдачи оператором, а не
+    момент активации клиенткой (иначе неподактивированный код не держит окно).
+    Учитываются и прямые redemptions из партий op_* (клиентка могла получить
+    код вне эндпоинта) — берём максимум двух источников.
+    """
+    cur = await db.execute(
+        "SELECT MAX(at) last_at FROM ("
+        "  SELECT MAX(d.created_at) at FROM deliveries d "
+        "   WHERE d.tg_id=:tg_id AND d.kind='op_gift' "
+        "  UNION ALL "
+        "  SELECT MAX(r.created_at) FROM promo_redemptions r "
+        "   JOIN promo_codes c ON c.code=r.code "
+        "   WHERE r.tg_id=:tg_id AND c.batch LIKE 'op\\_%' ESCAPE '\\'"
+        ") t", {"tg_id": tg_id})
+    row = await cur.fetchone()
+    return row["last_at"] if row else None
+
+
+async def last_op_gift_days(db, tg_id: int) -> int | None:
+    """Дни последнего выданного op-подарка — окно анти-абьюза (60/90)."""
+    cur = await db.execute(
+        "SELECT c.days FROM deliveries d JOIN promo_codes c ON c.code=d.key "
+        "WHERE d.tg_id=:tg_id AND d.kind='op_gift' "
+        "ORDER BY d.created_at DESC LIMIT 1", {"tg_id": tg_id})
+    row = await cur.fetchone()
+    return row["days"] if row else None
+
+
+async def op_batches_report(db, months: int = 6) -> list[dict]:
+    """Месячный отчёт по партиям op_* (§4.3, KPI §5): redemption rate + конверсия.
+
+    Конверсия — доля активировавших подарок клиенток, оплативших что-нибудь
+    после активации (любой paid-заказ, не только подписка): устойчиво к
+    бесплатным активациям и не требует склейки по SKU.
+    """
+    cur = await db.execute(
+        "SELECT c.batch, c.days, COUNT(*) codes, "
+        "  SUM(CASE WHEN COALESCE(c.used_count,0)>0 THEN 1 ELSE 0 END) used, "
+        "  SUM(CASE WHEN COALESCE(c.is_active,1)=0 THEN 1 ELSE 0 END) inactive, "
+        "  MIN(c.created_at) created_at "
+        "FROM promo_codes c WHERE c.batch LIKE 'op\\_%' ESCAPE '\\' "
+        "GROUP BY c.batch, c.days "
+        "ORDER BY c.batch DESC LIMIT :months", {"months": months})
+    batches = [dict(r) for r in await cur.fetchall()]
+    for b in batches:
+        cur = await db.execute(
+            "SELECT COUNT(DISTINCT r.tg_id) redeemers, "
+            "  COUNT(DISTINCT CASE WHEN EXISTS ("
+            "    SELECT 1 FROM orders o WHERE o.tg_id=r.tg_id "
+            "    AND o.status='paid' AND o.paid_at >= r.created_at"
+            "  ) THEN r.tg_id END) converted "
+            "FROM promo_redemptions r JOIN promo_codes c ON c.code=r.code "
+            "WHERE c.batch=:batch", {"batch": b["batch"]})
+        conv = await cur.fetchone()
+        b["redeemers"] = conv["redeemers"]
+        b["converted"] = conv["converted"]
+        b["redemption_rate"] = round(conv["redeemers"] / b["codes"], 4) if b["codes"] else 0
+        b["conversion_rate"] = round(conv["converted"] / conv["redeemers"], 4) if conv["redeemers"] else 0
+    return batches
+
+
 # ─────────────────────────────── рефералы ─────────────────────────────────────
 
 async def record_referral(db, referrer_id: int, invitee_id: int, *,

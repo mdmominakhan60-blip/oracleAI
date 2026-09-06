@@ -45,6 +45,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres-init.sql:/docker-entrypoint-initdb.d/10-pgvector.sql:ro
+      - ./postgres-ensure-test-role.sh:/docker-entrypoint-initdb.d/11-oracle-test-role.sh:ro
+    # BUS-277: стабильный хост-доступ для MCP (docker-IP 172.x меняется при
+    # пересоздании сети). Bind строго на loopback — снаружи недоступен.
+    ports:
+      - "${POSTGRES_HOST_BIND:-127.0.0.1}:${POSTGRES_HOST_PORT:-5433}:5432"
     networks:
       - oracle_internal
     restart: unless-stopped
