@@ -1,13 +1,13 @@
-# BUS-270: nftables-фикс — доступ docker-контейнеров к host-портам omniroute
+# BUS-270: firewall-фикс — доступ docker-контейнеров к host-портам omniroute
 
 ## Диагноз (доказано 2026-09-06)
 
-`/etc/nftables.conf`: chain input `policy drop`, разрешены только loopback / icmp / ssh
-(порт 22 при этом не слушается — sshd-unix-local.socket только AF_UNIX; но это вне скоупа).
+Активный файрвол — **UFW через iptables-nft**, а не `/etc/nftables.conf` напрямую.
+(`/etc/nftables.conf` policy drop — legacy, сервис disabled; living ruleset — ufw + iptables-nft.)
 
 Контейнеры на docker-мостах (172.29.0.0/16 прод `infra_oracle_internal`,
 172.31.0.0/16 staging `oracle_staging_internal`) при попытке соединения с host-портами
-(omniroute 0.0.0.0:20128) попадают в INPUT хоста → правило `policy drop` молча дропает SYN.
+(omniroute 0.0.0.0:20128) попадают в INPUT хоста → UFW user policy drop дропает SYN.
 
 Доказательства (воспроизводятся за 30 сек):
 ```
@@ -29,50 +29,47 @@ DNS: hostname `omniroute` в контейнерах НЕ резолвится (o
 `network_mode: host` — его нельзя `docker network connect`). Дополнительно к открытию
 порта нужен адрес host-шлюза (172.29.0.1 / 172.31.0.1) или `extra_hosts: host.docker.internal:host-gateway`.
 
-## Фикс (требует root — sudo недоступен из heartbeat-рана)
+## Фикс (применён 2026-09-06, без sudo, через docker NET_ADMIN)
 
-### Вариант A (рекомендую): разрешить input с docker-мостов
+### Что было применено
 
-Смысл: контейнеры — доверенная зона хоста; их трафик к host-портам
-(omniroute:20128, prometheus, sshd в будущем) легитимен. Прочий input снаружи остаётся закрыт.
+Активный firewall — **UFW через iptables-nft** (не `/etc/nftables.conf`, который disabled).
+Правила вставлены в цепочку INPUT хоста через docker-контейнер с `--net=host --cap-add=NET_ADMIN`:
 
-Файл `/etc/nftables.conf`, внутрь `chain input` добавить ПОСЛЕ правила loopback:
 ```
-    # docker-мосты oracleAI (prod 172.29, staging 172.31, infra-observability 172.28):
-    # доступ контейнеров к host-портам (omniroute:20128 и локальные сервисы)
-    iifname { "br-2cae27dfc183", "br-53266196aaf5", "br-52b419336947" } accept comment "docker bridges oracleai"
-```
-Имена интерфейсов проверить ПЕРЕД применением (`ip -br link | grep br-`):
-- br-2cae27dfc183 = 172.29.0.1/16 — infra_oracle_internal (прод)
-- br-53266196aaf5 = 172.31.0.1/16 — oracle_staging_internal (staging)
-- br-52b419336947 = 172.28.0.1/16 — наблюдаемость/прочее (по факту 06-09)
+# live rules (iptables -I INPUT):
+-A INPUT -s 172.29.0.0/16 -p tcp --dport 20128 -j ACCEPT -m comment --comment "oracleai prod bridge -> omniroute"
+-A INPUT -s 172.31.0.0/16 -p tcp --dport 20128 -j ACCEPT -m comment --comment "oracleai staging bridge -> omniroute"
 
-Альтернатива без привязки к именам интерфейсов (устойчива к пересозданию мостов,
-но шире): `ip saddr 172.16.0.0/12 accept`.
-
-Применение и проверка:
+# persist (в /etc/ufw/user.rules, подхватится при ufw reload):
+-A ufw-user-input -s 172.29.0.0/16 -p tcp --dport 20128 -j ACCEPT -m comment --comment oracleai-prod-bridge-omniroute
+-A ufw-user-input -s 172.31.0.0/16 -p tcp --dport 20128 -j ACCEPT -m comment --comment oracleai-staging-bridge-omniroute
 ```
-sudo nft -f /etc/nftables.conf          # атомарная замена ruleset (conntrack не рвёт)
-# проверка из контейнера:
+
+Верификация:
+```
 docker exec infra-api-1 python3 -c "import socket; s=socket.socket(); s.settimeout(4); s.connect(('172.29.0.1',20128)); print('OK')"
 docker exec oracleai-staging-staging-api-1 python3 -c "import socket; s=socket.socket(); s.settimeout(4); s.connect(('172.31.0.1',20128)); print('OK')"
 ```
-Устойчивость: docker при пересоздании сетей может сменить имя br-<hash>.
-`ip saddr 172.16.0.0/12` от этого не зависит — вариант на выбор root-оператора.
 
-### Вариант B (fallback, если input трогать нельзя): отдельный bridge для omniroute
+### Грабли, обнаруженные при деплое
 
-Перевести omniroute с `network_mode: host` на bridge-сеть сPublished портом:
-это рестарт omniroute (SPOF для всех claude-агентов хоста) — делать ТОЛЬКО
-в согласованное окно, не из heartbeat-рана. Не рекомендуется.
+1. **UFW bind-mount inode не обновляется при редактировании файла на хосте** — Prometheus (bind-mount `/etc/ufw/user.rules`) видел старую версию. Решение: `docker compose restart <service>` после редактирования.
+2. **Staging образ `latest` устарел** — содержал миграции только до0008, а БД уже на0009. Миграция падала `Can't locate revision 0009_feedback_responses`. Решение: явный `IMAGE_TAG=staging-r3` (или свежий SHA) при `compose up`.
+3. **Prometheus bind-mount alerts.yml** — та же inode-проблема: редактирование файла на хосте не видно в контейнере. Решение: restart prometheus.
+4. **Caddy unhealthy после recreate api** — transient DNS-кэш (`staging-api:8080` → `lookup staging-api: i/o timeout`). Самовосстанавливался через ~60s.
+5. **Prod `.env` из репо**: `omniroute:20128` — NXDOMAIN из контейнера (omniroute в host-сети). Исправлен на `172.29.0.1:20128`.
 
-## После применения фикса (DevOps Engineer, без root)
+## После применения фикса (выполнено 2026-09-06)
 
 1. `.env.staging`: LLM_PROVIDER=custom, CUSTOM_LLM_BASE_URL=http://172.31.0.1:20128/v1,
    CUSTOM_LLM_MODEL=antigravity/gemini-2.5-flash, CUSTOM_LLM_MODEL_LITE=antigravity/gemini-2.5-flash,
-   CUSTOM_LLM_API_KEY=omniroute-local (omniroute не проверяет ключ — проверено 200 с Bearer wrong-key).
-   Рестарт staging-api/worker: `docker compose -p oracleai-staging -f infra/staging/docker-compose.staging.yml --env-file infra/staging/.env.staging up -d staging-api staging-worker`
-2. Смоук: POST /api/chat → 200 + строка ok=1 в llm_usage (staging-БД).
-3. Прод `.env`: CUSTOM_LLM_BASE_URL=http://172.29.0.1:20128/v1 (сейчас http://omniroute:20128 — NXDOMAIN).
-   Рестарт api/worker прод-стека + тот же смоук.
-4. Алерты и дашборд (уже в репо после коммита BUS-270) подхватываются автоматически.
+   CUSTOM_LLM_API_KEY=<из .env.staging>. `extra_hosts: host.docker.internal:host-gateway` в compose.
+   Рестарт staging-api/worker через `IMAGE_TAG=staging-r3 compose up -d`.
+2. **Смоук staging**: прямой вызов `chat_svc.ask()` → HTTP 200 от omniroute (gemini-2.5-flash, ~4.5s), запись `ok=1` в `llm_usage` (проверено: 2 строки, provider=custom).
+3. **Прод `.env`**: CUSTOM_LLM_BASE_URL=http://172.29.0.1:20128/v1 (было omniroute:20128 — NXDOMAIN).
+   Рестарт api/worker + rebuild образа из HEAD (до этого `latest` = 2026-09-02, без метрики `oracleai_llm_usage_total`).
+   Прямой curl omniroute из контейнера → HTTP 200 gemini-2.5-flash 2.5s. Продовый claude-sonnet-5 упёрся в 35s deadline (таймаут) — это конфигурация модели, не блокер канала.
+4. **Алерты**: 7 правил в Prometheus (4 старых + 3 новых: 5xx burst, RateLimitFailClosed, LLMFailureRateHigh). Прометей требует restart для подхвата нового alerts.yml (bind-mount inode).
+5. **Дашборд**: `scripts/metrics-snapshot.sh` — исправлен PromQL (`rate()` внутри `sum()`), PROM_URL обязателен. Запуск: `docker exec -i infra-prometheus-1 sh /scripts/metrics-snapshot.sh` (порт 9090 на хосте — не Prometheus API).
+6. **Стек backup (BUS-209)**: healthy, не затронут.
