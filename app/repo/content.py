@@ -88,6 +88,16 @@ DEFAULT_EN_CONTENT: dict[tuple[str, str], dict[str, str]] = {
                  "waiting beyond the veil.\nYour memories are safe with me: return, "
                  "and we will continue where we paused."),
     },
+    ("copy", "winback2"): {
+        "title": "WB2: gift offer",
+        "body": ("🎁 {name}, I have kept everything you shared with me, and I miss "
+                 "our conversations ✨\n\n"
+                 "Here is a gift from me — full VIP access for 7 days. Your personal "
+                 "promo code: {code}\n\n"
+                 "Activate it within 14 days — enter this command in the chat:\n"
+                 "/promo {code}\n"
+                 "The stars will wait, but a gift is best enjoyed soon 🌙"),
+    },
     ("copy", "free_forecast_cta"): {
         "title": "Free forecast CTA",
         "body": "\n\n🔮 <b>Oracle</b> — your free daily forecast. Open it in Telegram: {url}",

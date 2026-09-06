@@ -126,6 +126,66 @@ async def batch_stats(db) -> list[dict]:
     return [dict(r) for r in await cur.fetchall()]
 
 
+async def ensure_winback_batch(db, count: int, *, now: datetime) -> str:
+    """Партия winback-кодов месяца (BUS-197): 25 кодов trial 7д/14д, 1 раз/мес.
+
+    Ежемесячная генерация на первом тике: партия = месяц атрибуции
+    (batch_stats). Пустой месяц — партия не создана; у неё месяц в имени.
+    """
+    batch = f"winback_{now.strftime('%Y-%m')}"
+    cur = await db.execute(
+        "SELECT COUNT(*) n FROM promo_codes WHERE batch=:batch",
+        {"batch": batch})
+    if (await cur.fetchone())["n"]:
+        return batch
+    await create_codes(db, count, kind="plan_days", days=7, plan_code="trial",
+                       batch=batch, max_uses=1, valid_days=14)
+    return batch
+
+
+async def reserve_code(db, batch: str) -> str | None:
+    """Резервирует код из партии для одного юзера (каждому — свой).
+
+    Проверка-запись в транзакции: два параллельных тика не получают один код.
+    None — партия исчерпана: warning наверху, юзерам уходит тёплый winback.
+    """
+    async with transaction(db):
+        cur = await db.execute(
+            "SELECT c.code FROM promo_codes c "
+            "WHERE c.batch=:batch AND COALESCE(c.used_count,0)=0 "
+            "AND (c.expires_at IS NULL OR c.expires_at > :now) "
+            "AND NOT EXISTS (SELECT 1 FROM deliveries d "
+            "  WHERE d.kind='winback2_code' AND d.key=c.code) "
+            "ORDER BY c.code LIMIT 1 "
+            "FOR UPDATE OF c SKIP LOCKED",
+            {"batch": batch, "now": utcnow()})
+        row = await cur.fetchone()
+        if not row:
+            return None
+        code = row["code"]
+        cur = await db.execute(
+            "INSERT INTO deliveries(tg_id, kind, key, created_at) "
+            "VALUES(0, 'winback2_code', :code, :created_at) "
+            "ON CONFLICT (tg_id, kind, key) DO NOTHING",
+            {"code": code, "created_at": utcnow()})
+        if not cur.rowcount:
+            return None
+        return code
+
+
+async def redeemed_winback_since(db, tg_id: int, since: datetime) -> bool:
+    """True — юзер активировал winback-код не позже `since` (анти-абьюз 90д).
+
+    Проверка одной строкой в SQL-отборе, без отдельного запроса на юзера.
+    """
+    cur = await db.execute(
+        "SELECT 1 FROM promo_redemptions r JOIN promo_codes c ON c.code=r.code "
+        "WHERE r.tg_id=:tg_id AND c.batch LIKE 'winback_%' "
+        "AND r.created_at >= :since LIMIT 1",
+        {"tg_id": tg_id, "since": since.isoformat()})
+    return await cur.fetchone() is not None
+
+
 async def list_codes(db, *, batch: str | None = None, unused_only: bool = False,
                      limit: int = 200) -> list[dict]:
     sql = ["SELECT * FROM promo_codes WHERE 1=1"]

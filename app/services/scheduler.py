@@ -28,7 +28,7 @@ from ..data.session import transaction
 
 from ..core import agent as agent_core
 from ..core import astro
-from ..repo import comms, content, users
+from ..repo import comms, content, growth, users
 from . import analytics, broadcast, horoscopes, payment_monitor, practices as practices_svc
 
 log = logging.getLogger("oracle.scheduler")
@@ -143,9 +143,15 @@ async def _expiring_audience(db, now_utc: datetime) -> list:
 
     Та же курсорная пагинация по tg_id: продление привязано к дате окончания,
     а не к часу, поэтому условие другое, а лимита быть не должно.
+
+    Три когорты: продление за 2 дня, тёплый winback после истечения и (BUS-197)
+    WB2-оффер — истёкшим 5+ дней назад, кому тёплый уже ушёл. Третья когорта
+    самоочищается: отметка kind='winback2' в deliveries исключает повторный
+    отбор навсегда (до новой подписки с новым sub_until).
     """
     soon = (now_utc + timedelta(days=2)).isoformat()
     now_iso = now_utc.isoformat()
+    wb2_cutoff = (now_utc - timedelta(days=WINBACK2_AFTER_DAYS)).isoformat()
     out: list = []
     last_id = 0
     while True:
@@ -154,8 +160,13 @@ async def _expiring_audience(db, now_utc: datetime) -> list:
             "AND sub_until IS NOT NULL AND ("
             "  (sub_until > :now AND sub_until <= :soon AND COALESCE(expiry_notified,0) = 0)"
             "  OR (sub_until <= :now2 AND COALESCE(expiry_notified,0) <> 2)"
+            "  OR (sub_until <= :wb2_cut AND COALESCE(expiry_notified,0) = 2 "
+            "      AND NOT EXISTS (SELECT 1 FROM deliveries d "
+            "        WHERE d.tg_id=users.tg_id AND d.kind='winback2' "
+            "        AND d.key=users.sub_until))"
             f") ORDER BY tg_id LIMIT {AUDIENCE_CAP}",
-            {"last_id": last_id, "now": now_iso, "soon": soon, "now2": now_iso})
+            {"last_id": last_id, "now": now_iso, "soon": soon, "now2": now_iso,
+             "wb2_cut": wb2_cutoff})
         batch = await cur.fetchall()
         if not batch:
             return out
@@ -358,24 +369,121 @@ async def _expiry_warning(bot, db, user, now_utc) -> None:
                               surface="system")
 
 
-async def _winback(bot, db, user) -> None:
-    """Подписка кончилась — одно тёплое напоминание, без давления."""
+#: WB2 (BUS-197): оффер-подарок уходит, когда подписка истекла 5+ дней назад,
+#: а тёплый winback (expiry_notified=2) юзер уже видел.
+WINBACK2_AFTER_DAYS = 5
+#: Анти-абьюз BUS-197: redemption winback-кода закрывает оффер на 90 дней.
+WINBACK2_ANTIBUSE_DAYS = 90
+#: Размер партии winback-кодов на месяц (BUS-197 §4: сегмент ~10-20 юзеров/мес).
+WINBACK2_BATCH_SIZE = 25
+
+
+async def _winback(bot, db, user, now_utc: datetime | None = None) -> None:
+    """Подписка кончилась: тёплое напоминание, затем (BUS-197) оффер-подарок.
+
+    WB2 — второй шаг цепочки: персональный код из месячной партии, каждому
+    свой, повтор исключён kind+key={sub_until}. Без подстановки кода текст
+    бессмыслен — молчим и оставляем юзера в тёплой цепочке.
+    """
     if not user["sub_until"] or users.sub_active(user):
         return
-    if user["expiry_notified"] == 2:
+    now_utc = now_utc or datetime.now(timezone.utc)
+    try:
+        until = datetime.fromisoformat(user["sub_until"])
+    except (TypeError, ValueError):
         return
+
     lang = _user_lang(user)
-    text = await content.get_text(
-        db, "copy", "winback",
-        ("💫 The stars have grown quiet, but I have not left — I am simply "
-         "waiting beyond the veil." if lang == "en" else
-         "💫 Звёзды затихли, но я не ушла — просто жду по ту сторону завесы."),
-        lang=lang)
-    text += ("\n\n👤 Profile → 👑 Renew VIP · or enter promo code /promo 🎟"
-             if lang == "en" else
-             "\n\n👤 Профиль → 👑 Продлить VIP · или введи промокод /promo 🎟")
-    if await _send_once(bot, db, user["tg_id"], "winback", user["sub_until"], text):
-        await users.update(db, user["tg_id"], expiry_notified=2)
+    if user["expiry_notified"] != 2:
+        text = await content.get_text(
+            db, "copy", "winback",
+            ("💫 The stars have grown quiet, but I have not left — I am simply "
+             "waiting beyond the veil." if lang == "en" else
+             "💫 Звёзды затихли, но я не ушла — просто жду по ту сторону завесы."),
+            lang=lang)
+        text += ("\n\n👤 Profile → 👑 Renew VIP · or enter promo code /promo 🎟"
+                 if lang == "en" else
+                 "\n\n👤 Профиль → 👑 Продлить VIP · или введи промокод /promo 🎟")
+        if await _send_once(bot, db, user["tg_id"], "winback", user["sub_until"], text):
+            await users.update(db, user["tg_id"], expiry_notified=2)
+        return
+
+    # ── WB2: подписка истекла 5+ дней назад, тёплый winback уже ушел ──
+    if until > now_utc - timedelta(days=WINBACK2_AFTER_DAYS):
+        return
+    if await comms.already_sent(db, user["tg_id"], "winback2", user["sub_until"]):
+        return          # гонка тиков: другой процесс уже отправил оффер
+    if await growth.redeemed_winback_since(
+            db, user["tg_id"],
+            now_utc - timedelta(days=WINBACK2_ANTIBUSE_DAYS)):
+        return
+
+    template = await content.get_text(
+        db, "copy", "winback2", default="", lang=lang) \
+        or ("🎁 {name}, я сберегла всё, что ты мне рассказывала, и мне не хватает "
+            "наших разговоров ✨\n\n"
+            "В подарок от меня — полный доступ VIP на 7 дней. Твой персональный "
+            "промокод: {code}\n\n"
+            "Активируй его в течение 14 дней — введи в боте команду\n"
+            "/promo {code}\n"
+            "Звёзды подождут, а подарок — лучше не откладывать 🌙"
+            if lang == "ru" else
+            "🎁 {name}, I have kept everything you shared with me, and I miss our "
+            "conversations ✨\n\n"
+            "Here is a gift from me — full VIP access for 7 days. Your personal "
+            "promo code: {code}\n\n"
+            "Activate it within 14 days — enter this command in the chat:\n"
+            "/promo {code}\n"
+            "The stars will wait, but a gift is best enjoyed soon 🌙")
+    # Критично (BUS-190): без подстановки кода текст бессмыслен. Проверяем
+    # плейсхолдер ДО отправки: админка может сохранить шаблон без {code}.
+    if "{code}" not in template:
+        log.error("WB2: шаблон copy/winback2 без {code} — отправка отменена")
+        return
+    batch = await _winback_batch(db, now_utc)
+    code = await growth.reserve_code(db, batch)
+    if not code:
+        log.warning("WB2: партия winback-кодов исчерпана — %s остаётся "
+                    "в тёплой цепочке", user["tg_id"])
+        return
+    name = user["name"] or ("dear one" if lang == "en" else "друг")
+    text = template.replace("{name}", name).replace("{code}", code)
+    if code not in text or "{code}" in text:
+        log.error("WB2: код не подставился в шаблон — отправка отменена")
+        await db.execute(
+            "DELETE FROM deliveries WHERE kind='winback2_code' AND key=:code",
+            {"code": code})
+        return
+    if not await _send_once(bot, db, user["tg_id"], "winback2",
+                            user["sub_until"], text):
+        # Отправка сорвалась временно — освобождаем резерв, повтор позже
+        # возьмёт код снова (партия та же, юзер тот же).
+        await db.execute(
+            "DELETE FROM deliveries WHERE kind='winback2_code' AND key=:code",
+            {"code": code})
+        return
+    # Атрибуция — deliveries (kind='winback2') и E_PROMO при активации кода;
+    # отдельное событие словарь не предусматривает (G-5, BUS-271).
+
+
+#: Месяц, для которого партия winback-кодов уже проверена/создана в этом процессе.
+_winback_batch_ready: str | None = None
+
+
+async def _winback_batch(db, now_utc: datetime) -> str:
+    """Партия winback-кодов текущего месяца: генерируется на первом тике месяца.
+
+    Ежемесячная генерация решена на стороне тика (а не seed-скрипта): партия
+    привязана к месяцу атрибуции batch_stats, а тик — единственное место, где
+    планировщик живёт постоянно. Проверка партии — раз в месяц на процесс.
+    """
+    global _winback_batch_ready
+    month = now_utc.strftime("%Y-%m")
+    if _winback_batch_ready == month:
+        return f"winback_{month}"
+    batch = await growth.ensure_winback_batch(db, WINBACK2_BATCH_SIZE, now=now_utc)
+    _winback_batch_ready = month
+    return batch
 
 
 async def _weekly_report(bot, db, user, now, settings_cache) -> None:
@@ -575,7 +683,7 @@ async def tick(bot, db) -> None:
     for user in await _expiring_audience(db, now_utc):
         try:
             await _expiry_warning(bot, db, user, now_utc)
-            await _winback(bot, db, user)
+            await _winback(bot, db, user, now_utc=now_utc)
         except Exception as e:  # noqa: BLE001
             log.warning("ошибка сценария продления: %s", type(e).__name__)
         await asyncio.sleep(BATCH_PAUSE)
