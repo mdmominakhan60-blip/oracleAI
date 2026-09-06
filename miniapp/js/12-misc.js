@@ -1,7 +1,7 @@
 /* misc: профиль, памяти, чтения, отчёты, полная карта, колокол, модалы */
   app.shareReading = async function(id) {
     try {
-      const res = await fetch('/api/share/reading/' + id + '.png');
+      const res = await fetch('/api/share/reading/' + id + '.png', { headers: authHeaders() });
       if (!res.ok) { this.toast('Картинка сейчас недоступна 🌙'); return; }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -481,14 +481,12 @@
     try {
       let url = '/api/account/export';
       const dev = new URLSearchParams(location.search).get('dev_user');
+      if (dev) url += '?dev_user=' + encodeURIComponent(dev);
+      const headers = Object.assign({ Accept: 'application/json' }, authHeaders());
       if (dev) {
-        url += '?dev_user=' + encodeURIComponent(dev);
         const devKey = localStorage.getItem('oracle_dev_key');
         if (devKey) headers['X-Dev-Key'] = devKey;
       }
-      const headers = { Accept: 'application/json' };
-      const initData = tg() && tg().initData;
-      if (initData) headers['X-Init-Data'] = initData;
       const response = await fetch(url, { headers });
       if (!response.ok) throw new Error('Не удалось подготовить экспорт');
       const blob = await response.blob();

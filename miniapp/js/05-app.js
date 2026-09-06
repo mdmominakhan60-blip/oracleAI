@@ -27,6 +27,11 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
     }
     syncDocumentLocale();
     this.renderFrame();
+    // BUS-341: initData уходит на сервер ровно один раз — на минт сессии.
+    // Токен уже мог лежать в sessionStorage с прошлого reload: тогда минт не нужен
+    // (повторный минт той же initData дал бы 401 replay). Неудача минта не
+    // блокирует старт: read-ручки примут back-compat x-init-data.
+    if (!sessionState.token) await mintSession();
     try {
       this.me = await api('/api/me');
       if (this.me) {

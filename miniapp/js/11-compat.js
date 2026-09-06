@@ -209,7 +209,7 @@
       relation: relation || 'love',
     }).toString();
     try {
-      const res = await fetch('/api/share/compat.png?' + qs);
+      const res = await fetch('/api/share/compat.png?' + qs, { headers: authHeaders() });
       if (!res.ok) { this.toast('Картинка сейчас недоступна 🌙'); return; }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

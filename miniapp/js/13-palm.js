@@ -224,7 +224,7 @@
       const response = await fetch('/api/palm' + (devUser ? '?dev_user=' + devUser : ''), {
         method: 'POST',
         headers: Object.assign({ 'Content-Type': file.type },
-          (tg() && tg().initData) ? { 'X-Init-Data': tg().initData } : {}, devHeaders),
+          authHeaders(), devHeaders),
         body: file,
       });
       let body = null;

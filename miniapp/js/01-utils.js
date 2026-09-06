@@ -39,6 +39,85 @@ function widAlive(key, view, pend) {
 }
 
 /* ── API-клиент ─────────────────────────────────────────────────────────── */
+
+/* BUS-341: X-Session-Token. Подписанная initData шлётся ровно один раз — на
+   минт POST /api/auth/session; дальше все запросы ходят токеном. Повторный
+   минт той же initData сервер отвергает (401 replay, nonce одноразовый), поэтому
+   токен переживает reload вебвью в sessionStorage (умирает с вкладкой — в
+   localStorage долгоживущие креды не храним). Если минт не удался (429/сеть/
+   401 replay) — тихо откатываемся на back-compat путь x-init-data для read-ручек. */
+const SESSION_KEY = 'oracle_session';
+const sessionState = { token: null };
+try { sessionState.token = sessionStorage.getItem(SESSION_KEY); } catch (e) {}
+
+function storeSession(token) {
+  sessionState.token = token;
+  try { sessionStorage.setItem(SESSION_KEY, token); } catch (e) {}
+}
+function clearSession() {
+  sessionState.token = null;
+  try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
+}
+
+/* Минт сессии. Одна попытка без ретраев: ретрай после потерянного ответа
+   получил бы 401 replay (nonce уже потреблён). Параллельные вызовы делят один
+   in-flight промис — два гонящихся минта одной initData получили бы 401 replay. */
+let mintInFlight = null;
+async function mintSession() {
+  if (mintInFlight) return mintInFlight;
+  const initData = tg() && tg().initData;
+  if (!initData) return false;
+  mintInFlight = (async () => {
+    try {
+      const res = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ init_data: initData }),
+      });
+      if (!res.ok) return false;
+      const body = await res.json();
+      if (!body || !body.session_token) return false;
+      storeSession(body.session_token);
+      return true;
+    } catch (e) {
+      return false;
+    } finally {
+      mintInFlight = null;
+    }
+  })();
+  return mintInFlight;
+}
+
+/* Токен приоритетнее initData (сервер тоже приоритизирует X-Session-Token);
+   call-site может переопределить через opts.headers. */
+function authHeaders() {
+  const h = {};
+  if (sessionState.token) h['X-Session-Token'] = sessionState.token;
+  else {
+    const initData = tg() && tg().initData;
+    if (initData) h['X-Init-Data'] = initData;
+  }
+  return h;
+}
+
+/* 401 с токеном = токен истёк/сменён ключ подписи: роняем его, пытаемся
+   переминтить и повторить запрос один раз. 401 = не пройдена аутентификация,
+   до бизнес-логики дело не дошло, так что повтор мутации безопасен.
+   Гонка параллельных запросов: сверяем токен, с которым ушёл запрос, с текущим.
+   Если другой запрос уже переминтил — не трогаем его свежий токен и просто
+   повторяем; если нет — чистим и минтим сами (in-flight дедуп схлопнет дубль). */
+async function withSessionResilient(run) {
+  const used = sessionState.token;
+  let out = await run();
+  if (out.res.status !== 401) return out;
+  if (sessionState.token === used) {
+    if (!used) return out; /* 401 по x-init-data — повтор с той же initData бессмыслен */
+    clearSession();
+    if (!(await mintSession())) return out;
+  }
+  return await run();
+}
+
 function newRequestKey() {
   try {
     if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
@@ -47,22 +126,24 @@ function newRequestKey() {
 }
 
 async function api(path, opts = {}) {
-  const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
-  const initData = tg() && tg().initData;
-  if (initData) headers['X-Init-Data'] = initData;
   let url = path;
   const dev = new URLSearchParams(location.search).get('dev_user');
-  if (dev) {
-    url += (url.includes('?') ? '&' : '?') + 'dev_user=' + dev;
+  if (dev) url += (url.includes('?') ? '&' : '?') + 'dev_user=' + dev;
+  const run = async () => {
     // DEV_KEY обязателен при DEV_MODE=1 (BUS-90): без заголовка dev-запрос ловит 401.
-    const devKey = localStorage.getItem('oracle_dev_key');
-    if (devKey) headers['X-Dev-Key'] = devKey;
-  }
-  const doFetch = async () => {
-    const res = await fetch(url, { ...opts, headers: Object.assign(
-      { 'Content-Type': 'application/json' }, opts.headers || {}) });
+    const headers = Object.assign(
+      { 'Content-Type': 'application/json' }, authHeaders(), opts.headers || {});
+    if (dev) {
+      const devKey = localStorage.getItem('oracle_dev_key');
+      if (devKey) headers['X-Dev-Key'] = devKey;
+    }
+    const res = await fetch(url, Object.assign({}, opts, { headers }));
     let body = null;
     try { body = await res.json(); } catch (e) { /* пустое тело */ }
+    return { res, body };
+  };
+  try {
+    const { res, body } = await withSessionResilient(run);
     if (!res.ok) {
       const detail = body && (body.detail || JSON.stringify(body));
       const err = new Error(detail || 'Связь прервалась 🌙');
@@ -70,9 +151,6 @@ async function api(path, opts = {}) {
       throw err;
     }
     return body;
-  };
-  try {
-    return await doFetch();
   } catch (err) {
     // ретрай: сетевой сбой — всегда; 5xx — только для GET (мутации не ретраим,
     // чтобы не задвоить эффект на сервере)
@@ -81,7 +159,16 @@ async function api(path, opts = {}) {
     const retriable = network || (method === 'GET' && err.status >= 500);
     if (retriable) {
       await new Promise(r => setTimeout(r, 600));
-      try { return await doFetch(); } catch (e2) { throw err; }
+      try {
+        const { res, body } = await run();
+        if (!res.ok) {
+          const detail = body && (body.detail || JSON.stringify(body));
+          const e2 = new Error(detail || 'Связь прервалась 🌙');
+          e2.status = res.status;
+          throw e2;
+        }
+        return body;
+      } catch (e2) { throw err; }
     }
     throw err;
   }
@@ -90,18 +177,30 @@ async function api(path, opts = {}) {
 /* Binary API client for private chart/share images. Auth stays in headers; only
    allowlisted render parameters are present in the URL. */
 async function apiBlob(path, opts = {}) {
-  const headers = Object.assign({ Accept: 'image/png, image/webp' }, opts.headers || {});
-  const initData = tg() && tg().initData;
-  if (initData) headers['X-Init-Data'] = initData;
   let url = path;
   const dev = new URLSearchParams(location.search).get('dev_user');
   if (dev) {
     url += (url.includes('?') ? '&' : '?') + 'dev_user=' + encodeURIComponent(dev);
-    const devKey = localStorage.getItem('oracle_dev_key');
-    if (devKey) headers['X-Dev-Key'] = devKey;
   }
   const request = async () => {
+    const used = sessionState.token;
+    const headers = Object.assign({ Accept: 'image/png, image/webp' },
+      authHeaders(), opts.headers || {});
+    if (dev) {
+      const devKey = localStorage.getItem('oracle_dev_key');
+      if (devKey) headers['X-Dev-Key'] = devKey;
+    }
     const res = await fetch(url, Object.assign({}, opts, { headers }));
+    if (res.status === 401) {
+      if (sessionState.token === used) {
+        if (used) {
+          clearSession();
+          if (await mintSession()) return request();
+        }
+      } else {
+        return request(); /* другой запрос уже переминтил — повторяем сразу */
+      }
+    }
     if (!res.ok) {
       let body = null;
       try { body = await res.json(); } catch (e) { /* non-JSON error */ }
