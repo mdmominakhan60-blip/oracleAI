@@ -158,9 +158,12 @@ class PromoIn(BaseModel):
 
 @router.post("/promo", dependencies=[Depends(rate_limit("write"))])
 async def redeem_promo(item: PromoIn, user=Depends(confirmed_age_user), db=Depends(get_db)):
-    result = await billing_svc.redeem_promo(db, user["tg_id"], item.code)
-    if not result:
-        raise HTTPException(400, "Этот код не отзывается... проверь написание 🌙")
+    try:
+        result = await billing_svc.redeem_promo(db, user["tg_id"], item.code)
+    except billing_svc.PromoRedeemRefused as exc:
+        # 404 unknown_code: «опечатка» ≠ «истёк» — CS различает без эскалации (B2).
+        status = 404 if exc.reason == "unknown_code" else 409
+        raise HTTPException(status, billing_svc.promo_refusal_text(exc.reason)) from exc
     return {"ok": True, **result}
 
 

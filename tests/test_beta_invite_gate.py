@@ -84,10 +84,13 @@ async def test_invite_is_single_use_under_parallel_redemptions(db):
                                       max_uses=1, valid_days=14, days=0)
 
     results = await asyncio.gather(
-        *[billing_svc.redeem_promo(db, uid, codes[0]) for uid in (1001, 1002, 1003)]
+        *[billing_svc.redeem_promo(db, uid, codes[0]) for uid in (1001, 1002, 1003)],
+        return_exceptions=True,
     )
-    successes = [r for r in results if r is not None]
+    successes = [r for r in results if not isinstance(r, Exception)]
     assert len(successes) == 1, "только один из параллельных redeem должен пройти"
+    assert all(isinstance(r, billing_svc.PromoRedeemRefused) for r in results
+               if isinstance(r, Exception)), "отказы — по состоянию кода, не сбои"
 
 
 async def test_invite_redeem_writes_promo_event_without_code(db):

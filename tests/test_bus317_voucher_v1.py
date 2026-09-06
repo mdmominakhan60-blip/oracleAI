@@ -17,7 +17,7 @@ from httpx import ASGITransport, AsyncClient  # noqa: E402
 
 from app.api.deps import get_db  # noqa: E402
 from app.api.main import app  # noqa: E402
-from app.repo import growth  # noqa: E402
+from app.repo import growth, users  # noqa: E402
 from app.services import billing as svc  # noqa: E402
 
 
@@ -34,12 +34,14 @@ async def client(db):
 # ──────────────────────────── G3: отзыв кода ─────────────────────────────────
 
 async def test_redeem_refuses_revoked_code(db, user):
-    """is_active=0 → redeem_promo возвращает None, код не сжигается и не выдаёт."""
+    """is_active=0 → redeem_promo отказывает (reason=revoked), код не сжигается."""
     codes = await growth.create_codes(db, 1, days=30, plan_code="vip",
                                       batch="mpl_test_2026-09")
     await db.execute("UPDATE promo_codes SET is_active=0 WHERE batch='mpl_test_2026-09'")
     await db.commit()
-    assert await svc.redeem_promo(db, user["tg_id"], codes[0]) is None
+    with pytest.raises(svc.PromoRedeemRefused) as excinfo:
+        await svc.redeem_promo(db, user["tg_id"], codes[0])
+    assert excinfo.value.reason == "revoked"
     row = await growth.get_code(db, codes[0])
     assert row["used_count"] in (None, 0), "отозванный код засчитан как использованный"
 
@@ -188,3 +190,148 @@ async def test_schema_has_is_active_column(db):
         "SELECT column_name FROM information_schema.columns "
         "WHERE table_name='promo_codes' AND column_name='is_active'")
     assert (await cur.fetchone()) is not None
+
+
+# ──────────────── B2: различимые отказы redeem (BUS-351) ─────────────────────
+
+async def test_b2_unknown_code_404_vs_used_409(client, db, user):
+    """API различает «код не существует» (404) и «уже использован» (409)."""
+    codes = await growth.create_codes(db, 1, days=30, batch="mpl_b2")
+    res = await client.post("/api/shop/promo", params={"dev_user": user["tg_id"]},
+                            json={"code": "NOPE0000"})
+    assert res.status_code == 404
+
+    first = await client.post("/api/shop/promo",
+                              params={"dev_user": user["tg_id"]},
+                              json={"code": codes[0]})
+    assert first.status_code == 200
+    again = await client.post("/api/shop/promo",
+                              params={"dev_user": user["tg_id"]},
+                              json={"code": codes[0]})
+    assert again.status_code == 409
+    detail = again.json()["detail"]
+    assert detail == "Ты уже активировала этот код ✨", \
+        f"отказ already_redeemed должен быть конкретным, пришло: {detail}"
+
+
+async def test_b2_expired_and_revoked_distinct(client, db, user):
+    """expired и revoked — разные причины отказа, код не сжигается ни в одном случае."""
+    codes = await growth.create_codes(db, 1, kind="plan_days", days=30,
+                                      valid_days=1, batch="mpl_b2_expired")
+    await db.execute("UPDATE promo_codes SET expires_at='2000-01-01T00:00:00Z' "
+                     "WHERE batch='mpl_b2_expired'")
+    await db.commit()
+    with pytest.raises(svc.PromoRedeemRefused) as e:
+        await svc.redeem_promo(db, user["tg_id"], codes[0])
+    assert e.value.reason == "expired"
+    assert (await growth.get_code(db, codes[0]))["used_count"] in (None, 0)
+
+    revoked = await growth.create_codes(db, 1, days=30, batch="mpl_b2_revoked")
+    await growth.set_codes_active(db, batch="mpl_b2_revoked", active=False)
+    with pytest.raises(svc.PromoRedeemRefused) as e:
+        await svc.redeem_promo(db, user["tg_id"], revoked[0])
+    assert e.value.reason == "revoked"
+
+
+async def test_b2_exhausted_when_uses_run_out(db, user):
+    """max_uses исчерпан другим человеком → для нового юзера reason=exhausted."""
+    codes = await growth.create_codes(db, 1, days=30, batch="mpl_b2_exh",
+                                      max_uses=1)
+    await svc.redeem_promo(db, 1001, codes[0])
+    await users.ensure(db, 2002, "Другая")
+    with pytest.raises(svc.PromoRedeemRefused) as e:
+        await svc.redeem_promo(db, 2002, codes[0])
+    assert e.value.reason == "exhausted"
+
+
+async def test_b2_promo_refusal_copy_known_reasons():
+    from app.services.billing import promo_refusal_text
+
+    texts = {r: promo_refusal_text(r) for r in
+             ("unknown_code", "expired", "revoked", "exhausted", "already_redeemed")}
+    assert len(set(texts.values())) == 5, "все причины имеют различимые тексты"
+    assert promo_refusal_text("no_such_reason") != texts["unknown_code"], \
+        "неизвестная причина — нейтральный текст"
+
+
+async def test_b2_api_refusal_texts_differ(client, db, user):
+    """detail в HTTP-ответе различим по состояниям (CS-маппинг B2)."""
+    res404 = await client.post("/api/shop/promo",
+                               params={"dev_user": user["tg_id"]},
+                               json={"code": "NOPE1111"})
+    codes = await growth.create_codes(db, 1, days=30, batch="mpl_b2_txt")
+    await growth.set_codes_active(db, batch="mpl_b2_txt", active=False)
+    res409revoked = await client.post("/api/shop/promo",
+                                      params={"dev_user": user["tg_id"]},
+                                      json={"code": codes[0]})
+    assert res404.json()["detail"] != res409revoked.json()["detail"]
+
+
+# ──────────────── B3: deep-link подтверждение всех kind (BUS-351) ────────────
+
+async def _deep_link_grant(db, tg_id: int, code: str, monkeypatch) -> list[str]:
+    """Прогоняет start_deeplink с ваучером, возвращает ответы бота."""
+    import app.bot.onboarding as onb
+
+    class _User:
+        id = tg_id
+        first_name = "Тест"
+        username = None
+        language_code = "ru"
+
+    class _Msg:
+        from_user = _User()
+        text = f"/start {code}"
+        args = f" {code}"
+        replied: list[str] = []
+
+        async def answer(self, text: str = "", **_):
+            self.replied.append(text)
+            return self
+
+    class _Cmd:
+        args = code
+
+    msg = _Msg()
+    state = _FakeState()
+    await onb.start_deeplink(msg, _Cmd(), state, db)
+    return msg.replied
+
+
+class _FakeState:
+    """FSM-заглушка: start_deeplink вызовет _begin → state.clear()."""
+
+    async def clear(self):
+        return None
+
+    async def get_data(self):
+        return {}
+
+    async def set_state(self, *_):
+        return None
+
+
+async def test_b3_deeplink_crystals_voucher_confirmed(db, user, monkeypatch):
+    """mpl_sku1_crystals100-тип (kind=crystals): подтверждение выдачи показано."""
+    codes = await growth.create_codes(db, 1, kind="crystals", crystals=100,
+                                      batch="mpl_d1")
+    replied = await _deep_link_grant(db, user["tg_id"], codes[0], monkeypatch)
+    assert any("100" in t and ("Кристалл" in t or "Crystals" in t)
+               for t in replied), \
+        f"подтверждение выдачи crystals не показано: {replied}"
+
+
+async def test_b3_deeplink_trial_voucher_confirmed(db, user, monkeypatch):
+    """mpl_sku2_trial7d-тип (plan_days/trial 7д): подтверждение выдачи показано."""
+    codes = await growth.create_codes(db, 1, kind="plan_days", days=7,
+                                      plan_code="trial", batch="mpl_d2")
+    replied = await _deep_link_grant(db, user["tg_id"], codes[0], monkeypatch)
+    assert any("7" in t and "дней" in t for t in replied), \
+        f"подтверждение выдачи trial-плана не показано: {replied}"
+
+
+async def test_b3_deeplink_bad_code_gives_distinct_refusal(db, user):
+    """Неверный код в deep-link — различимый отказ, не молчание."""
+    replied = await _deep_link_grant(db, user["tg_id"], "NOPE2222", None)
+    assert any("не найден" in t or "not found" in t for t in replied), \
+        f"отказ не различим: {replied}"

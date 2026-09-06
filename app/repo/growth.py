@@ -16,6 +16,19 @@ def generate_code(prefix: str = "", length: int = 8) -> str:
 
 # ─────────────────────────────── промокоды ────────────────────────────────────
 
+class PromoRedeemRefused(Exception):
+    """Код не активирован по доменной причине (B2, BUS-351).
+
+    Раньше все отказы схлопывались в None, и покупатель/CS не отличал
+    «опечатка» от «код истёк». reason — машиночитаемая причина отказа:
+    путь успеха (dict) не меняется, транзакция при исключении откатывается.
+    """
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
+
+
 async def create_codes(db, count: int, *, kind: str = "plan_days", days: int = 30,
                        plan_code: str = "vip", crystals: int = 0,
                        sku: str | None = None, batch: str = "",
@@ -53,33 +66,39 @@ async def get_code(db, code: str):
 
 
 async def redeem(db, code: str, tg_id: int) -> dict | None:
-    """Активирует код. Возвращает описание выдачи или None.
+    """Активирует код. Возвращает описание выдачи.
 
     Проверки (срок, лимит использований, отзыв кода, повторная активация
     одним человеком) и инкремент счётчика — в одной транзакции: иначе код с
     `max_uses=1`, отправленный двумя сообщениями подряд, активировался бы дважды.
+    Отказы — PromoRedeemRefused с машиночитаемой причиной (B2): у вызывающих
+    путь успеха не меняется, а «не существует» / «истёк» / «уже использован»
+    различимы без перебора SQL-состояний наверху.
     """
     code = (code or "").strip().upper()
     if not code:
-        return None
+        raise PromoRedeemRefused("unknown_code")
     async with transaction(db):
         cur = await db.execute(
             "SELECT * FROM promo_codes WHERE code=:code", {"code": code})
         promo = await cur.fetchone()
         if not promo:
-            return None
+            raise PromoRedeemRefused("unknown_code")
         if promo["expires_at"] and promo["expires_at"] <= utcnow():
-            return None
+            raise PromoRedeemRefused("expired")
         if promo["is_active"] == 0:
-            return None                          # отозван (kill switch, G3)
-        max_uses = promo["max_uses"] or 1
-        if (promo["used_count"] or 0) >= max_uses:
-            return None
+            raise PromoRedeemRefused("revoked")     # отозван (kill switch, G3)
+        # Своя прошлая активация проверяется раньше исчерпания лимита: при
+        # max_uses=1 счётчик уже списан, и без этого порядка человек получил
+        # бы «код уже использован» вместо честного «ты уже активировала».
         cur = await db.execute(
             "SELECT 1 FROM promo_redemptions WHERE code=:code AND tg_id=:tg_id",
             {"code": code, "tg_id": tg_id})
         if await cur.fetchone():
-            return None                          # этот человек код уже применял
+            raise PromoRedeemRefused("already_redeemed")  # этот человек код уже применял
+        max_uses = promo["max_uses"] or 1
+        if (promo["used_count"] or 0) >= max_uses:
+            raise PromoRedeemRefused("exhausted")
 
         cur = await db.execute(
             "UPDATE promo_codes SET used_count=COALESCE(used_count,0)+1, "
@@ -87,7 +106,7 @@ async def redeem(db, code: str, tg_id: int) -> dict | None:
             "WHERE code=:code AND COALESCE(used_count,0) < :max_uses",
             {"tg_id": tg_id, "now": utcnow(), "code": code, "max_uses": max_uses})
         if not cur.rowcount:
-            return None
+            raise PromoRedeemRefused("exhausted")
         # Plain INSERT: SELECT guard + enclosing transaction prevent duplicates.
         # promo_redemptions has no UNIQUE(code, tg_id) constraint in the schema.
         await db.execute(

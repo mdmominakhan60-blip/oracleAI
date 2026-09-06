@@ -128,14 +128,18 @@ async def test_record_referral_duplicate_returns_false(db, user, free_user):
     assert (await cur.fetchone())["c"] == 1, "дубль строки в referrals"
 
 
-async def test_redeem_promo_second_activation_same_user_returns_none(db, user):
-    """Повторная активация того же промокода одним человеком → None (не дубль)."""
+async def test_redeem_promo_second_activation_same_user_refused(db, user):
+    """Повторная активация того же промокода одним человеком → отказ (не дубль)."""
+    import pytest
+
     codes = await growth.create_codes(db, 1, days=30, max_uses=2, batch="dedup-test")
     first = await growth.redeem(db, codes[0], user["tg_id"])
     assert first is not None, "первая активация должна успешно пройти"
 
-    second = await growth.redeem(db, codes[0], user["tg_id"])
-    assert second is None, "повторная активация тем же пользователем не должна проходить"
+    with pytest.raises(growth.PromoRedeemRefused) as excinfo:
+        await growth.redeem(db, codes[0], user["tg_id"])
+    assert excinfo.value.reason == "already_redeemed", \
+        "повторная активация тем же пользователем не должна проходить"
 
     cur = await db.execute(
         "SELECT COUNT(*) c FROM promo_redemptions WHERE code=:code AND tg_id=:tg_id",

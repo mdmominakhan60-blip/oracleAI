@@ -613,9 +613,10 @@ async def test_promo_endpoint(client, db, user):
     res = await client.post("/api/shop/promo", params=as_user(user),
                             json={"code": codes[0]})
     assert res.status_code == 200
+    # B2 (BUS-351): неизвестный код различим — 404, а не общий 400.
     bad = await client.post("/api/shop/promo", params=as_user(user),
                             json={"code": "НЕВЕРНЫЙ"})
-    assert bad.status_code == 400
+    assert bad.status_code == 404
 
 
 async def test_report_requires_purchase(client, user):

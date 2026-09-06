@@ -155,9 +155,16 @@ async def start_deeplink(message: Message, command: CommandObject,
             except Exception as e:  # noqa: BLE001
                 log.info("не смогла уведомить пригласившую %s: %s", ref_id, e)
     elif arg:
-        granted = await billing_svc.redeem_promo(db, message.from_user.id, arg)
-        if granted and granted.get("kind") == "invite":
-            invite_granted = True
+        try:
+            granted = await billing_svc.redeem_promo(db, message.from_user.id, arg)
+        except billing_svc.PromoRedeemRefused as exc:
+            # Не-инвайт в deep-link не гейтит: различимый отказ (B2), человек
+            # попадает в обычный /start. Подтверждение выдачи — для любого
+            # kind ваучера (mpl_sku1_crystals100, mpl_sku2_trial7d), не только invite.
+            granted = None
+            await message.answer(billing_svc.promo_refusal_text(exc.reason))
+        if granted:
+            invite_granted = granted.get("kind") == "invite"
             await message.answer(_promo_text(granted))
 
     # Гейт контролируемой беты (BUS-269): новые без валидного инвайта — waitlist.
@@ -820,18 +827,17 @@ async def promo_enter(message: Message, state: FSMContext, db):
     await state.clear()
     user = await users.get(db, message.from_user.id)
     lang = _lang(user) if user else "ru"
-    granted = await billing_svc.redeem_promo(db, message.from_user.id,
-                                         message.text.strip())
+    try:
+        granted = await billing_svc.redeem_promo(db, message.from_user.id,
+                                                 message.text.strip())
+    except billing_svc.PromoRedeemRefused as exc:
+        # Различимый отказ по состоянию кода (B2) на языке интерфейса (BOT-011).
+        await message.answer(billing_svc.promo_refusal_text(exc.reason, lang),
+                             reply_markup=await _menu(db, message.from_user.id))
+        return
     menu = await _menu(db, message.from_user.id)
     if granted:
         await message.answer(_promo_text(granted, lang), reply_markup=menu)
-    else:
-        # BOT-011: отказ тоже на языке интерфейса.
-        await message.answer(
-            "This code does not respond... Check the spelling — it may already "
-            "be redeemed or expired 🌙" if lang == "en" else
-            "Этот код не отзывается... Проверь написание — возможно, он уже "
-            "активирован или истёк 🌙", reply_markup=menu)
 
 
 # ─────────────────────────────── помощь ───────────────────────────────────────

@@ -294,24 +294,36 @@ async def test_winback_trial_grant_no_crystals(db, free_user):
 
 
 async def test_promo_cannot_be_used_twice(db, user, free_user):
+    import pytest
+
     codes = await growth.create_codes(db, 1, days=30, max_uses=1)
     assert await svc.redeem_promo(db, user["tg_id"], codes[0])
-    assert await svc.redeem_promo(db, free_user["tg_id"], codes[0]) is None
+    with pytest.raises(svc.PromoRedeemRefused) as excinfo:
+        await svc.redeem_promo(db, free_user["tg_id"], codes[0])
+    assert excinfo.value.reason == "exhausted"
 
 
 async def test_promo_with_multiple_uses(db, user, free_user):
+    import pytest
+
     codes = await growth.create_codes(db, 1, days=7, max_uses=2, batch="multi")
     assert await svc.redeem_promo(db, user["tg_id"], codes[0])
     assert await svc.redeem_promo(db, free_user["tg_id"], codes[0])
-    # тот же человек второй раз — нельзя
-    assert await svc.redeem_promo(db, user["tg_id"], codes[0]) is None
+    # тот же человек второй раз — нельзя, и причина именно «уже активировал»
+    with pytest.raises(svc.PromoRedeemRefused) as excinfo:
+        await svc.redeem_promo(db, user["tg_id"], codes[0])
+    assert excinfo.value.reason == "already_redeemed"
 
 
 async def test_expired_promo_is_refused(db, user):
+    import pytest
+
     codes = await growth.create_codes(db, 1, days=30, valid_days=1)
     await db.execute("UPDATE promo_codes SET expires_at='2000-01-01T00:00:00+00:00'")
     await db.commit()
-    assert await svc.redeem_promo(db, user["tg_id"], codes[0]) is None
+    with pytest.raises(svc.PromoRedeemRefused) as excinfo:
+        await svc.redeem_promo(db, user["tg_id"], codes[0])
+    assert excinfo.value.reason == "expired"
 
 
 async def test_promo_can_grant_crystals(db, user):
@@ -323,8 +335,12 @@ async def test_promo_can_grant_crystals(db, user):
     assert after == before + 100
 
 
-async def test_unknown_promo_returns_none(db, user):
-    assert await svc.redeem_promo(db, user["tg_id"], "НЕТТАКОГО") is None
+async def test_unknown_promo_raises_distinct_reason(db, user):
+    import pytest
+
+    with pytest.raises(svc.PromoRedeemRefused) as excinfo:
+        await svc.redeem_promo(db, user["tg_id"], "НЕТТАКОГО")
+    assert excinfo.value.reason == "unknown_code"
 
 
 # ──────────────────────────── рефералка ───────────────────────────────────────

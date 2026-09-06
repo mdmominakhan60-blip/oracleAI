@@ -52,6 +52,49 @@ class PurchaseError(Exception):
         self.status_code = status_code
 
 
+# Различимые отказы активации промокода (B2, BUS-351): причина приходит из
+# repo-слоя, текст для клиентки/CS — здесь. unknown_grant (SKU из кода не
+# найден) наружу не отличаем от unknown_code — лишняя гранулярность ни к чему.
+PromoRedeemRefused = growth.PromoRedeemRefused
+
+PROMO_REFUSAL_COPY = {
+    # (ru, en): «не существует» от «истёк/использован» отличает CS поддержку
+    # продаж на площадках: опечатку человек исправит сам, остальное — в CS.
+    "unknown_code": (
+        "Этот код не найден — проверь написание 🌙",
+        "This code was not found — please double-check the spelling 🌙",
+    ),
+    "expired": (
+        "Срок действия этого кода истёк 🌙",
+        "This code has expired 🌙",
+    ),
+    "revoked": (
+        "Этот код больше не действует 🌙",
+        "This code is no longer valid 🌙",
+    ),
+    "exhausted": (
+        "Этот код уже использован 🌙",
+        "This code has already been used 🌙",
+    ),
+    "already_redeemed": (
+        "Ты уже активировала этот код ✨",
+        "You have already redeemed this code ✨",
+    ),
+}
+
+
+def promo_refusal_text(reason: str, lang: str = "ru") -> str:
+    """Текст отказа по причине; неизвестная причина — нейтральный общий."""
+    en = lang == "en"
+    pair = PROMO_REFUSAL_COPY.get(reason)
+    if not pair:
+        pair = (
+            "Код не принят — проверь написание 🌙",
+            "Code not accepted — please double-check the spelling 🌙",
+        )
+    return pair[1] if en else pair[0]
+
+
 # ─────────────────────────────── витрина ──────────────────────────────────────
 
 async def storefront(db, user) -> dict:
@@ -483,11 +526,11 @@ async def redeem_promo(db, tg_id: int, code: str) -> dict | None:
     «код засчитан» и «товар выдан» не сжигает промокод впустую.
     kind='invite' — входной билет контролируемой беты (BUS-269): доступ не
     расширяет, только фиксирует вход в когорту волны через атрибуцию source.
+    Отказ по состоянию кода — PromoRedeemRefused (B2): вызывающие получают
+    различимую причину вместо неразличимого None.
     """
     async with transaction(db):
         promo = await growth.redeem(db, code, tg_id)
-        if not promo:
-            return None
         kind = promo["kind"]
         if kind == "invite":
             granted = None
@@ -497,7 +540,11 @@ async def redeem_promo(db, tg_id: int, code: str) -> dict | None:
         elif kind == "product" and promo["sku"]:
             product = await repo.get_product(db, promo["sku"])
             if not product:
-                return None          # rollback: код не засчитан
+                # Раньше здесь был `return None` — но transaction() коммитит
+                # при нормальном выходе, и код уже засчитанным оставался
+                # сгоревшим (used_count+1 без выдачи). Исключение гарантирует
+                # откат: счётчик и redemption откатываются вместе с выдачей.
+                raise growth.PromoRedeemRefused("unknown_grant")
             granted = await _apply_grant(
                 db, tg_id, product["grant_kind"], product["grant_code"],
                 qty=product["grant_qty"] or 1, valid_days=product["valid_days"],
