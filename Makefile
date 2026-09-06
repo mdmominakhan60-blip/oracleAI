@@ -93,8 +93,16 @@ ensure-mcp-role:
 #  - APP_ENV=test перекрывает env_file-наследие .env (production ронял сбор).
 #  - Пароль достаём grep'ом из .env: make не читает .env и $(POSTGRES_PASSWORD)
 #    раскрылся бы в пустоту (прецедент — таргет ensure-mcp-role).
+#  - flock-сериализация: два параллельных запуска делят одну oracle_test —
+#    reset чужого рана под живым pytest давал невоспроизводимые asyncpg-ошибки
+#    (инцидент 2026-09-06/07: BUS-330/351/334). Ждём до 15 мин, потом сдаёмся.
 test:
-	$(CURDIR)/.venv/bin/python scripts/check_test_env.py || python3 scripts/check_test_env.py
+	flock -w 900 /tmp/oracleai-make-test.lock \
+		$(CURDIR)/.venv/bin/python scripts/check_test_env.py \
+		|| flock -w 900 /tmp/oracleai-make-test.lock python3 scripts/check_test_env.py
+	flock -w 900 /tmp/oracleai-make-test.lock $(MAKE) _test
+.PHONY: _test
+_test:
 	$(COMPOSE) up -d --wait postgres
 	$(COMPOSE) run --rm --no-deps --entrypoint "" -e APP_ENV=test \
 		-e DEV_MODE=1 -e DEV_KEY=test-dev-key \

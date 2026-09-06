@@ -1,4 +1,10 @@
 .env
+.env.*
+!.env.example
+!.env.production.example
+infra/staging/.env.staging*
+!infra/staging/.env.staging.example
+infra/staging/PUBLIC_URL.txt
 __pycache__/
 *.pyc
 .venv/
@@ -39,6 +45,7 @@ __pycache__/
 # Локальные журналы и временные проверки
 *.log
 *.qa_*.py
+logs/
 
 # Frontend dependency/build outputs
 node_modules/

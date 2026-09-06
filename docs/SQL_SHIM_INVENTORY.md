@@ -27,6 +27,8 @@ Scanned files:
 | `app/repo/feedback_admin.py` **✅ DB-001**       |         7 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/repo/growth.py` **✅ DB-001**               |        23 |         0 |                0 |             0 |              0 |         0 |        6 |   0 |    0 |           0 |             0 |
 | `app/repo/jobs.py` **✅ DB-001**                 |         8 |         0 |                0 |             0 |              0 |         0 |        1 |   0 |    0 |           0 |             0 |
+| `app/repo/ltv_constants.py                  ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
+| `app/repo/ltv_tier.py` **✅ DB-001**             |        37 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/repo/monetization.py` **✅ DB-001**         |        21 |         0 |                0 |             0 |              0 |         0 |        5 |   0 |    0 |           0 |             0 |
 | `app/repo/notifications.py` **✅ DB-001**        |         5 |         0 |                0 |             0 |              0 |         0 |        1 |   0 |    0 |           0 |             0 |
 | `app/repo/palm.py` **✅ DB-001**                 |         5 |         0 |                0 |             0 |              0 |         0 |        1 |   0 |    0 |           0 |             0 |
@@ -55,10 +57,10 @@ Scanned files:
 | `app/services/rate_limit.py                 ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/services/referrals.py                  ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/services/repo_gateway.py               ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
-| `app/services/scheduler.py` **✅ DB-001**        |        21 |         0 |                0 |             0 |              0 |         0 |        2 |   0 |    0 |           0 |             0 |
+| `app/services/scheduler.py` **✅ DB-001**        |        24 |         0 |                0 |             0 |              0 |         0 |        2 |   0 |    0 |           0 |             0 |
 | `app/services/telegram.py                   ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/data/seed.py` **✅ DB-001**                 |        14 |         0 |                0 |             0 |              0 |         0 |       14 |   0 |    0 |           0 |             0 |
-| ****TOTAL**                                ** | **341** | **0** | **0** | **0** | **0** | **0** | **55** | **0** | **0** | **1** | **0** |
+| ****TOTAL**                                ** | **381** | **0** | **0** | **0** | **0** | **0** | **55** | **0** | **0** | **1** | **0** |
 
 ### Column Legend
 

@@ -231,7 +231,6 @@ async def test_export_writes_audit_trail(admin_client, db):
 
 async def test_export_forbidden_for_non_admin_roles(admin_client, db):
     """analyst имеет dashboard, но экспорт — только owner/admin (R8-срез)."""
-    from app.repo import admin as admin_repo
     await db.execute(
         "INSERT INTO admins(tg_id, role) VALUES(3101, 'analyst') "
         "ON CONFLICT (tg_id) DO UPDATE SET role='analyst'")
