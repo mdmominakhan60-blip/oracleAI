@@ -1,0 +1,1 @@
+{"status":"success","data":{"resultType":"vector","result":[{"metric":{"job":"oracleai-api"},"value":[1788682249.374,"0.04971354166666665"]},{"metric":{"job":"oracleai-staging-api"},"value":[1788682249.374,"0.04901960784313721"]}]}}
