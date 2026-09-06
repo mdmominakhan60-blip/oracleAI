@@ -87,6 +87,10 @@ jobs:
         env:
           TEST_ROLE_PASSWORD: oracle
         run: python scripts/ensure_test_role.py --admin-database-url postgresql://oracle:oracle@127.0.0.1:5432/postgres
+      - name: Prepare isolated test database (BUS-304 mirror of make test)
+        run: |
+          python scripts/reset_test_database.py
+          alembic upgrade head
       - name: PostgreSQL schema migration
         run: alembic upgrade head
       - name: Repository hygiene
@@ -142,10 +146,6 @@ jobs:
           mkdir -p artifacts
           python scripts/sql_shim_inventory.py
           cp docs/SQL_SHIM_INVENTORY.md artifacts/SQL_SHIM_INVENTORY.md
-      - name: Prepare isolated test database (BUS-304 mirror of make test)
-        run: |
-          python scripts/reset_test_database.py
-          alembic upgrade head
       - name: Migration-focused tests
         run: python -m pytest tests/test_data.py -q -p no:cacheprovider --timeout=120
       - name: Full tests
