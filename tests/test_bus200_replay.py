@@ -275,7 +275,9 @@ class TestReplayStoreMetric:
         # Увеличение с нуля должно быть видно rate()/increase(): prometheus_client
         # создаёт ряд только при .inc(), а без предыдущей точки рост 0→N алерт
         # не видит (проверено на staging: счётчик=2, increase=0, алерт inactive).
-        # Оба детей обязаны существовать сразу после импорта модуля.
+        # Оба детей обязаны существовать (не None) сразу после импорта модуля.
+        # Точное 0.0 гарантировано только на свежем реестре; в общем прогоне
+        # предыдущие тесты класса уже могли инкрементить глобальный счётчик.
         from app.api.routers import auth_router  # noqa: F401 — импорт регистрирует
-        assert _replay_store_sample("open") == 0.0
-        assert _replay_store_sample("closed") == 0.0
+        assert _replay_store_sample("open") is not None
+        assert _replay_store_sample("closed") is not None
