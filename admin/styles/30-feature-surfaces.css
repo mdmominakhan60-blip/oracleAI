@@ -148,3 +148,30 @@
   .log-message { grid-column: 3; }
   .log-fields { grid-column: 1 / -1; }
 }
+
+/* ── Экран A «Аудитория» (BUS-178) ── */
+.churn-grid {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+.churn-card {
+  display: grid; gap: 2px; padding: 12px; text-align: left;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: var(--radius); color: var(--ink); font: inherit; cursor: pointer;
+}
+.churn-card:hover { border-color: var(--line-strong); }
+.churn-value { font-size: 22px; font-weight: 700; }
+.churn-label { font-size: 12px; color: var(--ink); }
+.churn-split { font-size: 11px; color: var(--muted); }
+
+.seg-delta { font-weight: 700; }
+.seg-delta.up { color: var(--green); }
+.seg-delta.down { color: var(--red); }
+
+/* ── Экран B «Когорты» (BUS-178) ── */
+.chart-legend {
+  display: flex; gap: 10px; margin-bottom: 6px; font-size: 12px; color: var(--muted);
+}
+.chart-legend .dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px;
+}

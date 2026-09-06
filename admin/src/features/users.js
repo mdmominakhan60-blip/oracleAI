@@ -6,6 +6,17 @@ export function segmentLabel(code) {
     not_onboarded: 'Не дошли до конца', paying: 'Платящие', never_paid: 'Ни разу не платили',
     push_on: 'С утренним прогнозом', active_7d: 'Активны за 7 дней', sleeping_14d: 'Спят 14+ дней',
     expiring_3d: 'Подписка кончается за 3 дня',
+    // CRM-предикаты BUS-230 (рамка BUS-169 §1): появляются в /api/admin/users
+    // и /api/admin/audience/segments — сырой код в дропдауне недопустим.
+    onboarded_unactivated: 'Прошли знакомство, без практики',
+    first_value: 'Получили первую ценность',
+    cancelled_recent: 'Отменились за 30 дней',
+    paying_pack: 'Платили без активной подписки',
+    daily_user: 'Активны 5+ дней за неделю',
+    weekly_user: 'События за 7 дней',
+    ritual_streak_3plus: 'Стрик практик 3+',
+    limit_hitters: 'Упирались в лимит',
+    sleeping_14d_push: 'Спят 14+ дней с прогнозом',
   }[code] || code);
 }
 

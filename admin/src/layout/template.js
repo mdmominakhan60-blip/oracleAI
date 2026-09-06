@@ -16,6 +16,8 @@ export const adminShellTemplate = String.raw`
     <nav id="nav" aria-label="Разделы панели">
       <button class="nav-item active" data-view="dashboard"><i>📊</i>Дашборд</button>
       <button class="nav-item" data-view="analytics"><i>🔭</i>Аналитика</button>
+      <button class="nav-item" data-view="audience"><i>👤</i>Аудитория</button>
+      <button class="nav-item" data-view="cohorts"><i>📈</i>Когорты</button>
       <button class="nav-item" data-view="users"><i>👥</i>Клиентки</button>
       <button class="nav-item" data-view="orders"><i>💳</i>Заказы</button>
       <button class="nav-item" data-view="reconciliation"><i>🧾</i>Сверка платежей</button>
@@ -217,6 +219,77 @@ export const adminShellTemplate = String.raw`
           <span id="anx-page" class="muted"></span>
           <button id="anx-next" class="btn ghost">Вперёд →</button>
         </div>
+      </div>
+    </section>
+
+    <!-- АУДИТОРИЯ (BUS-178) -->
+    <section class="view" id="view-audience">
+      <div class="card">
+        <div class="card-head"><h3>Сегменты аудитории</h3>
+          <span id="aud-dq" class="anx-dq"></span>
+          <label class="sr-only" for="aud-sort">Сортировка сегментов</label>
+          <select id="aud-sort" class="input slim" aria-label="Сортировка">
+            <option value="count">по размеру</option>
+            <option value="delta">по Δ7д</option>
+          </select>
+        </div>
+        <div id="aud-segments" class="table-wrap" role="group" aria-label="Сегментная таблица"></div>
+      </div>
+      <div class="row-2">
+        <div class="card">
+          <div class="card-head"><h3>Churn-карточки</h3>
+            <span id="aud-churn-dq" class="anx-dq"></span>
+            <span class="muted small">клик по карточке — открыть сегмент</span></div>
+          <div id="aud-churn" class="churn-grid" role="group" aria-label="Churn-карточки"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Цели (G-11)</h3>
+            <span id="aud-goals-dq" class="anx-dq"></span></div>
+          <div id="aud-goals"></div>
+        </div>
+      </div>
+      <div class="card hidden" id="aud-detail-card">
+        <div class="card-head"><h3 id="aud-detail-title">Сегмент</h3>
+          <button id="aud-detail-back" class="btn ghost" type="button">← Назад</button></div>
+        <div class="toolbar">
+          <label class="sr-only" for="aud-detail-q">Поиск в сегменте</label>
+          <input id="aud-detail-q" class="input" aria-label="Поиск в сегменте" placeholder="Имя, @username или id…">
+          <span id="aud-detail-total" class="muted"></span>
+        </div>
+        <div id="aud-detail-table" class="table-wrap"></div>
+        <div class="pager">
+          <button id="aud-detail-prev" class="btn ghost" type="button">← Назад</button>
+          <span id="aud-detail-page" class="muted"></span>
+          <button id="aud-detail-next" class="btn ghost" type="button">Вперёд →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- КОГОРТЫ -->
+    <section class="view" id="view-cohorts">
+      <div class="card">
+        <div class="card-head"><h3>Retention по когортам</h3>
+          <span class="anx-dq-wrap">
+            <label class="sr-only" for="coh-granularity">Гранулярность</label>
+            <select id="coh-granularity" class="input slim" aria-label="Гранулярность">
+              <option value="day">по дням</option>
+              <option value="week">по неделям</option>
+            </select>
+            <span id="coh-retention-dq" class="anx-dq"></span>
+          </span>
+        </div>
+        <div id="coh-retention" class="table-wrap"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Кривые D1 / D7 / D30</h3>
+          <span class="muted small">d30 = activity_fallback до G1; ∅ = milestone не наступил или данные подчищены</span></div>
+        <div id="coh-curves" class="chart"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Churn-карточки</h3>
+          <span id="coh-churn-dq" class="anx-dq"></span>
+          <span class="muted small">клик по карточке — открыть сегмент на экране «Аудитория»</span></div>
+        <div id="coh-churn" class="churn-grid" role="group" aria-label="Churn-карточки"></div>
       </div>
     </section>
 

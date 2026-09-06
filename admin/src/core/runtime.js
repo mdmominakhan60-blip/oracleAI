@@ -99,6 +99,10 @@ export class AdminState {
     this.content = { kind: '', items: [], current: null };
     this.promoBatch = '';
     this.plans = [];
+    // Кросс-экранный переход «карточка churn на „Когортах“ → открытый
+    // список сегмента на „Аудитории“» (R2 BUS-168: цифра кликабельна
+    // до источника); потребителя гасит сам экран аудитории.
+    this.audiencePending = null;
   }
 
   can(permission) {

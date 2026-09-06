@@ -155,6 +155,53 @@ const server = http.createServer(async (req, res) => {
       top_referrers: [], promo_batches: [], monetization: {}, revenue: {},
     });
   }
+
+  if (p === '/api/admin/audience/segments') {
+    return json(res, 200, { segments: [
+      {segment:'all', count:451, delta_7d:12}, {segment:'active_sub', count:164, delta_7d:8},
+      {segment:'expired', count:287, delta_7d:-5}, {segment:'onboarded', count:389, delta_7d:14},
+      {segment:'not_onboarded', count:62, delta_7d:-3}, {segment:'paying', count:182, delta_7d:6},
+      {segment:'never_paid', count:269, delta_7d:-6}, {segment:'active_7d', count:247, delta_7d:11},
+      {segment:'sleeping_14d', count:89, delta_7d:4}, {segment:'expiring_3d', count:23, delta_7d:-2},
+      {segment:'onboarded_unactivated', count:45, delta_7d:null},
+      {segment:'first_value', count:231, delta_7d:null},
+      {segment:'cancelled_recent', count:18, delta_7d:-7},
+      {segment:'paying_pack', count:31, delta_7d:null},
+      {segment:'daily_user', count:67, delta_7d:null},
+      {segment:'weekly_user', count:198, delta_7d:null},
+      {segment:'ritual_streak_3plus', count:42, delta_7d:null},
+      {segment:'limit_hitters', count:15, delta_7d:null},
+      {segment:'sleeping_14d_push', count:34, delta_7d:3},
+      {segment:'push_on', count:120, delta_7d:null},
+    ], data_quality: {status:'full', note:null}});
+  }
+  if (p === '/api/admin/audience/churn') {
+    return json(res, 200, { cards: [
+      {segment:'expiring_3d', total:23, payers:8, free:15},
+      {segment:'sleeping_14d', total:89, payers:12, free:77},
+    ]});
+  }
+  if (p === '/api/admin/audience/goals') {
+    return json(res, 200, { total:451, goals: [
+      {goal:'love', users:189, share_pct:41.9, payers:72},
+      {goal:'career', users:134, share_pct:29.7, payers:51},
+      {goal:'practice', users:98, share_pct:21.7, payers:41},
+      {goal:'unset', users:30, share_pct:6.6, payers:10},
+    ]});
+  }
+  if (p === '/api/admin/analytics/retention') {
+    const granularity = url.searchParams.get('granularity') || 'day';
+    const cohorts = granularity === 'week' ? [
+      {day:'2026-08-10', size:214, d1:{value:64,rate:29.9,matured:true}, d7:{value:31,rate:14.5,matured:true}, d30:{value:12,rate:5.6,matured:true,method:'activity_fallback',event:null}},
+      {day:'2026-08-17', size:167, d1:{value:58,rate:34.7,matured:true}, d7:{value:27,rate:16.2,matured:true}, d30:{value:8,rate:4.8,matured:true,method:'activity_fallback',event:null}},
+      {day:'2026-08-24', size:70, d1:{value:42,rate:60.0,matured:true}, d7:{value:20,rate:28.6,matured:true}, d30:{value:null,rate:null,matured:false,method:'activity_fallback',event:null}},
+    ] : [
+      {day:'2026-08-24', size:25, d1:{value:12,rate:48.0,matured:true}, d7:{value:5,rate:20.0,matured:true}, d30:{value:null,rate:null,matured:false,method:'activity_fallback',event:null}},
+      {day:'2026-08-25', size:18, d1:{value:8,rate:44.4,matured:true}, d7:{value:4,rate:22.2,matured:true}, d30:{value:null,rate:null,matured:false}},
+      {day:'2026-08-26', size:30, d1:{value:15,rate:50.0,matured:true}, d7:{value:9,rate:30.0,matured:true}, d30:{value:null,rate:null,matured:false}},
+    ];
+    return json(res, 200, {period:{from:'2026-08-01',to:'2026-08-31'}, cohort_anchor:'miniapp_open', granularity, cohorts, data_quality:{status:'full',note:null}});
+  }
   if (p === '/api/admin/dashboard/demo') {
     return json(res, 200, { overview, funnel, activation, retention, sources, monetization_v2 });
   }
@@ -177,6 +224,24 @@ const server = http.createServer(async (req, res) => {
       total: items.length,
       segments: ['active_7d', 'active_sub', 'all', 'expired', 'expiring_3d', 'never_paid', 'not_onboarded', 'onboarded', 'paying', 'push_on', 'sleeping_14d'],
     });
+  }
+  if (p.startsWith('/api/admin/audience/segments/') && p.endsWith('/users')) {
+    const segment = p.split('/')[5];
+    const segUsers = users.filter((u, i) => {
+      if (segment === 'paying') return u.ltv_stars > 0;
+      if (segment === 'never_paid') return !u.ltv_stars;
+      if (segment === 'active_sub') return u.sub_active;
+      if (segment === 'expired') return !u.sub_active;
+      if (segment === 'onboarded') return i % 7 !== 0;
+      if (segment === 'not_onboarded') return i % 7 === 0;
+      if (segment === 'active_7d') return i < 30;
+      if (segment === 'all') return true;
+      return true;
+    });
+    const offset = +url.searchParams.get('offset') || 0;
+    const limit = +url.searchParams.get('limit') || 50;
+    const items = segUsers.slice(offset, offset + limit).map((u) => ({...u, sub_active: u.sub_active, tags: u.tags}));
+    return json(res, 200, {segment, items, total: segUsers.length});
   }
   if (/^\/api\/admin\/users\/\d+$/.test(p)) {
     const tgId = +p.split('/').pop();

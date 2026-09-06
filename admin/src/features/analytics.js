@@ -10,7 +10,10 @@ import { segmentLabel } from './users.js';
 // retention в админке считается по активности (activity fallback, §5.2), воронка —
 // по registrations-когорте (§5.3); таргеты §6 — гипотезы, только подсветка, без алертов.
 
-function setDq(id, { status, note }) {
+// Общая для аналитических экранов метка качества данных (BUS-176 §4):
+// ✓ полные, ~ частичные, ∅ пусто — расшифровка всегда в sr-only, а не
+// только в title (axe не считает title именем для голого глифа).
+export function setDq(id, { status, note }) {
   const el = $(id);
   if (!el) return;
   const labels = { full: '✓', partial: '~', empty: '∅' };

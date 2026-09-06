@@ -3,6 +3,8 @@ import { adminShellTemplate } from './layout/template.js';
 import { DashboardFeature } from './features/dashboard.js';
 import { AnalyticsFeature } from './features/analytics.js';
 import { UsersFeature } from './features/users.js';
+import { AudienceFeature } from './features/audience.js';
+import { CohortsFeature } from './features/cohorts.js';
 import { CommerceFeature } from './features/commerce.js';
 import { EngagementFeature } from './features/engagement.js';
 import { ContentFeature } from './features/content.js';
@@ -21,6 +23,8 @@ export class AdminApplication {
     this.features = {
       dashboard: new DashboardFeature(),
       analytics: new AnalyticsFeature(),
+      audience: new AudienceFeature(),
+      cohorts: new CohortsFeature(),
       users: new UsersFeature(),
       commerce: new CommerceFeature(),
       engagement: new EngagementFeature(),
@@ -33,6 +37,8 @@ export class AdminApplication {
     this.loaders = {
       dashboard: () => this.features.dashboard.load(),
       analytics: () => this.features.analytics.load(),
+      audience: () => this.features.audience.load(),
+      cohorts: () => this.features.cohorts.load(),
       users: () => this.features.users.load(),
       orders: () => this.features.commerce.loadOrders(),
       catalog: () => this.features.commerce.loadCatalog(),
@@ -94,7 +100,7 @@ export class AdminApplication {
   }
 
   applyNavigationPermissions() {
-    const requirements = { analytics: 'dashboard', users: 'users:read', orders: 'dashboard', catalog: 'catalog', promo: 'promo', broadcasts: 'broadcast', content: 'content:read', settings: 'settings:read', audit: 'dashboard', reconciliation: 'dashboard', logs: 'dashboard', horoscopes: 'content:read', costs: 'dashboard', safety: 'users:read' };
+    const requirements = { analytics: 'dashboard', audience: 'dashboard', cohorts: 'dashboard', users: 'users:read', orders: 'dashboard', catalog: 'catalog', promo: 'promo', broadcasts: 'broadcast', content: 'content:read', settings: 'settings:read', audit: 'dashboard', reconciliation: 'dashboard', logs: 'dashboard', horoscopes: 'content:read', costs: 'dashboard', safety: 'users:read' };
     document.querySelectorAll('.nav-item').forEach((button) => {
       const permission = requirements[button.dataset.view];
       if (permission && !state.can(permission)) button.classList.add('hidden');
