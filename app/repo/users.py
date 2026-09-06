@@ -275,6 +275,34 @@ SEGMENTS = {
     "active_7d": "last_seen >= :week_ago",
     "sleeping_14d": "(last_seen IS NULL OR last_seen < :two_weeks_ago)",
     "expiring_3d": "sub_until > :now AND sub_until <= :in_3d",
+    # ── CRM-рамка BUS-169 §1 / BUS-168 R1: предикаты поверх users + events ──
+    # Параметризованные EXISTS: условие добавляется через _segment_params(),
+    # счётчик дашборда и broadcast preview идут через один segment_count (§3.3).
+    "onboarded_unactivated":
+        "(onboarded = 1 AND NOT EXISTS (SELECT 1 FROM events e WHERE e.tg_id = users.tg_id "
+        "AND e.name IN ('first_ritual', 'first_question')))",
+    "first_value":
+        "EXISTS (SELECT 1 FROM events e WHERE e.tg_id = users.tg_id "
+        "AND e.name IN ('first_ritual', 'first_question'))",
+    "cancelled_recent":
+        "(sub_until IS NOT NULL AND sub_until <= :now AND sub_until >= :month_ago)",
+    "paying_pack":
+        "(ltv_stars > 0 AND (sub_until IS NULL OR sub_until <= :now))",
+    "daily_user":
+        "EXISTS (SELECT 1 FROM events e WHERE e.tg_id = users.tg_id "
+        "AND e.created_at >= :week_ago HAVING COUNT(DISTINCT e.day) >= 5)",
+    "weekly_user":
+        "EXISTS (SELECT 1 FROM events e WHERE e.tg_id = users.tg_id "
+        "AND e.created_at >= :week_ago HAVING COUNT(DISTINCT e.day) >= 1)",
+    "ritual_streak_3plus":
+        "EXISTS (SELECT 1 FROM practices p WHERE p.tg_id = users.tg_id "
+        "AND p.streak >= 3 AND p.finished_at IS NULL)",
+    "limit_hitters":
+        "EXISTS (SELECT 1 FROM events e WHERE e.tg_id = users.tg_id "
+        "AND e.name = 'limit_reached')",
+    # Композит §1.5(2): спящая + push_on; без push — таргет broadcast.
+    "sleeping_14d_push":
+        "((last_seen IS NULL OR last_seen < :two_weeks_ago) AND morning_push = 1)",
 }
 
 
@@ -285,6 +313,7 @@ def _segment_params() -> dict:
         "week_ago": (now - timedelta(days=7)).isoformat(),
         "two_weeks_ago": (now - timedelta(days=14)).isoformat(),
         "in_3d": (now + timedelta(days=3)).isoformat(),
+        "month_ago": (now - timedelta(days=30)).isoformat(),
     }
 
 

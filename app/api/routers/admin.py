@@ -244,6 +244,60 @@ async def user_list(q: str = "", segment: str = "all",
     }
 
 
+# ────────────────────────── Аудитория (BUS-230, волна 1) ──────────────────────
+
+@router.get("/audience/segments")
+async def audience_segments(ctx=Depends(require("dashboard")),
+                            db=Depends(get_db)):
+    """Таблица сегментов crm-frame §1: размер и Δ7д.
+
+    Счётчики идут через users.segment_count — равенство broadcast preview
+    (§3.3 BUS-168) соблюдается конструкцией. Сегменты — фиксированный
+    allowlist SEGMENTS, а не произвольные ключи: анти-reid разрез <5→other
+    (BUS-176 §4.4) здесь не нужен, доступ уже под permission.
+    """
+    return await analytics_svc.audience_segments(db)
+
+
+@router.get("/audience/segments/{segment}/users")
+async def audience_segment_users(segment: str,
+                                 limit: int = Query(default=50, ge=1, le=200),
+                                 offset: int = Query(default=0, ge=0),
+                                 ctx=Depends(require("users:read")),
+                                 db=Depends(get_db)):
+    """Детализация сегмента до списка клиенток (клик с таблицы → 360°).
+
+    users:read — жёстче, чем у таблицы (dashboard): список tg_id — уже
+    персональные данные. Неизвестный сегмент — 404, а не пустой список:
+    «сегмента нет» и «сегмент пуст» — разные состояния для UI.
+    """
+    if segment not in users.SEGMENTS:
+        raise HTTPException(404, f"неизвестный сегмент: {segment}")
+    rows = await users.search(db, "", segment, limit=limit, offset=offset)
+    for row in rows:
+        row["sub_active"] = users.sub_active(row)
+        row["tags"] = await crm.tags_of(db, row["tg_id"])
+    return {
+        "segment": segment,
+        "items": rows,
+        "total": await users.count(db, "", segment),
+    }
+
+
+@router.get("/audience/churn")
+async def audience_churn(ctx=Depends(require("dashboard")),
+                         db=Depends(get_db)):
+    """Churn-карточки R3 BUS-168: expiring_3d/sleeping_14d со сплитом payer/free."""
+    return await analytics_svc.audience_churn(db)
+
+
+@router.get("/audience/goals")
+async def audience_goals(ctx=Depends(require("dashboard")),
+                         db=Depends(get_db)):
+    """Разбивка аудитории по мотивации (G-11 BUS-175): GROUP BY goal."""
+    return await analytics_repo.goal_split(db)
+
+
 @router.get("/users/{tg_id}")
 async def user_card(tg_id: int, ctx=Depends(require("users:read")),
                     db=Depends(get_db)):

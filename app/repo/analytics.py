@@ -27,6 +27,7 @@ E_SHOP_VIEW = "shop_view"
 E_INVOICE = "invoice_created"
 E_PAID = "payment_success"
 E_PROMO = "promo_redeemed"
+E_WINBACK_OFFER = "winback_offer_sent"
 E_REFERRAL = "referral_joined"
 E_MINIAPP_OPEN = "miniapp_open"
 E_CHURN_WARN = "expiry_notified"
@@ -726,6 +727,9 @@ async def llm_costs(db, days: int = 30) -> dict:
         "per_paying_usd": round(total_cost / subs, 3) if subs else 0.0,
         "by_purpose": by_purpose,
         "by_model": by_model,
+        # Латентность рядом с деньгами (F-3): деградация ответов видна там же,
+        # где считают их себестоимость.
+        "latency": await latency_percentiles(db, days=days),
     }
 
 
@@ -939,3 +943,55 @@ async def rollup_day(db, day: str | None = None) -> dict:
              "stats_json": json.dumps(stats, ensure_ascii=False),
              "updated_at": utcnow()})
     return stats
+
+
+async def goal_split(db) -> dict:
+    """Разбивка аудитории по мотивации (G-11 BUS-175): GROUP BY goal.
+
+    Пустой goal → bucket «unset»: NULL в SQL нельзя показать в графике,
+    а потерять часть аудитории — исказить все доли. Deleted исключены
+    (privacy, как в segment_count). payers — доля платящих в bucket'е.
+    """
+    cur = await db.execute(
+        "SELECT COALESCE(NULLIF(goal, ''), 'unset') AS goal, COUNT(*) users, "
+        "SUM(CASE WHEN ltv_stars > 0 THEN 1 ELSE 0 END) payers "
+        "FROM users WHERE status <> 'deleted' "
+        "GROUP BY COALESCE(NULLIF(goal, ''), 'unset') "
+        "ORDER BY users DESC")
+    rows = [dict(r) for r in await cur.fetchall()]
+    total = sum(r["users"] for r in rows)
+    for r in rows:
+        r["share_pct"] = round(r["users"] * 100 / total, 1) if total else 0.0
+    return {"total": total, "goals": rows}
+
+
+async def latency_percentiles(db, days: int = 30) -> dict:
+    """Перцентили латентности LLM p50/p95 (F-3 BUS-166).
+
+    percentile_cont — PostgreSQL-only: это единственный бэкенд продукта
+    (см. app/data/session.py). Окно по created_at, как в llm_costs.
+    R9 BUS-168: нет данных в окне → no_data, никогда не ноль — ноль
+    выглядел бы как «мгновенные ответы» и скрыл бы деградацию.
+    """
+    since = _ago(days)
+    calls = await _scalar(
+        db, "SELECT COUNT(*) FROM llm_usage WHERE created_at>=:since AND ok=1",
+        {"since": since})
+    if not calls:
+        return {"p50_ms": None, "p95_ms": None,
+                "status": "no_data", "note": "llm_usage пуст в окне"}
+    # Алиасы обязательны: две безымянные percentile_cont дают один ключ
+    # row._mapping ("percentile_cont") — вторая колонка теряется.
+    cur = await db.execute(
+        "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY latency_ms) AS p50, "
+        "percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_ms) AS p95 "
+        "FROM llm_usage WHERE created_at>=:since AND ok=1",
+        {"since": since})
+    row = await cur.fetchone()
+    p50, p95 = row["p50"], row["p95"]
+    return {
+        "p50_ms": int(round(p50)) if p50 is not None else None,
+        "p95_ms": int(round(p95)) if p95 is not None else None,
+        "status": "full",
+        "calls": calls,
+    }

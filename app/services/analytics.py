@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 import logging
 
 from ..repo import analytics as repo
@@ -29,6 +29,7 @@ E_SHOP_VIEW = repo.E_SHOP_VIEW
 E_INVOICE = repo.E_INVOICE
 E_PAID = repo.E_PAID
 E_PROMO = repo.E_PROMO
+E_WINBACK_OFFER = repo.E_WINBACK_OFFER
 E_REFERRAL = repo.E_REFERRAL
 E_MINIAPP_OPEN = repo.E_MINIAPP_OPEN
 E_CHURN_WARN = repo.E_CHURN_WARN
@@ -310,3 +311,101 @@ async def demo_dashboard(*, days: int = 30) -> dict:
 
 async def rollup(db, day: str | None = None) -> dict:
     return await repo.rollup_day(db, day)
+
+
+# ────────────────────────── Аудитория (BUS-230, волна 1) ──────────────────────
+
+#: Сегменты, чья Δ7д вычислима (временная граница входит в предикат).
+#: Остальные (событийные/композитные) дают null — R9 BUS-168: «нет данных»,
+#: а не ноль, иначе виджет врёт о динамике.
+_DELTA_SEGMENTS = {
+    "sleeping_14d", "active_7d", "cancelled_recent", "expiring_3d",
+    "sleeping_14d_push",
+}
+
+
+async def audience_segments(db) -> dict:
+    """Таблица сегментов crm-frame §1 для экрана A: имя, размер, Δ7д.
+
+    Единственный источник предикатов — SEGMENTS (users.py), счётчик —
+    segment_count: равенство broadcast preview (§3.3 BUS-168) соблюдается
+    конструкцией, а не согласованием цифр.
+    """
+    from ..repo import users as users_repo
+
+    now = datetime.now(timezone.utc)
+    week_ago = (now - timedelta(days=7)).isoformat()
+    month_ago = (now - timedelta(days=30)).isoformat()
+
+    segments = []
+    for name in users_repo.SEGMENTS:
+        count = await users_repo.segment_count(db, name)
+        if name in _DELTA_SEGMENTS:
+            # Δ7д: сколько клиенток было в сегменте 7 дней назад — предикат
+            # со сдвинутой границей. Сегодняшний сегмент — знаменатель.
+            if name == "sleeping_14d_push":
+                past_where = ("((last_seen IS NULL OR last_seen < :two_weeks_ago) "
+                              "AND morning_push = 1)")
+                params = {"two_weeks_ago": (now - timedelta(days=21)).isoformat()}
+            elif name == "sleeping_14d":
+                past_where = ("(last_seen IS NULL OR last_seen < :two_weeks_ago)")
+                params = {"two_weeks_ago": (now - timedelta(days=21)).isoformat()}
+            elif name == "active_7d":
+                past_where = "last_seen >= :from"
+                params = {"from": (now - timedelta(days=14)).isoformat()}
+            elif name == "cancelled_recent":
+                past_where = ("(sub_until IS NOT NULL AND sub_until <= :from "
+                              "AND sub_until >= :month_ago)")
+                params = {"from": (now - timedelta(days=7)).isoformat(),
+                          "month_ago": month_ago}
+            else:  # expiring_3d
+                past_where = ("sub_until > :from AND sub_until <= :in_3d")
+                params = {"from": (now - timedelta(days=7)).isoformat(),
+                          "in_3d": (now + timedelta(days=3)).isoformat()}
+            cur = await db.execute(
+                "SELECT COUNT(*) c FROM users WHERE status <> 'deleted' "
+                f"AND ({past_where})", params)
+            past = (await cur.fetchone())["c"]
+            delta = count - past
+        else:
+            delta = None
+        segments.append({"segment": name, "count": count, "delta_7d": delta})
+
+    return {
+        "segments": segments,
+        "generated_at": now.isoformat(),
+        "data_quality": {"status": "full", "note": None},
+    }
+
+
+async def audience_churn(db) -> dict:
+    """Churn-карточки R3 BUS-168: expiring_3d/sleeping_14d с платёжным сплитом.
+
+    Privacy §2.3: только агрегаты; категория пользователя (payer/free) —
+    денормализованное поле ltv_stars, не PII.
+    """
+    from ..repo import users as users_repo
+
+    now = datetime.now(timezone.utc)
+    cards = []
+    for name, past_where, params in (
+        ("expiring_3d",
+         "sub_until > :from AND sub_until <= :in_3d",
+         {"from": (now - timedelta(days=7)).isoformat(),
+          "in_3d": (now + timedelta(days=3)).isoformat()}),
+        ("sleeping_14d",
+         "(last_seen IS NULL OR last_seen < :two_weeks_ago)",
+         {"two_weeks_ago": (now - timedelta(days=14)).isoformat()}),
+    ):
+        cur = await db.execute(
+            "SELECT COUNT(*) total, "
+            "SUM(CASE WHEN ltv_stars > 0 THEN 1 ELSE 0 END) payers "
+            "FROM users WHERE status <> 'deleted' "
+            f"AND ({past_where})", params)
+        row = dict(await cur.fetchone())
+        total = row["total"] or 0
+        payers = row["payers"] or 0
+        cards.append({"segment": name, "total": total,
+                      "payers": payers, "free": total - payers})
+
+    return {"cards": cards, "generated_at": now.isoformat()}
