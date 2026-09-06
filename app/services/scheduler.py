@@ -720,6 +720,118 @@ async def _practice_reminder(bot, db, user, now, settings_cache) -> None:
     await _send_once(bot, db, user["tg_id"], "practice", day, text)
 
 
+async def _feedback_survey(bot, db, user, now_utc: datetime) -> None:
+    """Day-7 опрос: приглашение на день 7, напоминание на день 10.
+
+    Opt-out — через deliveries kind='feedback_optout' (key=str(tg_id)):
+    после этого опрос никогда не отправляется. Напоминание уходит только
+    если приглашение уже ушло И ответов ещё нет (feedback_responses).
+    """
+    tg_id = user["tg_id"]
+    if await comms.already_sent(db, tg_id, "feedback_optout", str(tg_id)):
+        return
+    if not await content.is_on(db, "feedback_survey", tg_id, default=True):
+        return
+    if not settings.webapp_url:
+        return
+
+    try:
+        created = datetime.fromisoformat(user["created_at"])
+    except (TypeError, ValueError):
+        return
+
+    now_user = now_utc.astimezone(users.user_tz(user))
+    if now_user.hour < 10 or now_user.hour > 21:
+        return
+
+    invite_key = "day7_v1"
+    remind_key = "day7_v1_remind"
+    sent_invite = await comms.already_sent(db, tg_id,
+                                            "feedback_survey", invite_key)
+    sent_remind = await comms.already_sent(db, tg_id,
+                                           "feedback_survey", remind_key)
+    answered = await feedback_repo.get_response(db, tg_id) is not None
+
+    # День 7: приглашение (однократно).
+    if not sent_invite and not answered and now_utc >= created + timedelta(days=7):
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+        lang = _user_lang(user)
+        name = user["name"] or ("dear one" if lang == "en" else "друг")
+        text = await content.get_text(
+            db, "copy", "feedback_survey_invite",
+            ("{name}, a week with me — time to look back.\n"
+             "Tell me how you're finding Oracle — it takes a minute, "
+             "and I'll gift you 40 Crystals ✦"
+             if lang == "en" else
+             "{name}, неделя с нами — время оглянуться 🌙\n"
+             "Расскажи, как тебе Оракул — это займёт минуту, "
+             "а взамен подарю 40 кристаллов ✦"),
+            lang=lang)
+        text = text.replace("{name}", name)
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text=await content.get_text(
+                    db, "copy", "feedback_btn_webapp",
+                    "Answer and get 40 Crystals" if lang == "en"
+                    else "Ответить и получить 40 кристаллов",
+                    lang=lang),
+                web_app=WebAppInfo(url=settings.webapp_url + "/survey"))],
+            [InlineKeyboardButton(
+                text=await content.get_text(
+                    db, "copy", "feedback_btn_later",
+                    "Not now" if lang == "en" else "Не сейчас",
+                    lang=lang),
+                callback_data="feedback_later")],
+        ])
+        if await _send_once(bot, db, tg_id, "feedback_survey",
+                            invite_key, text, markup=markup):
+            await analytics.track(
+                db, analytics.E_FEEDBACK_SURVEY_SENT, tg_id,
+                props={"survey_code": feedback_repo.SURVEY_CODE,
+                       "delivery_key": invite_key},
+                surface="system")
+        return
+
+    # День 10: одно напоминание (только если приглашение ушло, ответов нет,
+    # напоминание ещё не уходило и final opt-out не нажимался).
+    if not sent_remind and sent_invite and not answered \
+            and now_utc >= created + timedelta(days=10):
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+        lang = _user_lang(user)
+        name = user["name"] or ("dear one" if lang == "en" else "друг")
+        text = await content.get_text(
+            db, "copy", "feedback_survey_remind",
+            ("{name}, I'm still gathering first-week impressions. "
+             "A couple of your minutes = 40 Crystals ✦"
+             if lang == "en" else
+             "{name}, я всё ещё собираю впечатления о первой неделе. "
+             "Твоя пара минут = 40 кристаллов ✦"),
+            lang=lang)
+        text = text.replace("{name}", name)
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text=await content.get_text(
+                    db, "copy", "feedback_btn_webapp",
+                    "Answer and get 40 Crystals" if lang == "en"
+                    else "Ответить и получить 40 кристаллов",
+                    lang=lang),
+                web_app=WebAppInfo(url=settings.webapp_url + "/survey"))],
+            [InlineKeyboardButton(
+                text=await content.get_text(
+                    db, "copy", "feedback_btn_never",
+                    "Don't ask again" if lang == "en" else "Не спрашивать",
+                    lang=lang),
+                callback_data="feedback_never")],
+        ])
+        if await _send_once(bot, db, tg_id, "feedback_survey",
+                            remind_key, text, markup=markup):
+            await analytics.track(
+                db, analytics.E_FEEDBACK_SURVEY_SENT, tg_id,
+                props={"survey_code": feedback_repo.SURVEY_CODE,
+                       "delivery_key": remind_key},
+                surface="system")
+
+
 async def _tick_user(bot, db, user, now_utc, settings_cache) -> None:
     now = now_utc.astimezone(users.user_tz(user))
     if await content.is_on(db, "daily_push", user["tg_id"], default=True):
@@ -728,6 +840,7 @@ async def _tick_user(bot, db, user, now_utc, settings_cache) -> None:
         await _weekly_report(bot, db, user, now, settings_cache)
     await _monthly_report(bot, db, user, now, settings_cache)
     await _practice_reminder(bot, db, user, now, settings_cache)
+    await _feedback_survey(bot, db, user, now_utc)
 
 
 # ────────────────────────────── общий цикл ────────────────────────────────────

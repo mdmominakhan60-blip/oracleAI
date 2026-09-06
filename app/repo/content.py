@@ -115,6 +115,92 @@ DEFAULT_EN_CONTENT: dict[tuple[str, str], dict[str, str]] = {
                  "You can do it anytime — in your Profile. No rush — I'll keep "
                  "everything safe."),
     },
+    # day-7 опрос (BUS-234)
+    ("copy", "feedback_survey_invite"): {
+        "title": "Survey: day-7 invite",
+        "body": ("{name}, a week with me — time to look back 🌙\n"
+                 "Tell me how you're finding Oracle — it takes a minute, "
+                 "and I'll gift you 40 Crystals ✦"),
+    },
+    ("copy", "feedback_survey_remind"): {
+        "title": "Survey: day-10 reminder",
+        "body": ("{name}, I'm still gathering first-week impressions ✨ "
+                 "A couple of your minutes = 40 Crystals ✦"),
+    },
+    ("copy", "feedback_form_head"): {
+        "title": "Survey: form heading",
+        "body": "A Week with Oracle 🌙",
+    },
+    ("copy", "feedback_form_intro"): {
+        "title": "Survey: form intro",
+        "body": ("Five short questions. For a thoughtful review — 40 Crystals ✦ "
+                 "to your balance (enough for an in-depth Tarot reading). "
+                 "Valid for 90 days."),
+    },
+    ("copy", "feedback_q_like"): {
+        "title": "Survey: question Q1 (like)", "body": "What did you enjoy most?"},
+    ("copy", "feedback_q_blocker"): {
+        "title": "Survey: question Q2 (blocker)", "body": "What gets in the way?"},
+    ("copy", "feedback_q_nps"): {
+        "title": "Survey: question Q3 (nps)",
+        "body": "How likely are you to recommend Oracle to a friend (0–10)?"},
+    ("copy", "feedback_q_dream"): {
+        "title": "Survey: question Q4 (dream)",
+        "body": "What's missing? What do you dream of when you think of Oracle?"},
+    ("copy", "feedback_q_next"): {
+        "title": "Survey: question Q5 (next)", "body": "What should we add first?"},
+    ("copy", "feedback_opt_like_forecasts"): {
+        "title": "Survey: option like/forecasts", "body": "Forecasts"},
+    ("copy", "feedback_opt_like_tarot"): {
+        "title": "Survey: option like/tarot", "body": "Tarot"},
+    ("copy", "feedback_opt_like_diary"): {
+        "title": "Survey: option like/diary", "body": "Diary & practices"},
+    ("copy", "feedback_opt_like_voice"): {
+        "title": "Survey: option like/voice", "body": "Voice & answers"},
+    ("copy", "feedback_opt_like_chart"): {
+        "title": "Survey: option like/chart", "body": "Birth chart"},
+    ("copy", "feedback_opt_blocker_offtopic"): {
+        "title": "Survey: option blocker/offtopic", "body": "Answers miss the mark"},
+    ("copy", "feedback_opt_blocker_slow"): {
+        "title": "Survey: option blocker/slow", "body": "Too long a wait"},
+    ("copy", "feedback_opt_blocker_paywall"): {
+        "title": "Survey: option blocker/paywall", "body": "Too little for free"},
+    ("copy", "feedback_opt_blocker_lost"): {
+        "title": "Survey: option blocker/lost", "body": "Unclear what comes next"},
+    ("copy", "feedback_opt_blocker_nothing"): {
+        "title": "Survey: option blocker/nothing", "body": "Nothing gets in the way"},
+    ("copy", "feedback_opt_next_compat"): {
+        "title": "Survey: option next/compat", "body": "Compatibility"},
+    ("copy", "feedback_opt_next_practices"): {
+        "title": "Survey: option next/practices", "body": "More practices"},
+    ("copy", "feedback_opt_next_lunar"): {
+        "title": "Survey: option next/lunar", "body": "Lunar rhythm"},
+    ("copy", "feedback_opt_next_personal"): {
+        "title": "Survey: option next/personal", "body": "Personal guidance"},
+    ("copy", "feedback_survey_hint_text"): {
+        "title": "Survey: Q4 hint",
+        "body": "A couple of sentences — and 40 Crystals are yours ✦ (50+ characters)"},
+    ("copy", "feedback_thanks_bonus"): {
+        "title": "Survey: thanks (bonus granted)",
+        "body": ("Thank you for sharing! ✨\n"
+                 "40 Crystals are already on your balance — enough for an "
+                 "in-depth Tarot reading."),
+    },
+    ("copy", "feedback_thanks_saved"): {
+        "title": "Survey: thanks (saved)",
+        "body": "Thank you — your review is saved 🌙"},
+    ("copy", "feedback_btn_webapp"): {
+        "title": "Survey: web_app button", "body": "Answer and get 40 Crystals"},
+    ("copy", "feedback_btn_later"): {
+        "title": "Survey: 'not now' button", "body": "Not now"},
+    ("copy", "feedback_btn_never"): {
+        "title": "Survey: opt-out button", "body": "Don't ask again"},
+    ("copy", "feedback_btn_back"): {
+        "title": "Survey: 'back to Oracle' button", "body": "Back to Oracle"},
+    ("copy", "feedback_btn_skip"): {
+        "title": "Survey: skip button", "body": "Skip"},
+    ("copy", "feedback_btn_other"): {
+        "title": "Survey: 'other' button", "body": "Other…"},
     ("copy", "free_forecast_cta"): {
         "title": "Free forecast CTA",
         "body": "\n\n🔮 <b>Oracle</b> — your free daily forecast. Open it in Telegram: {url}",
