@@ -19,8 +19,13 @@ jobs:
       # с пустым ключом. QA-сервер и скрипты шлют это же значение в X-Dev-Key.
       DEV_KEY: ci-dev-key
       LLM_PROVIDER: off
-      DATABASE_URL: postgresql+asyncpg://oracle:oracle@127.0.0.1:5432/oracle
-      TEST_DATABASE_URL: postgresql+asyncpg://oracle:oracle@127.0.0.1:5432/oracle
+      # BUS-304 guard: тесты принимают только базы *_test (fail-closed против
+      # прод-DATABASE_URL). CI зеркалит локальный `make test`: оракл-юзер —
+      # суперпользователь сервис-контейнера, admin DSN нужен reset_test_database.
+      DATABASE_URL: postgresql+asyncpg://oracle_test:oracle@127.0.0.1:5432/oracle_test
+      TEST_DATABASE_URL: postgresql+asyncpg://oracle_test:oracle@127.0.0.1:5432/oracle_test
+      POSTGRES_ADMIN_DATABASE_URL: postgresql://oracle:oracle@127.0.0.1:5432/postgres
+      ALLOW_DB_RESET: "1"
       PGVECTOR_ENABLED: "1"
     services:
       postgres:
@@ -130,6 +135,10 @@ jobs:
           mkdir -p artifacts
           python scripts/sql_shim_inventory.py
           cp docs/SQL_SHIM_INVENTORY.md artifacts/SQL_SHIM_INVENTORY.md
+      - name: Prepare isolated test database (BUS-304 mirror of make test)
+        run: |
+          python scripts/reset_test_database.py
+          alembic upgrade head
       - name: Migration-focused tests
         run: python -m pytest tests/test_data.py -q -p no:cacheprovider --timeout=120
       - name: Full tests
