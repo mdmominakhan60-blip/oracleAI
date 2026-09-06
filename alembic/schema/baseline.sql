@@ -144,9 +144,14 @@ CREATE TABLE IF NOT EXISTS reports (
     -- Reports are immutable history entries. The latest row for a kind/period
     -- remains the cache; regeneration appends a new version.
 );
+-- kind: forecast|weekly|expiry|winback|broadcast|feedback_survey.
+-- feedback_survey: key='day7_v1' — приглашение на опрос (BUS-170),
+-- key='day7_v1_remind' — единственное напоминание на день 10. PK (tg_id,
+-- kind, key) + comms.claim/mark_sent (ON CONFLICT DO NOTHING) исключают
+-- повторную отправку при рестартах scheduler'а.
 CREATE TABLE IF NOT EXISTS deliveries (
     tg_id      BIGINT NOT NULL,
-    kind       TEXT NOT NULL,                -- forecast|weekly|expiry|winback|broadcast
+    kind       TEXT NOT NULL,                -- forecast|weekly|expiry|winback|broadcast|feedback_survey
     key        TEXT NOT NULL,                -- день/идентификатор повода
     created_at TEXT,
     PRIMARY KEY (tg_id, kind, key)
