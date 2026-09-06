@@ -360,11 +360,25 @@ if MINIAPP_DIR.is_dir():
 if ADMIN_DIR.is_dir():
     app.mount("/admin/static", StaticFiles(directory=str(ADMIN_DIR)),
               name="admin-static")
+class _NoHtmlStaticFiles(StaticFiles):
+    """Маунт /public отдаёт только ассеты: *.html → 404.
+
+    HTML-страницы web/ канонически обслуживают маршруты /landing, /privacy,
+    /terms (с подстановкой __PUBLIC_BASE_URL__); прямая раздача StaticFiles
+    отдавала бы их полные SEO-дубли с невалидным canonical (BUS-130 → BUS-321).
+    """
+
+    async def get_response(self, path: str, scope):
+        if path.lower().endswith(".html"):
+            return Response(status_code=404)
+        return await super().get_response(path, scope)
+
+
 if WEB_DIR.is_dir() and (WEB_DIR / "landing.css").is_file():
     # Только публичные стили лендинга: HTML отдаётся отдельными маршрутами выше,
     # а мёртвые статичные robots.txt/sitemap.xml удалены (аудит 4.4) —
     # их генерируют динамические маршруты ниже.
-    app.mount("/public", StaticFiles(directory=str(WEB_DIR)),
+    app.mount("/public", _NoHtmlStaticFiles(directory=str(WEB_DIR)),
               name="public-static")
 
 
@@ -429,7 +443,10 @@ async def _public_page(name: str, page: str, request: Request,
 
 @app.get("/robots.txt", include_in_schema=False)
 async def robots_txt(request: Request):
-    body = ("User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\nDisallow: /static\n\n"
+    # Allow длиннее Disallow → краулеры, уважающие robots.txt (Twitterbot,
+    # facebookexternalhit), fetchнут og:image и favicon под /static/img.
+    body = ("User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\n"
+            "Allow: /static/img/\nDisallow: /static\n\n"
             f"Sitemap: {_public_base(request)}/sitemap.xml\n")
     return Response(body, media_type="text/plain")
 
