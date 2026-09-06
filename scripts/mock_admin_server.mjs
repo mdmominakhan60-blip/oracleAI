@@ -86,7 +86,7 @@ const users = Array.from({ length: 50 }, (_, i) => ({
   sub_level: i % 2 ? 'vip' : 'plus',
   sub_active: i % 4 !== 0,
   crystals: 120 + i * 7,
-  ltv_stars: i % 5 ? 300 + i * 40 : 0,
+  ltv_stars: i === 0 ? 8400 : i % 5 ? 300 + i * 40 : 0,
   last_seen: new Date(Date.now() - i * 3600e3 * 5).toISOString(),
   created_at: new Date(Date.now() - i * 86400e3).toISOString(),
   tags: i % 6 === 0 ? ['vip'] : [],
@@ -309,9 +309,85 @@ const server = http.createServer(async (req, res) => {
       ],
       threads: [], readings: [], reports: [], orders: [{ title: 'VIP на месяц', amount_stars: 100, amount_crystals: 0, status: 'paid', paid_at: new Date().toISOString() }], crystals_history: [],
       referrals: { level1: 2 }, referral: {},
+      // BUS-309 §6: ltv-объект карточки (tier, метрики, риски, NBA, таймлайн)
+      ltv: {
+        tier: u.ltv_stars > 5000 ? 'A' : u.ltv_stars > 0 ? 'B' : 'C',
+        tier_recalc_at: new Date().toISOString(),
+        ltv_stars: u.ltv_stars, payments_count: u.ltv_stars > 0 ? 2 : 0,
+        avg_check_stars: u.ltv_stars > 0 ? Math.round(u.ltv_stars / 2) : 0,
+        days_as_payer: u.ltv_stars > 0 ? 45 : null,
+        crystals_bought: 500, crystals_granted: 300,
+        risk_flags: u.ltv_stars > 5000 ? ['sleeping', 'expiring'] : u.ltv_stars > 0 ? ['limit_hits'] : [],
+        channel_closed: false,
+        next_best_action: u.ltv_stars > 5000 ? { rule: 'q2', playbook: 'pb-1' } : u.ltv_stars > 0 ? { rule: 'q4', playbook: 'pb-4' } : null,
+        timeline: [
+          { kind: 'auto', type: 'delivery', key: 'forecast:d1:2026-09-06', at: new Date(Date.now() - 3600e3 * 20).toISOString(), status: 'sent', error_class: null },
+          { kind: 'auto', type: 'delivery', key: 'winback2:wb2-77', at: new Date(Date.now() - 86400e3 * 9).toISOString(), status: 'forbidden', error_class: 'forbidden_by_user' },
+          { kind: 'manual', type: 'note', key: 'note:41', at: new Date(Date.now() - 86400e3 * 12).toISOString(), text: 'Договорились о возврате к практикам после отпуска' },
+        ],
+      },
     });
+  }
+  // BUS-312: очередь внимания — 7 правил, шейп из ltv_tier.attention_queue
+  if (p === '/api/admin/attention-queue') {
+    const mk = (tg_id, display, priority, rule, playbook, tier, reason_data, triggeredAgoH, overdue = false, channel_closed = false) => ({
+      tg_id, display, priority, rule, playbook, tier, reason_data,
+      triggered_at: new Date(Date.now() - triggeredAgoH * 3600e3).toISOString(),
+      sla_due_at: new Date(Date.now() + 3600e3 * 10).toISOString(),
+      overdue, channel_closed,
+    });
+    return json(res, 200, {
+      items: [
+        mk(700000001, 'Анна П.', 'p1', 'q1', 'pb-7', 'A', { order_ref: '#204' }, 10, true),
+        mk(700000002, 'Мария К.', 'p1', 'q2', 'pb-1', 'A', { sleeping_days: 21, sub_expired_days: null }, 30, true),
+        mk(700000003, 'Вера С.', 'p1', 'q3', 'pb-3', 'B', { offer_sent_at: new Date(Date.now() - 86400e3 * 9).toISOString(), offer_expires_at: new Date(Date.now() + 86400e3 * 5).toISOString(), wb2_kind: 'winback2' }, 80),
+        mk(700000004, 'Ольга М.', 'p2', 'q4', 'pb-4', 'B', { limit_hits_count: 4, plan: 'plus', next_plan: 'vip', deep_link: '/admin/users/700000004' }, 20),
+        mk(700000005, 'Лида П.', 'p2', 'q5', 'pb-5', 'C', { delivery_status: 'forbidden', error_class: 'forbidden_by_user', delivery_kind: 'forecast', delivery_created_at: new Date(Date.now() - 3600e3 * 8).toISOString() }, 8, false, true),
+        mk(700000006, 'Ирина К.', 'p3', 'q6', 'pb-6', 'D', { days_since_created: 4, o1_sent: true }, 96),
+        mk(700000007, 'Света М.', 'p3', 'q7', 'pb-2', 'B', { gap_days: 34 }, 40),
+      ],
+      counts: { p1: 3, p2: 2, p3: 2 },
+      overdue: { p1: 2, p2: 0, p3: 0 },
+      limit: 50, truncated: false,
+    });
+  }
+  // BUS-284 §4.1: eligibility подарка (роль owner в моке)
+  if (/^\/api\/admin\/users\/(\d+)\/gift\/eligibility$/.test(p)) {
+    return json(res, 200, {
+      allowed_days: [3, 7, 10, 14], eligible: true, cooldown: false,
+      next_available_at: null, last_gift_at: null,
+    });
+  }
+  if (/^\/api\/admin\/users\/(\d+)\/gift$/.test(p) && req.method === 'POST') {
+    const body = await readBody(req);
+    const reason = (body.reason || '').trim();
+    if (!reason) {
+      return json(res, 400, { detail: { error: { code: 'validation', message: 'reason обязателен' } } });
+    }
+    return json(res, 200, { code: 'OP3A9K2M', days: +body.days || 3, reason });
+  }
+  // KPI §5: отчёт партий op_*
+  if (p === '/api/admin/promo/op-report') {
+    return json(res, 200, { batches: [
+      { batch: 'op_202609_3d', days: 3, codes: 25, used: 9, inactive: 2, created_at: '2026-09-01T10:00:00+00:00', redeemers: 9, converted: 4, redemption_rate: 0.36, conversion_rate: 0.4444 },
+      { batch: 'op_202608_7d', days: 7, codes: 20, used: 11, inactive: 1, created_at: '2026-08-01T10:00:00+00:00', redeemers: 11, converted: 6, redemption_rate: 0.55, conversion_rate: 0.5455 },
+    ]});
+  }
+  // BUS-293: копирайт плейбуков (seeded нет — фронтfallbackит на дефолты)
+  if (p === '/api/admin/content' && url.searchParams.get('kind') === 'copy') {
+    return json(res, 200, { items: [] });
   }
   res.writeHead(404); res.end();
 });
+
+function readBody(req) {
+  return new Promise((resolve) => {
+    let raw = '';
+    req.on('data', (chunk) => { raw += chunk; });
+    req.on('end', () => {
+      try { resolve(JSON.parse(raw || '{}')); } catch { resolve({}); }
+    });
+  });
+}
 
 server.listen(PORT, '127.0.0.1', () => console.log(`mock admin on http://127.0.0.1:${PORT}/admin`));

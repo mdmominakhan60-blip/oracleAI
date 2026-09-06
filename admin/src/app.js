@@ -3,6 +3,7 @@ import { adminShellTemplate } from './layout/template.js';
 import { DashboardFeature } from './features/dashboard.js';
 import { AnalyticsFeature } from './features/analytics.js';
 import { UsersFeature } from './features/users.js';
+import { AttentionQueueFeature } from './features/attention-queue.js';
 import { AudienceFeature } from './features/audience.js';
 import { CohortsFeature } from './features/cohorts.js';
 import { FeedbackFeature } from './features/feedback.js';
@@ -28,6 +29,7 @@ export class AdminApplication {
       cohorts: new CohortsFeature(),
       feedback: new FeedbackFeature(),
       users: new UsersFeature(),
+      'attention-queue': new AttentionQueueFeature(),
       commerce: new CommerceFeature(),
       engagement: new EngagementFeature(),
       content: new ContentFeature(),
@@ -55,6 +57,7 @@ export class AdminApplication {
       audit: () => this.features.observability.loadAudit(),
       reconciliation: () => this.features.commerce.loadReconciliation(),
       logs: () => this.features.logs.refresh(),
+      'attention-queue': () => this.features['attention-queue'].load(),
     };
     this.bindShellEvents();
     return this.bootstrap();
@@ -103,7 +106,7 @@ export class AdminApplication {
   }
 
   applyNavigationPermissions() {
-    const requirements = { analytics: 'dashboard', audience: 'dashboard', cohorts: 'dashboard', feedback: 'dashboard', users: 'users:read', orders: 'dashboard', catalog: 'catalog', promo: 'promo', broadcasts: 'broadcast', content: 'content:read', settings: 'settings:read', audit: 'dashboard', reconciliation: 'dashboard', logs: 'dashboard', horoscopes: 'content:read', costs: 'dashboard', safety: 'users:read' };
+    const requirements = { analytics: 'dashboard', audience: 'dashboard', cohorts: 'dashboard', feedback: 'dashboard', 'attention-queue': 'dashboard', users: 'users:read', orders: 'dashboard', catalog: 'catalog', promo: 'promo', broadcasts: 'broadcast', content: 'content:read', settings: 'settings:read', audit: 'dashboard', reconciliation: 'dashboard', logs: 'dashboard', horoscopes: 'content:read', costs: 'dashboard', safety: 'users:read' };
     document.querySelectorAll('.nav-item').forEach((button) => {
       const permission = requirements[button.dataset.view];
       if (permission && !state.can(permission)) button.classList.add('hidden');

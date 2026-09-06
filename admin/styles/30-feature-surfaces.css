@@ -165,6 +165,24 @@
 .churn-split { font-size: 11px; color: var(--muted); }
 
 .seg-delta { font-weight: 700; }
+
+/* ── Очередь внимания (BUS-312) ─────────────────────────────────────────── */
+.queue-header { margin-bottom: 10px; }
+.queue-summary { margin-bottom: 8px; }
+.queue-list { display: grid; gap: 8px; }
+.queue-card { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+.queue-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.queue-card-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.queue-card-body { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+.queue-playbook { margin-left: auto; }
+.pb-hint { white-space: pre-wrap; color: var(--ink); line-height: 1.45; }
+.pb-actions { display: grid; gap: 8px; }
+.pb-action { display: grid; gap: 4px; }
+.pb-action.disabled { opacity: 0.55; }
+.context-row { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--line); }
+.context-row:last-child { border-bottom: none; }
+.pb-msg { width: 100%; }
+.pb-gift-form { margin-top: 8px; }
 .seg-delta.up { color: var(--green); }
 .seg-delta.down { color: var(--red); }
 

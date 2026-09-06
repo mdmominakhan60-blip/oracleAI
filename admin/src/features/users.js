@@ -1,4 +1,10 @@
 import { $, esc, num, date, get, post, del, state, actions, table, bindRows, fillSegmentSelect, can, toast, fail } from '../core/runtime.js';
+import { RULE_LABELS, TIER_LABELS, RISK_FLAG_LABELS } from './attention-queue.js';
+
+// Метки единого таймлайна card.ltv (BUS-309 §6): kind auto = доставки,
+// manual = заметки/сообщения оператора.
+const TL_TYPE_LABELS = { delivery: 'доставка', note: 'заметка', message: 'сообщение' };
+const TL_STATUS_LABELS = { sent: 'доставлено', forbidden: 'канал закрыт', failed: 'ошибка' };
 
 export function segmentLabel(code) {
   return ({
@@ -82,7 +88,7 @@ export class UsersFeature {
     const card = await get(`/api/admin/users/${encodeURIComponent(tgId)}`);
     const user = card.user;
     const sun = card.chart?.sun;
-    const tabs = [['profile', 'Профиль'], ['chats', 'Диалоги'], ['money', 'Платежи'], ['memory', 'Память'], ['activity', 'События'], ['actions', 'Действия']];
+    const tabs = [['profile', 'Профиль'], ['chats', 'Диалоги'], ['money', 'Платежи'], ['memory', 'Память'], ['activity', 'События'], ['ltv', 'LTV'], ['actions', 'Действия']];
     $('drawer-content').innerHTML = `<div class="u-head"><div class="u-avatar">${esc(sun?.symbol || '🔮')}</div><div><div class="u-name">${esc(user.name || 'без имени')} ${card.sub_active ? `<span class="badge on">${esc(user.sub_level)}</span>` : '<span class="badge off">без подписки</span>'}</div><div class="u-meta">${user.username ? '@' + esc(user.username) + ' · ' : ''}id ${user.tg_id} · с ${date(user.created_at)}${user.source ? ' · ' + esc(user.source) : ''}</div></div></div>
       <div class="u-stats"><div class="u-stat"><b>${num(user.crystals)}</b><span>Кристаллы ✦</span></div><div class="u-stat"><b>${num(card.sub_days_left)}</b><span>дней подписки</span></div><div class="u-stat"><b>${num(user.ltv_stars)}</b><span>Stars всего</span></div><div class="u-stat"><b>${num(card.questions_today)}</b><span>вопросов сегодня</span></div><div class="u-stat"><b>${num(card.diary_streak)}</b><span>стрик дневника</span></div><div class="u-stat"><b>${num(card.referrals.level1)}</b><span>привела подруг</span></div></div>
       <div class="chip-row" id="u-tags">${(card.tags || []).map((tag) => `<span class="badge tag">${esc(tag)} <a href="#" data-untag="${esc(tag)}" aria-label="Удалить тег ${esc(tag)}">✕</a></span>`).join(' ')}${can('crm:write') ? '<button class="btn tiny ghost" id="u-add-tag" type="button">+ тег</button>' : ''}</div>
@@ -92,9 +98,11 @@ export class UsersFeature {
       <div class="u-pane" data-pane="money">${this.moneyPane(card)}</div>
       <div class="u-pane" data-pane="memory">${(card.memories || []).length ? `<div class="timeline">${card.memories.map((item) => `<div>${esc(item.fact)} <span class="badge">${esc(item.kind)}</span><div class="t-when">${date(item.created_at, true)}</div></div>`).join('')}</div>` : '<div class="muted small">Память пуста</div>'}</div>
       <div class="u-pane" data-pane="activity"><div class="timeline">${(card.events || []).map((item) => `<div><b>${esc(item.name)}</b> ${esc(item.surface || '')}${item.props_json ? `<span class="muted small">${esc(item.props_json)}</span>` : ''}<div class="t-when">${date(item.created_at, true)}</div></div>`).join('') || '<div class="muted small">Событий нет</div>'}</div></div>
+      <div class="u-pane" data-pane="ltv">${this.ltvPane(card, user)}</div>
       <div class="u-pane" data-pane="actions">${this.actionsPane(user)}</div>`;
     $('drawer').classList.remove('hidden');
     this.bindCard(tgId, user);
+    this.loadGiftForm(tgId);
   }
 
   profilePane(card, user) {
@@ -109,8 +117,89 @@ export class UsersFeature {
     return `${table([{ title: 'Заказ', render: (row) => esc(row.title || row.sku || row.kind) }, { title: 'Stars', num: true, render: (row) => num(row.amount_stars) }, { title: '✦', num: true, render: (row) => num(row.amount_crystals) }, { title: 'Статус', render: (row) => `<span class="badge ${row.status === 'paid' ? 'on' : row.status === 'refunded' ? 'bad' : 'off'}">${esc(row.status)}</span>` }, { title: 'Когда', render: (row) => date(row.paid_at || row.created_at, true) }], card.orders || [], { empty: 'Покупок не было' })}<h3 style="margin:12px 0 8px">Кристаллы</h3>${table([{ title: 'Δ', num: true, render: (row) => (row.delta > 0 ? '+' : '') + num(row.delta) }, { title: 'Причина', render: (row) => esc(row.reason) }, { title: 'Баланс', num: true, render: (row) => num(row.balance) }, { title: 'Когда', render: (row) => date(row.created_at, true) }], card.crystals_history || [], { empty: 'Движений не было' })}`;
   }
 
+  // LTV-блок (BUS-312): тир, метрики, риск-флаги, next_best_action, таймлайн.
+  // card.ltv === null для синтетики — нейтральное пустое состояние без PII.
+  ltvPane(card) {
+    const ltv = card.ltv;
+    if (!ltv) return '<div class="muted small">LTV-данных нет</div>';
+    const tierBadge = ltv.tier ? `<span class="badge on">${esc(TIER_LABELS[ltv.tier] || ltv.tier)}</span>` : '<span class="badge off">вне тира</span>';
+    const flags = (ltv.risk_flags || []).map((flag) => `<span class="badge bad">${esc(RISK_FLAG_LABELS[flag] || flag)}</span>`);
+    if (ltv.channel_closed) flags.push('<span class="badge bad">канал закрыт</span>');
+    const nba = ltv.next_best_action
+      ? `<b>${esc(RULE_LABELS[ltv.next_best_action.rule] || ltv.next_best_action.rule)} · плейбук ${esc(ltv.next_best_action.playbook)}</b>`
+      : '<span class="muted small">правил не сработало</span>';
+    const timeline = (ltv.timeline || []).map((item) => {
+      const status = item.status ? ` <span class="badge ${item.status === 'sent' ? 'on' : 'bad'}">${esc(TL_STATUS_LABELS[item.status] || item.status)}</span>` : '';
+      const text = item.text ? ` — ${esc(item.text)}` : '';
+      return `<div><b>${item.kind === 'auto' ? '🤖' : '👤'} ${esc(TL_TYPE_LABELS[item.type] || item.type)}</b>${status}${text}<div class="t-when">${esc(item.key || '')} · ${date(item.at, true)}</div></div>`;
+    }).join('');
+    return `<div class="queue-summary">${tierBadge}</div>
+      <div class="u-stats">
+        <div class="u-stat"><b>${num(ltv.ltv_stars)}</b><span>Stars всего</span></div>
+        <div class="u-stat"><b>${num(ltv.payments_count)}</b><span>платежей</span></div>
+        <div class="u-stat"><b>${num(ltv.avg_check_stars)}</b><span>средний чек</span></div>
+        <div class="u-stat"><b>${ltv.days_as_payer == null ? '—' : num(ltv.days_as_payer)}</b><span>дней платит</span></div>
+        <div class="u-stat"><b>+${num(ltv.crystals_bought)}</b><span>✦ куплено</span></div>
+        <div class="u-stat"><b>+${num(ltv.crystals_granted)}</b><span>✦ выдано</span></div>
+      </div>
+      <div class="chip-row">${flags.join(' ') || '<span class="muted small">риск-флагов нет</span>'}</div>
+      <h3 style="margin:14px 0 6px">Что сделать</h3>
+      <div class="context-row"><span>Рекомендуется</span>${nba}</div>
+      <h3 style="margin:14px 0 6px">История касаний</h3>
+      <div class="timeline">${timeline || '<div class="muted small">Касаний нет</div>'}</div>`;
+  }
+
   actionsPane(user) {
-    return `${can('grants') ? `<div class="card"><div class="card-head"><h3>Выдать</h3></div><div class="form"><div class="row-2 tight"><label>Что<select id="g-kind" class="input"><option value="plan">Подписку</option><option value="crystals">Кристаллы ✦</option><option value="spread">Право на расклад</option><option value="report">Право на разбор</option><option value="question">Вопросы</option></select></label><label>Код / SKU<input id="g-code" class="input" placeholder="vip, celtic, natal…"></label></div><div class="row-2 tight"><label>Количество<input id="g-qty" class="input" type="number" value="1" min="1"></label><label>Дней<input id="g-days" class="input" type="number" placeholder="по умолчанию"></label></div><label>Причина (в аудит)<input id="g-reason" class="input" placeholder="компенсация за сбой"></label><button class="btn gold" id="g-do" type="button">Выдать</button></div></div>` : ''}${can('crm:write') ? '<div class="card"><div class="card-head"><h3>Написать клиентке</h3></div><div class="form"><textarea id="m-text" class="input" rows="4" placeholder="Здравствуйте! Мы разобрались с вашим вопросом…"></textarea><button class="btn ghost" id="m-send" type="button">Отправить в Telegram</button></div></div>' : ''}${can('users:write') ? `<div class="card"><div class="card-head"><h3>Доступ</h3></div><div class="btn-row"><button class="btn ${user.status === 'blocked' ? '' : 'danger'}" id="u-status" type="button">${user.status === 'blocked' ? 'Разблокировать' : 'Заблокировать'}</button>${state.role === 'owner' ? '<button class="btn danger" id="u-anon" type="button">Удалить данные</button>' : ''}</div><p class="muted small" style="margin-top:8px">Блокировка закрывает доступ к API и боту. Удаление данных стирает PII и историю, финансовый след остаётся.</p></div>` : ''}`;
+    return `${can('grants') ? `<div class="card"><div class="card-head"><h3>Выдать</h3></div><div class="form"><div class="row-2 tight"><label>Что<select id="g-kind" class="input"><option value="plan">Подписку</option><option value="crystals">Кристаллы ✦</option><option value="spread">Право на расклад</option><option value="report">Право на разбор</option><option value="question">Вопросы</option></select></label><label>Код / SKU<input id="g-code" class="input" placeholder="vip, celtic, natal…"></label></div><div class="row-2 tight"><label>Количество<input id="g-qty" class="input" type="number" value="1" min="1"></label><label>Дней<input id="g-days" class="input" type="number" placeholder="по умолчанию"></label></div><label>Причина (в аудит)<input id="g-reason" class="input" placeholder="компенсация за сбой"></label><button class="btn gold" id="g-do" type="button">Выдать</button></div></div>` : ''}${can('crm:write') ? '<div class="card"><div class="card-head"><h3>Написать клиентке</h3></div><div class="form"><textarea id="m-text" class="input" rows="4" placeholder="Здравствуйте! Мы разобрались с вашим вопросом…"></textarea><button class="btn ghost" id="m-send" type="button">Отправить в Telegram</button></div></div>' : ''}${can('crm:write') ? `<div class="card" id="gift-card"><div class="card-head"><h3>Подарок (промокод)</h3></div><div class="form" id="gift-body"><div class="muted small">Проверяем доступность…</div></div></div>` : ''}${can('users:write') ? `<div class="card"><div class="card-head"><h3>Доступ</h3></div><div class="btn-row"><button class="btn ${user.status === 'blocked' ? '' : 'danger'}" id="u-status" type="button">${user.status === 'blocked' ? 'Разблокировать' : 'Заблокировать'}</button>${state.role === 'owner' ? '<button class="btn danger" id="u-anon" type="button">Удалить данные</button>' : ''}</div><p class="muted small" style="margin-top:8px">Блокировка закрывает доступ к API и боту. Удаление данных стирает PII и историю, финансовый след остаётся.</p></div>` : ''}`;
+  }
+
+  // Подарок из партии op_* (BUS-284 §4.1): pre-check eligibility строит форму
+  // заранее; machine-ошибки бэкенда (gift_cooldown, gift_batch_empty,
+  // gift_days_not_allowed) рендерим по code, не по тексту ответа.
+  async loadGiftForm(tgId) {
+    const body = $('gift-body');
+    if (!body) return;
+    let eligibility;
+    try {
+      eligibility = await get(`/api/admin/users/${encodeURIComponent(tgId)}/gift/eligibility`);
+    } catch (error) {
+      body.innerHTML = '<div class="muted small">Подарки недоступны</div>';
+      return;
+    }
+    if (!eligibility.eligible && !eligibility.cooldown) {
+      body.innerHTML = '<div class="muted small">Ваша роль не может выдавать подарки</div>';
+      return;
+    }
+    if (eligibility.cooldown) {
+      const until = eligibility.next_available_at ? date(eligibility.next_available_at, true) : '—';
+      body.innerHTML = `<div class="muted small">Кулдаун: следующий подарок можно выдать ${esc(until)}</div>`;
+      return;
+    }
+    const options = (eligibility.allowed_days || []).map((days) => `<option value="${days}">${days} дн</option>`).join('');
+    body.innerHTML = `<div class="row-2 tight"><label>Срок<select id="gf-days" class="input">${options}</select></label></div><label>Причина (обязательна, в аудит)<input id="gf-reason" class="input" placeholder="компенсация за сбой доставки"></label><button class="btn gold" id="gf-do" type="button">Выдать промокод</button>`;
+    $('gf-do')?.addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      const reason = $('gf-reason').value.trim();
+      if (!reason) { toast('Укажите причину — она попадёт в аудит', true); return; }
+      button.disabled = true;
+      try {
+        const granted = await post(`/api/admin/users/${encodeURIComponent(tgId)}/gift`, { days: +$('gf-days').value, reason });
+        body.innerHTML = `<div class="muted small">Выдан код на ${granted.days} дн. Передайте его клиентке в личном сообщении:</div><div class="pb-msg"><code>${esc(granted.code)}</code></div>`;
+        toast('Промокод зарезервирован');
+      } catch (error) {
+        button.disabled = false;
+        const code = error?.data?.error?.code || error?.code;
+        if (code === 'gift_cooldown') {
+          body.innerHTML = '<div class="muted small">Кулдаун: у этой клиентки уже был подарок недавно. Повторите позже.</div>';
+        } else if (code === 'gift_batch_empty') {
+          body.innerHTML = '<div class="muted small">Партия промокодов исчерпана — пополните партию op_*.</div>';
+        } else if (code === 'gift_days_not_allowed') {
+          body.innerHTML = '<div class="muted small">Ваша роль не может выдавать подарок такого размера.</div>';
+        } else {
+          fail(error);
+        }
+      }
+    });
   }
 
   bindCard(tgId, user) {

@@ -19,6 +19,7 @@ export const adminShellTemplate = String.raw`
       <button class="nav-item" data-view="audience"><i>👤</i>Аудитория</button>
       <button class="nav-item" data-view="cohorts"><i>📈</i>Когорты</button>
       <button class="nav-item" data-view="feedback"><i>💬</i>Отзывы</button>
+      <button class="nav-item" data-view="attention-queue"><i>📋</i>Очередь</button>
       <button class="nav-item" data-view="users"><i>👥</i>Клиентки</button>
       <button class="nav-item" data-view="orders"><i>💳</i>Заказы</button>
       <button class="nav-item" data-view="reconciliation"><i>🧾</i>Сверка платежей</button>
@@ -292,6 +293,16 @@ export const adminShellTemplate = String.raw`
           <span class="muted small">клик по карточке — открыть сегмент на экране «Аудитория»</span></div>
         <div id="coh-churn" class="churn-grid" role="group" aria-label="Churn-карточки"></div>
       </div>
+    </section>
+
+    <!-- ОЧЕРЕДЬ ВНИМАНИЯ (BUS-312) -->
+    <section class="view" id="view-attention-queue">
+      <div class="card">
+        <div class="card-head"><h3>Задачи оператора</h3><span class="muted small">приоритет P1→P2→P3 · SLA P1 48 ч, P2/P3 7 дн</span></div>
+        <div id="queue-header" class="queue-header"></div>
+      </div>
+      <div id="queue-list" class="queue-list"></div>
+      <div id="queue-opreport" class="card" style="margin-top:12px"></div>
     </section>
 
     <!-- КЛИЕНТКИ -->
