@@ -21,7 +21,7 @@ from httpx import ASGITransport, AsyncClient  # noqa: E402
 
 from app.api.deps import get_db  # noqa: E402
 from app.api.main import app  # noqa: E402
-from app.repo import analytics, feedback as feedback_repo, users  # noqa: E402
+from app.repo import feedback as feedback_repo, users  # noqa: E402
 
 
 # ───────────────────────────────── helpers ────────────────────────────────────

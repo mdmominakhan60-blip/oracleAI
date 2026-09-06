@@ -24,11 +24,12 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+from ..config import settings
 from ..data.session import transaction
 
 from ..core import agent as agent_core
 from ..core import astro
-from ..repo import comms, content, growth, users
+from ..repo import comms, content, feedback as feedback_repo, growth, users
 from . import analytics, broadcast, horoscopes, payment_monitor, practices as practices_svc
 
 log = logging.getLogger("oracle.scheduler")
