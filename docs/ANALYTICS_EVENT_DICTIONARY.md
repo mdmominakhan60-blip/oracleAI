@@ -31,6 +31,26 @@
 
 D1/D7/D30 — это milestone пользователя, а не количество открытий. Если пользовательница вернулась на 31-й день, сразу три milestone (`return_d1`, `return_d7`, `return_d30`) могут быть записаны при этом открытии; dashboard должен считать cohort completion (COUNT DISTINCT tg_id), а не складывать rows как sessions.
 
+## Web funnel events (visit → signup → activation — EXP-004 / BUS-144, сверка BUS-271)
+
+Нижний ярус воронки до ботового `start`: анонимная сессия на публичной поверхности и регистрация. Связка — по `session_id` (клиентский анонимный sid, колонка `events.session_id`, миграция 0008; частичный уникальный индекс `uq_events_session_name` = идемпотентность per-session). Приём — только через серверный эндпоинт `POST /api/funnel/events` (батч 1–20, rate-limit, pydantic extra=forbid, allowlist имён и props); клиент не создаёт новые имена. Все props — категориальные allowlist-значения, нормализуемые сервером; вне формата — отбрасываются (fail-closed). Детальная схема props: `Business/metrics/funnel-events-schema.md`.
+
+| Event | Момент | Allowed props | tg_id | Surface | Owner | KPI |
+|---|---|---|---|---|---|---|
+| `visit` | Сервер принял первое событие анонимной сессии на публичной поверхности (лендинг/мини-лендинг); дедуп `(session_id, name)` на уровне БД. | required `source` (`organic`\|`direct`\|`referral`\|`tg`\|`instagram`\|`reddit`\|`email`\|`paid`\|`unknown`), `medium` (`organic`\|`cpc`\|`social`\|`email`\|`referral`\|`none`\|`unknown`); optional `campaign` (ascii-токен ≤64), `path` (путь без query ≤128) | NULL | `web`/`bot`/`miniapp` | Growth/Product | Top of funnel; visit→signup conversion; channel attribution (utm). |
+| `signup` | Сервер зафиксировал регистрацию (создание аккаунта); до связки с профилем tg_id — псевдонимный. | same props as `visit` + optional `signup_method` (`telegram`, `miniapp`, ascii-токен ≤32) | optional | `web`/`bot`/`miniapp` | Growth/Product | Registration rate (signup/visit); канал регистраций. |
+| `activation` | Сервер зафиксировал ключевое действие активации. | same props as `visit` + required `action`: `first_question` \| `first_ritual` \| `profile_complete` \| `daily_forecast` (несписочное — отказ записи) | optional | `web`/`bot`/`miniapp` | Growth/Product | Activation rate = activation/signup (KPI проекта ≥25% регистраций, organic-growth-engine). |
+
+**Anti-фрод и дедупликация:** `visit` дедуплицируется по `(session_id, name)` — повторные beacon/retry не создают дублей; `activation` по одному sid — одно событие на action. Проп `path` не содержит query-строку (utm и произвольные параметры отбрасываются — «arbitrary URL query» запрещён глобальным privacy-правилом). Имена в allowlist `app/repo/analytics.py` (`E_VISIT`/`E_SIGNUP`/`E_ACTIVATION`).
+
+## Promo redemption (BUS-271 сверка)
+
+| Event | Момент | Allowed props | Surface | Owner | KPI |
+|---|---|---|---|---|---|
+| `promo_redeemed` | Серверная точка успешного активирования промокода: после идемпотентного `_apply_grant` (`source='promo'`) в `redeem_promo` (billing). Повторное использование того же кода той же клиенткой не создаёт новое событие (dedup таблицей `promo_redemptions`). | `batch` (server-owned значение из `promo_codes.batch`; для беты — `BETA1`, разрез волны беты); `kind`: `plan_days` \| `crystals` \| `product`; **`code` — НЕ в события**: точный код — user-redeemable secret с неограниченной кардинальностью (per-user значение), для разбора живёт в `promo_redemptions` (защищённая БД, admin-only) | `bot` | Product | Redemption rate батча, конверсия промо→активация, разрез волны беты по `batch=BETA1`. |
+
+**Правило `code`-пропа (уточнение против текущей эмиссии):** проп `code` в текущем вызове `billing.py` (`props={"code", "batch", "kind"}`) нарушает низкокардиальное правило словаря — точный промокод есть per-user значение, а `promo_redemptions` уже хранит связку `(code, tg_id)` полностью. Backend-дельта (BUS-172/реализация беты): убрать `code` из props события, оставить `batch`+`kind`. Атрибуция источника пользователя через `users.source = promo:{batch}` (server-side, уже реализовано) не меняется.
+
 ## Existing product events
 
 | Event | Server-owned props | KPI/use |
@@ -128,6 +148,16 @@ Monetization events are emitted only from authenticated server-owned transitions
 | Survey claim rate | Unique users with `survey_grant_issued` divided by users who received the survey invitation. | Responses without bonus (anti-abuse gates, BUS-170 §5) are not claims. |
 | Claim→spend (90d) | Users spending the granted lot within 90d of `survey_grant_issued`, divided by grant recipients. | Only the granted `review_bonus` lot counts, not user's own crystals. |
 | Fallback rate | `llm_fallback` operational records divided by successful provider completions, segmented by purpose/provider/language outside event table. | Never attach prompt, answer or memory. |
+| Beta wave DAU | COUNT DISTINCT tg_id с любым событием за UTC-день среди пользователей волны (вход в когорту волны: `promo_redeemed` с `batch='BETA1'` ИЛИ `start` с `source='promo:BETA1'`-семейство / инвайт-лист). Базовая поверхность — daily-агрегаты, не сырые events. | Синтетические tg_id 10001/10002 исключать всегда. |
+| Beta activation rate | Уникальные пользователи когорты волны с `first_ritual` или `first_question` (в памяти о D1-окне) / уникальные вошедшие в когорту волны. | Активация = first-value milestone, не `miniapp_open`. |
+| Beta funnel visit→signup→activation | Когортная воронка EXP-004 по `session_id` (funnel-trace) — только для web-сессий; ботовая воронка считается отдельно от `start`. | Не смешивать session-воронку (анонимную) с tg_id-воронкой. |
+| Survey response rate (beta) | Определение выше («Survey response rate»); для беты — когорта волны, survey_code=`day7_v1`. | Reminder-касания схлопываются в получателя (COUNT DISTINCT tg_id). |
+| Promo redemption rate (beta) | Уникальные активации кода батча `BETA1` / количество выданных кодов батча (знаменатель — из `promo_codes`/`promo_redemptions`, не из событий). | Знаменатель — учётная таблица, не события. |
+| Error rate (beta-наблюдаемость) | Доля 5xx-ответов API + доля неуспешных LLM-вызовов за день. Источник — операционные логи/`llm_usage`, НЕ product events. | Продуктовые события не предназначены для ops-алертов. |
+| LLM ok=0 share | Доля LLM-вызовов с `ok=false` в `llm_usage` за день, по purpose/provider. | Отдельно от error rate API. |
+| p50/p95 latency | `percentile_cont` по `llm_usage.latency_ms` за день по purpose/provider. **Реализация — BUS-230 п.3 (F-3)**: owner Backend Engineer, PostgreSQL-only с деградацией на SQLite. Дашборд беты потребляет это, дублирование агрегации не создаёт. | Агрегация — не Analytics-зона; Analytics владеет определением KPI и порогами. |
+
+**Стык BUS-230 ↔ дашборд беты (согласовано BUS-271):** BUS-230 F-3 даёт перцентили p50/p95 как SQL-агрегат в admin-агрегате; дашборд беты (Analytics) потребляет этот агрегат и добавляет DAU волны / activation rate / error rate / llm ok=0 share / redemption rate как KPI-определения из этой таблицы. Отдельного второго перцентиль-агрегата не создаём.
 
 ## Review and ownership
 
