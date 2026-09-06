@@ -16,7 +16,6 @@ from scripts.ensure_mcp_role import (
     _quote_ident,
     _quote_literal,
     _validated,
-    ensure,
 )
 
 
