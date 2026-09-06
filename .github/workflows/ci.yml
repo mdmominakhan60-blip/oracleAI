@@ -81,6 +81,11 @@ jobs:
         shell: bash
         run: find miniapp/js admin -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
       - name: Ensure oracle_test role (BUS-303 least privilege)
+        # пароль роли = пароль сервис-контейнера postgres (тот же домен доверия,
+        # роль NOSUPERUSER/NOCREATEDB/NOCREATEROLE); TEST_ROLE_PASSWORD берёт
+        # скрипт из env, если не передан явно
+        env:
+          TEST_ROLE_PASSWORD: oracle
         run: python scripts/ensure_test_role.py --admin-database-url postgresql://oracle:oracle@127.0.0.1:5432/postgres
       - name: PostgreSQL schema migration
         run: alembic upgrade head
