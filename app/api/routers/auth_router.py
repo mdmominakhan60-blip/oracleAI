@@ -1,0 +1,111 @@
+"""Аутентификация и replay-защита initData (BUS-200).
+
+Поток:
+  1. Клиент шлёт initData один раз в `POST /auth/session`.
+  2. Сервер проверяет подпись Telegram (`parse_init_data`) и атомарно
+     резервирует hash initData в Redis (SET NX, TTL = срок годности подписи).
+  3. Повторный минт с той же initData → 401: строка потребляется один раз.
+  4. При успехе минтится stateless `X-Session-Token` = HMAC(tg_id:expiry);
+     дальше клиент ходит токеном, initData не нужен.
+  5. До миграции Mini App на токены read-ручки продолжают принимать initData
+     напрямую. Replay GET не расширяет полномочия: украденная строка даёт не
+     больше, чем одно легитимное окно 24ч жизни подписи.
+
+Redis нужен только на минте: токен проверяется без бэкенда. Сбой Redis
+fail-open (REPLAY_FAIL_CLOSED=1 включает fail-closed) — у авторизации не
+появляется второго источника тотального отказа, а окно replay и так
+ограничено 24ч. Решение согласовано с Engineering Lead; security-review:
+BUS-200.
+"""
+from __future__ import annotations
+
+import hashlib
+import logging
+import time
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+
+from ...config import settings
+from ...services import rate_limit as rate_limit_service
+from ...services.repo_gateway import users as users_repo
+from ..auth_common import sign_session_token
+from ..deps import get_db, rate_limit
+from ..security import MAX_AGE_SECONDS, parse_init_data
+
+log = logging.getLogger("oracle.api.auth")
+
+router = APIRouter(prefix="/api", tags=["auth"])
+
+SESSION_TTL = MAX_AGE_SECONDS
+MINT_LIMIT_PER_MINUTE = 10
+
+try:
+    from redis.asyncio import Redis as _Redis
+    _redis: _Redis | None = _Redis.from_url(settings.redis_url,
+                                            decode_responses=True)
+except Exception:
+    _redis = None
+
+
+class InitDataRequest(BaseModel):
+    # Optional: отсутствующее поле — 401 (как и пустая строка), не 422:
+    # единый контракт ошибки аутентификации для клиента.
+    init_data: str = ""
+
+
+def _init_data_hash(raw: str) -> str:
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+async def _mark_init_data_used(raw: str) -> bool:
+    """Атомарная бронь nonce. True — initData видна впервые, False — replay.
+
+    Сбой Redis: fail-open по умолчанию, REPLAY_FAIL_CLOSED=1 — fail-closed.
+    Хеш в логе усечён: он не секрет (вход — сама строка), но и не нужен целиком.
+    """
+    digest = _init_data_hash(raw)
+    try:
+        if _redis is None:
+            raise RuntimeError("redis не сконфигурирован")
+        created = await _redis.set(f"oracleai:initdata:{digest}", "1",
+                                   nx=True, ex=MAX_AGE_SECONDS)
+        if not created:
+            log.warning("auth_replay_blocked hash=%s", digest[:12])
+        return bool(created)
+    except Exception as e:
+        if settings.replay_fail_closed:
+            log.error("auth_replay_store_down fail-closed: %s", e)
+            return False
+        log.warning("auth_replay_store_down fail-open: %s", e)
+        return True
+
+
+@router.post("/auth/session", dependencies=[Depends(rate_limit("write"))])
+async def mint_session(req: InitDataRequest, db=Depends(get_db)):
+    """Обмен подписанной initData на долгоживущий session-токен.
+
+    Публичный эндпоинт: валидация подписи обязательна, темп ограничен и по IP
+    (guard rate_limit), и по tg_id после валидации.
+    """
+    data = parse_init_data(req.init_data)
+    if not data:
+        raise HTTPException(401, "подпись Telegram не подтверждена")
+
+    tg_id = data["tg_id"]
+    decision = await rate_limit_service.allow(str(tg_id), "auth",
+                                              MINT_LIMIT_PER_MINUTE, 60)
+    if not decision.allowed:
+        raise HTTPException(429, "слишком часто — переведи дыхание 🌙",
+                            headers={"Retry-After": str(decision.retry_after)})
+
+    if not await _mark_init_data_used(req.init_data):
+        raise HTTPException(401, "initData уже использована (replay)")
+
+    await users_repo.ensure(db, tg_id, data["first_name"], data["username"],
+                            lang=data["language_code"])
+
+    expiry = int(time.time()) + SESSION_TTL
+    log.info("session minted tg_id=%s", tg_id)
+    return {"session_token": sign_session_token(tg_id, expiry),
+            "expires_in": SESSION_TTL}

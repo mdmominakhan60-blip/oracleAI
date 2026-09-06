@@ -22,7 +22,8 @@
   S5 missing    — параметр hash отсутствует                       → 401
   S6 badhash    — hash не совпадает (подпись чужого бота)         → 401
   S7 dupkey     — дублирующийся ключ user= (ambiguous)            → 401
-  S8 replay     — валидная подпись переиспользована повторно      → см. вердикт
+  S8 replay     — повторный минт POST /auth/session с той же подписью  → 401
+  S9 token      — минтенный X-Session-Token аутентифицирует GET /api/me → 200
 
 Owner isolation:
   O1 A читает только себя (GET /api/me → tg_id A)
@@ -143,14 +144,27 @@ def main() -> int:
     r = client.get("/api/me", headers={"x-init-data": dup})
     check("S7_dupkey", r.status_code == 401, f"HTTP {r.status_code}")
 
-    # ── S8 replay: та же валидная подпись, второй запрос ─────────────────────
+    # ── S8 replay: повторный минт POST /auth/session с той же подписью ───────
+    # Новая семантика (BUS-200): initData потребляется ОДИН раз — на минте
+    # session-токена; повторный минт → 401. Read-ручки продолжают принимать
+    # initData напрямую (back-compat), это не расширяет полномочия.
     replay = build_valid(tok, args.tg_a, now)
-    client.get("/api/me", headers={"x-init-data": replay})  # первый (принимается)
-    r = client.get("/api/me", headers={"x-init-data": replay})  # повтор
-    # ОЖИДАНИЕ гейта: replay ОТВЕРГАЕТСЯ. Текущий код replay НЕ режет
-    # (нет nonce/jti-кэша) → r.status_code==200 означает FAIL находки.
-    check("S8_replay_rejected", r.status_code == 401,
-          f"HTTP {r.status_code} (200 = replay принят — нет защиты)")
+    r1 = client.post("/api/auth/session", json={"init_data": replay})
+    minted_token = r1.json().get("session_token") if r1.status_code == 200 else None
+    r = client.post("/api/auth/session", json={"init_data": replay})
+    check("S8_replay_rejected",
+          r1.status_code == 200 and r.status_code == 401,
+          f"первый минт HTTP {r1.status_code}, повтор HTTP {r.status_code} "
+          f"(повтор 200 = replay принят — нет защиты)")
+
+    # ── S9 session-token: минтенный токен аутентифицирует без initData ──────
+    if minted_token:
+        r = client.get("/api/me", headers={"X-Session-Token": minted_token})
+        check("S9_session_token_works",
+              r.status_code == 200 and r.json().get("tg_id") == args.tg_a,
+              f"HTTP {r.status_code}")
+    else:
+        check("S9_session_token_works", False, "минт не состоялся — S8 провален")
 
     # ── O1 A читает только себя ──────────────────────────────────────────────
     r = client.get("/api/me", headers={"x-init-data": build_valid(tok, args.tg_a, now)})

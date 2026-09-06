@@ -11,6 +11,7 @@ from ..config import settings
 from ..services.repo_gateway import admin as admin_repo
 from ..services.repo_gateway import users as users_repo
 from ..services import rate_limit as rate_limit_service
+from .auth_common import verify_session_token
 from .security import parse_init_data
 
 log = logging.getLogger("oracle.api")
@@ -103,16 +104,20 @@ def rate_limit(bucket: str = "read"):
 # ──────────────────────────────── клиентка ────────────────────────────────────
 
 async def _authenticated_user(db, x_init_data: str | None, dev_user: int | None,
+                              x_session_token: str | None = None,
                               *, allow_deleted: bool = False,
                               dev_allowed: bool = False):
     """Resolve identity and enforce the account lifecycle state.
 
-    Deleted users remain as anonymized accounting anchors, but are not valid
-    product principals. The sole exception is the confirm-gated deletion route,
-    which must remain idempotent for a retried client request.
+    Priority: X-Session-Token > x-init-data > dev_user.
     """
-    data = parse_init_data(x_init_data) if x_init_data else None
-    tg_id = data["tg_id"] if data else None
+    tg_id = None
+    data = None
+    if x_session_token:
+        tg_id = verify_session_token(x_session_token)
+    if tg_id is None:
+        data = parse_init_data(x_init_data) if x_init_data else None
+        tg_id = data["tg_id"] if data else None
     if tg_id is None and dev_allowed and dev_user:
         tg_id = dev_user
     if tg_id is None:
@@ -133,17 +138,22 @@ async def _authenticated_user(db, x_init_data: str | None, dev_user: int | None,
 
 async def current_user(request: Request, db=Depends(get_db),
                        x_init_data: str | None = Header(default=None),
+                       x_session_token: str | None = Header(default=None),
                        dev_user: int | None = Query(default=None)):
-    """Клиентка по подписи Telegram. В DEV_MODE — по `?dev_user=<id>` (+ DEV_KEY)."""
+    """Клиентка по подписи Telegram или X-Session-Token. В DEV_MODE — по `?dev_user=<id>` (+ DEV_KEY)."""
     return await _authenticated_user(db, x_init_data, dev_user,
+                                     x_session_token=x_session_token,
                                      dev_allowed=_dev_identity_allowed(request))
 
 
 async def deletion_user(request: Request, db=Depends(get_db),
                         x_init_data: str | None = Header(default=None),
+                        x_session_token: str | None = Header(default=None),
                         dev_user: int | None = Query(default=None)):
     """Identity dependency for a retry of the confirm-gated delete operation."""
-    return await _authenticated_user(db, x_init_data, dev_user, allow_deleted=True,
+    return await _authenticated_user(db, x_init_data, dev_user,
+                                     x_session_token=x_session_token,
+                                     allow_deleted=True,
                                      dev_allowed=_dev_identity_allowed(request))
 
 
@@ -185,15 +195,19 @@ class AdminContext:
 
 async def current_admin(request: Request, db=Depends(get_db),
                         x_init_data: str | None = Header(default=None),
+                        x_session_token: str | None = Header(default=None),
                         dev_user: int | None = Query(default=None)) -> AdminContext:
     """Администратор панели.
 
-    Вход только через подпись Telegram: панель открывается кнопкой из бота, и
-    отдельного пароля у неё нет — так нечего утекать. `dev_user` работает лишь
+    Вход через подпись Telegram или X-Session-Token. `dev_user` работает лишь
     при DEV_MODE (и с DEV_KEY, когда он задан), то есть на машине разработчика.
     """
-    data = parse_init_data(x_init_data) if x_init_data else None
-    tg_id = data["tg_id"] if data else None
+    tg_id = None
+    if x_session_token:
+        tg_id = verify_session_token(x_session_token)
+    if tg_id is None:
+        data = parse_init_data(x_init_data) if x_init_data else None
+        tg_id = data["tg_id"] if data else None
     if tg_id is None and _dev_identity_allowed(request) and dev_user:
         tg_id = dev_user
     if tg_id is None:

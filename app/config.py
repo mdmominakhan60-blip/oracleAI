@@ -112,6 +112,11 @@ class Settings:
     redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0").strip()
     rate_limit_backend: str = os.getenv("RATE_LIMIT_BACKEND", "memory").strip().lower()
     rate_limit_fail_closed: bool = os.getenv("RATE_LIMIT_FAIL_CLOSED", "1") == "1"
+    # Replay-защита initData (BUS-200): при недоступности Redis минт сессии
+    # fail-open, чтобы авторизация не получила второй точку тотального отказа;
+    # окно replay и так ограничено 24ч жизни подписи. REPLAY_FAIL_CLOSED=1
+    # переворачивает в fail-closed (строже, доступность — жертвой).
+    replay_fail_closed: bool = os.getenv("REPLAY_FAIL_CLOSED", "0") == "1"
     celery_enabled: bool = os.getenv("CELERY_ENABLED", "0") == "1"
     celery_task_always_eager: bool = os.getenv("CELERY_TASK_ALWAYS_EAGER", "0") == "1"
     celery_task_time_limit: int = _int("CELERY_TASK_TIME_LIMIT", 300)
