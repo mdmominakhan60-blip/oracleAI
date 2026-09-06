@@ -56,10 +56,10 @@ Scanned files:
 | `app/services/rate_limit.py                 ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/services/referrals.py                  ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/services/repo_gateway.py               ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
-| `app/services/scheduler.py` **✅ DB-001**        |        29 |         0 |                0 |             0 |              0 |         0 |        2 |   0 |    0 |           0 |             0 |
+| `app/services/scheduler.py` **✅ DB-001**        |        28 |         0 |                0 |             0 |              0 |         0 |        2 |   0 |    0 |           0 |             0 |
 | `app/services/telegram.py                   ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/data/seed.py` **✅ DB-001**                 |        14 |         0 |                0 |             0 |              0 |         0 |       14 |   0 |    0 |           0 |             0 |
-| ****TOTAL**                                ** | **387** | **0** | **0** | **0** | **0** | **0** | **55** | **0** | **0** | **1** | **0** |
+| ****TOTAL**                                ** | **386** | **0** | **0** | **0** | **0** | **0** | **55** | **0** | **0** | **1** | **0** |
 
 ### Column Legend
 
