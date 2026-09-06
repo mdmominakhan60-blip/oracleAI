@@ -129,7 +129,13 @@
     'account-delete': () => call('deleteAccount'),
     'account-privacy': () => call('openPrivacyCenter'),
     'account-export': () => call('exportAccount'),
-    'city-pick': (el) => call('pickCitySuggestion', el)
+    'city-pick': (el) => call('pickCitySuggestion', el),
+    'survey-choice': (el) => call('surveyChoice', el),
+    'survey-skip': () => call('surveySkip'),
+    'survey-next': () => call('surveyAdvance'),
+    'survey-back': () => call('surveyBack'),
+    'survey-close': () => call('closeSurvey'),
+    'survey-open': () => call('openSurvey')
   };
 
   app.actionHandlers = actionHandlers;

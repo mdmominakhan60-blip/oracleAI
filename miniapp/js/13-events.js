@@ -53,6 +53,11 @@ document.addEventListener('input', function (event) {
       ['ch-city', 'sp-city'].includes(event.target.id)) {
     app.citySuggest(event.target);
   }
+  // BUS-240: текст опроса (dream / other) — в state формы
+  if (event.target && typeof app.surveySyncInput === 'function' &&
+      ['fb-dream-text', 'fb-other-text'].includes(event.target.id)) {
+    app.surveySyncInput(event.target);
+  }
 });
 
 
