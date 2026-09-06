@@ -335,7 +335,10 @@ async def audience_segments(db) -> dict:
 
     now = datetime.now(timezone.utc)
     week_ago = (now - timedelta(days=7)).isoformat()
-    month_ago = (now - timedelta(days=30)).isoformat()
+    # Границы «оценки 7 дней назад»: окно предиката целиком сдвинуто на -7д,
+    # а не только одна из границ (иначе прошлое завышено/занижено → дельта врёт).
+    month_ago_past = (now - timedelta(days=37)).isoformat()   # 30-дн. окно на -7д
+    in_3d_past = (now - timedelta(days=4)).isoformat()        # «истекает в 3д» на -7д
 
     segments = []
     for name in users_repo.SEGMENTS:
@@ -356,12 +359,10 @@ async def audience_segments(db) -> dict:
             elif name == "cancelled_recent":
                 past_where = ("(sub_until IS NOT NULL AND sub_until <= :from "
                               "AND sub_until >= :month_ago)")
-                params = {"from": (now - timedelta(days=7)).isoformat(),
-                          "month_ago": month_ago}
-            else:  # expiring_3d
+                params = {"from": week_ago, "month_ago": month_ago_past}
+            else:  # expiring_3d: (now-7d, now-4d], не (now-7d, now+3d]
                 past_where = ("sub_until > :from AND sub_until <= :in_3d")
-                params = {"from": (now - timedelta(days=7)).isoformat(),
-                          "in_3d": (now + timedelta(days=3)).isoformat()}
+                params = {"from": week_ago, "in_3d": in_3d_past}
             cur = await db.execute(
                 "SELECT COUNT(*) c FROM users WHERE status <> 'deleted' "
                 f"AND ({past_where})", params)
@@ -381,6 +382,10 @@ async def audience_segments(db) -> dict:
 async def audience_churn(db) -> dict:
     """Churn-карточки R3 BUS-168: expiring_3d/sleeping_14d с платёжным сплитом.
 
+    Окно берётся из SEGMENTS (users.py) через _segment_sql — тот же предикат,
+    что в segment_count таблицы аудитории, поэтому расхождение карточки и
+    таблицы невозможно конструкцией (ревью BUS-279: копипаст (now-7d, now+3d]
+    давал карточке завышение на истёкших за неделю).
     Privacy §2.3: только агрегаты; категория пользователя (payer/free) —
     денормализованное поле ltv_stars, не PII.
     """
@@ -388,20 +393,13 @@ async def audience_churn(db) -> dict:
 
     now = datetime.now(timezone.utc)
     cards = []
-    for name, past_where, params in (
-        ("expiring_3d",
-         "sub_until > :from AND sub_until <= :in_3d",
-         {"from": (now - timedelta(days=7)).isoformat(),
-          "in_3d": (now + timedelta(days=3)).isoformat()}),
-        ("sleeping_14d",
-         "(last_seen IS NULL OR last_seen < :two_weeks_ago)",
-         {"two_weeks_ago": (now - timedelta(days=14)).isoformat()}),
-    ):
+    for name in ("expiring_3d", "sleeping_14d"):
+        where, params = users_repo._segment_sql(name)
         cur = await db.execute(
             "SELECT COUNT(*) total, "
             "SUM(CASE WHEN ltv_stars > 0 THEN 1 ELSE 0 END) payers "
             "FROM users WHERE status <> 'deleted' "
-            f"AND ({past_where})", params)
+            f"AND ({where})", params)
         row = dict(await cur.fetchone())
         total = row["total"] or 0
         payers = row["payers"] or 0

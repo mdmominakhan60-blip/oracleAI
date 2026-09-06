@@ -25,6 +25,10 @@ async def _track(db, name: str, tg_id: int | None = None, day: str | None = None
 
 async def _ensure(db, tg_id: int, **fields):
     await users_repo.ensure(db, tg_id, "Т")
+    # AUTO_TRIAL=1 даёт last_seen=NULL — попадает в sleeping_14d и ломает
+    # Δ7д- и churn-тесты, где важен именно segment_count, а не дефолт.
+    # Явный last_seen=now исключает это пересечение без изменения ensure().
+    fields.setdefault("last_seen", datetime.now(timezone.utc).isoformat())
     if fields:
         await users_repo.update(db, tg_id, **fields)
 
@@ -162,6 +166,45 @@ async def test_audience_segments_delta_on_empty_base_is_zero(db):
     assert by_name["first_value"]["delta_7d"] is None
 
 
+async def test_delta7d_expiring_3d_window_fully_shifted(db):
+    """Δ7d expiring_3d: прошлое окно (now-7d, now-4d], не (now-7d, now+3d].
+
+    2145 (sub_until=now+1d): в сегодняшнем сегменте, но 7 дней назад до
+    истечения было 31 день — в прошлом окне её нет (несдвинутая верхняя
+    граница, баг ревью №1, давала бы past=2 и delta=-1).
+    2146 (sub_until=now-5d): сегодня истекла, но 7 дней назад «истекала
+    в 3 дня» — в прошлом окне есть (заякоривает сдвинутое окно).
+    count=1 и delta=0 вместе означают past=1: 2146 внутри, 2145 снаружи.
+    """
+    now = datetime.now(timezone.utc)
+    await _ensure(db, 2145, sub_until=(now + timedelta(days=1)).isoformat())
+    await _ensure(db, 2146, sub_until=(now - timedelta(days=5)).isoformat())
+
+    table = await analytics.audience_segments(db)
+    by_name = {s["segment"]: s for s in table["segments"]}
+    assert by_name["expiring_3d"]["count"] == 1
+    assert by_name["expiring_3d"]["delta_7d"] == 0
+
+
+async def test_delta7d_cancelled_recent_window_fully_shifted(db):
+    """Δ7d cancelled_recent: 30-дневное окно, оценённое 7 дней назад.
+
+    2147 (sub_until=now-33d): сегодня вне 30-дневного окна, но 7 дней
+    назад отмена была свежей ([now-37d, now-7d]). Несдвинутая нижняя
+    граница now-30d (баг ревью №2) давала бы past=0 и delta=1.
+    2148 (sub_until=now-5d): сегодняшняя отмена — в сегменте, в прошлом
+    окне её нет (верхняя граница <= now-7d). count=1, delta=0 → past=1.
+    """
+    now = datetime.now(timezone.utc)
+    await _ensure(db, 2147, sub_until=(now - timedelta(days=33)).isoformat())
+    await _ensure(db, 2148, sub_until=(now - timedelta(days=5)).isoformat())
+
+    table = await analytics.audience_segments(db)
+    by_name = {s["segment"]: s for s in table["segments"]}
+    assert by_name["cancelled_recent"]["count"] == 1
+    assert by_name["cancelled_recent"]["delta_7d"] == 0
+
+
 async def test_audience_segments_matches_broadcast_preview(db):
     """§3.3: счётчики дашборда == broadcast preview (дельта 0)."""
     await _ensure(db, 2101, onboarded=1)
@@ -192,6 +235,25 @@ async def test_audience_churn_cards_split_by_paying(db):
     assert cards["expiring_3d"]["free"] == 1
     assert cards["sleeping_14d"]["total"] == 1
     assert cards["sleeping_14d"]["payers"] == 1
+
+
+async def test_audience_churn_card_matches_segment_count(db):
+    """Ревью №3 (BUS-279): карточка и таблица считают одну метрику.
+
+    2153 истекла 5 дней назад: в багованном окне карточки (now-7d, now+3d]
+    её считали — карточка завышала на 1 против segment_count. Теперь оба
+    источника идут через один предикат SEGMENTS — расхождение конструкцией
+    исключено, тест якорит равенство на базе с «истёкшей за неделю».
+    """
+    now = datetime.now(timezone.utc)
+    await _ensure(db, 2153, sub_until=(now - timedelta(days=5)).isoformat())
+
+    cards = {c["segment"]: c for c in
+             (await analytics.audience_churn(db))["cards"]}
+    table = await analytics.audience_segments(db)
+    counts = {s["segment"]: s["count"] for s in table["segments"]}
+    assert cards["expiring_3d"]["total"] == counts["expiring_3d"] == 0
+    assert cards["sleeping_14d"]["total"] == counts["sleeping_14d"] == 0
 
 
 async def test_goal_split_groups_and_unsets(db):
