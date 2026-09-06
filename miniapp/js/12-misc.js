@@ -870,7 +870,7 @@
     ov.id = 'app-modal';
     ov.innerHTML = `<div class="modal${variant === 'full' ? ' full' : ''}" role="dialog" aria-modal="true" tabindex="-1">${html}</div>`;
     // aria-labelledby ставим только при найденном заголовке — ссылка на пустой id хуже её отсутствия
-    const h3 = ov.querySelector('.modal > h3, .modal .picker-title');
+    const h3 = ov.querySelector('.modal > h3, .modal .picker-title, .modal .fb-title');
     if (h3) {
       if (!h3.id) h3.id = 'app-modal-title';
       ov.querySelector('.modal').setAttribute('aria-labelledby', h3.id);
