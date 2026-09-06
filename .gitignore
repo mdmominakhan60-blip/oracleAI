@@ -1,7 +1,4 @@
 .env
-.env.*
-!.env.example
-!.env.production.example
 __pycache__/
 *.pyc
 .venv/
@@ -41,9 +38,7 @@ __pycache__/
 
 # Локальные журналы и временные проверки
 *.log
-!docs/RELEASE/evidence/*.log
 *.qa_*.py
-logs/
 
 # Frontend dependency/build outputs
 node_modules/
@@ -71,10 +66,5 @@ screenshots/
 # Host-mounted encrypted PostgreSQL backup artifacts
 /backups/
 infra/backups/
-infra/staging/backups/
 infra/restore-rehearsal/oracle-*.dump.enc
 infra/restore-rehearsal/oracle-*.dump.enc.sha256
-infra/staging/.env.staging
-
-# staging public tunnel runtime state (BUS-138): URL меняется при рестарте туннеля
-infra/staging/PUBLIC_URL.txt

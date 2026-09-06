@@ -54,7 +54,6 @@ if not os.environ.get("DATABASE_URL"):
     print("DATABASE_URL не задан — сертификация требует PostgreSQL", file=sys.stderr)
     sys.exit(2)
 
-import httpx  # noqa: E402
 
 from app.api.deps import get_db  # noqa: E402
 from app.api.main import app  # noqa: E402
@@ -221,7 +220,7 @@ class Cert:
 async def s1_invoice(c: Cert) -> None:
     """S1: invoice — web-checkout → pending-заказ + paddle_transaction_id."""
     checks = []
-    user = await c.fresh_user(CERT_TG_ID)
+    await c.fresh_user(CERT_TG_ID)
     await c.enable_flag()
 
     res = await c.http.post("/api/shop/web-checkout",
@@ -547,7 +546,8 @@ async def reconciliation(c: Cert) -> dict:
         and all(p["tg_id"] == o["tg_id"] for o, p in zip(paid_web_orders, payments)),
         f"paid_orders={len(paid_web_orders)} payments={len(payments)}"))
 
-    granting = [h for h in hooks if h["kind"] == "transaction.completed"]
+    # granting вычислен сверкой ниже; переменная не нужна отдельно
+    _ = [h for h in hooks if h["kind"] == "transaction.completed"]
     # Истинная сверка «деньги ↔ журнал»: каждый payment обязан ссылаться на
     # event_id, зафиксированный в webhook_events (charge_id == event_id).
     event_ids = {h["event_id"] for h in hooks}
