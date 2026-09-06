@@ -98,6 +98,23 @@ DEFAULT_EN_CONTENT: dict[tuple[str, str], dict[str, str]] = {
                  "/promo {code}\n"
                  "The stars will wait, but a gift is best enjoyed soon 🌙"),
     },
+    ("copy", "post_limit"): {
+        "title": "After limit: gentle invite",
+        "body": ("{name}, yesterday's questions are gone, but I can see the curiosity "
+                 "is still there ✨\n\n"
+                 "Without limits, these are always open to you: your card of the day "
+                 "and forecast, your diary and practices, Tarot readings.\n\n"
+                 "And if you'd like to ask as many questions as you wish — a "
+                 "subscription opens my full depth for you. Drop by whenever the mood "
+                 "strikes — I'm here 🌙"),
+    },
+    ("copy", "low_balance"): {
+        "title": "Low balance: gentle reminder",
+        "body": ("{name}, the Crystals in your balance are melting 🌙 Top up so our "
+                 "connection isn't interrupted mid-practice.\n\n"
+                 "You can do it anytime — in your Profile. No rush — I'll keep "
+                 "everything safe."),
+    },
     ("copy", "free_forecast_cta"): {
         "title": "Free forecast CTA",
         "body": "\n\n🔮 <b>Oracle</b> — your free daily forecast. Open it in Telegram: {url}",

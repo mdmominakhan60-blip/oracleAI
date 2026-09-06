@@ -146,6 +146,66 @@ async def _audience(db, zones: set[str]) -> list:
         last_id = batch[-1]["tg_id"]
 
 
+async def _crm_post_limit_audience(db, now_utc: datetime) -> list:
+    """Кому пора post_limit: limit_reached 24–48ч назад, нет покупки после."""
+    cutoff_24 = (now_utc - timedelta(hours=24)).isoformat()
+    cutoff_48 = (now_utc - timedelta(hours=48)).isoformat()
+    out: list = []
+    last_id = 0
+    while True:
+        cur = await db.execute(
+            "SELECT * FROM users WHERE onboarded=1 AND status='active' "
+            "AND tg_id>:last_id AND (sub_until IS NULL OR sub_until <= :now) "
+            "AND EXISTS (SELECT 1 FROM events e "
+            "  WHERE e.tg_id=users.tg_id AND e.name='limit_reached' "
+            "    AND e.created_at >= :cut_48 AND e.created_at <= :cut_24) "
+            "AND NOT EXISTS (SELECT 1 FROM events e "
+            "  WHERE e.tg_id=users.tg_id AND e.name IN ("
+            "    'payment_success','credit_pack_paid') "
+            "    AND e.created_at > (SELECT MAX(created_at) FROM events e2 "
+            "      WHERE e2.tg_id=users.tg_id AND e2.name='limit_reached')) "
+            f"ORDER BY tg_id LIMIT {AUDIENCE_CAP}",
+            {"last_id": last_id, "now": now_utc.isoformat(),
+             "cut_24": cutoff_24, "cut_48": cutoff_48})
+        batch = await cur.fetchall()
+        if not batch:
+            return out
+        out.extend(batch)
+        last_id = batch[-1]["tg_id"]
+
+
+async def _crm_low_balance_audience(db, now_utc: datetime) -> list:
+    """Кому пора low_balance: credit_balance_low <1ч назад, не ушли post_limit сегодня."""
+    cutoff_1h = (now_utc - timedelta(hours=1)).isoformat()
+    today = now_utc.strftime("%Y-%m-%d")
+    out: list = []
+    last_id = 0
+    while True:
+        cur = await db.execute(
+            "SELECT * FROM users WHERE onboarded=1 AND status='active' "
+            "AND tg_id>:last_id AND (sub_until IS NULL OR sub_until <= :now) "
+            "AND NOT EXISTS (SELECT 1 FROM events e "
+            "  WHERE e.tg_id=users.tg_id AND e.name IN ("
+            "    'payment_success','credit_pack_paid') "
+            "    AND e.created_at > (SELECT MAX(created_at) FROM events e2 "
+            "      WHERE e2.tg_id=users.tg_id AND e2.name='credit_balance_low')) "
+            "AND NOT EXISTS (SELECT 1 FROM deliveries d "
+            "  WHERE d.tg_id=users.tg_id AND d.kind='post_limit' "
+            "    AND d.created_at >= :today_start) "
+            "AND EXISTS (SELECT 1 FROM events e "
+            "  WHERE e.tg_id=users.tg_id AND e.name='credit_balance_low' "
+            "    AND e.created_at >= :cutoff) "
+            f"ORDER BY tg_id LIMIT {AUDIENCE_CAP}",
+            {"last_id": last_id, "now": now_utc.isoformat(),
+             "cutoff": cutoff_1h,
+             "today_start": today + "T00:00:00+00:00"})
+        batch = await cur.fetchall()
+        if not batch:
+            return out
+        out.extend(batch)
+        last_id = batch[-1]["tg_id"]
+
+
 async def _expiring_audience(db, now_utc: datetime) -> list:
     """Кому пора сказать про конец доступа — выбираем сразу условием, не перебором.
 
@@ -494,6 +554,107 @@ async def _winback_batch(db, now_utc: datetime) -> str:
     return batch
 
 
+# ─────────────────────────── free→paid по событию (BUS-257 §5) ───────────────
+
+async def _crm_free_paid(bot, db, user, now_utc: datetime) -> None:
+    """post_limit (+24ч после limit_reached) и low_balance (<1ч).
+
+    Оба канала — событийные, вне guardrail 1/7д. Между собой разводим:
+    если post_limit ушёл сегодня, low_balance переносится на завтра
+    (требование BUS-190 §5).
+    """
+    if users.sub_active(user):
+        return
+    today_start = now_utc.strftime("%Y-%m-%d") + "T00:00:00+00:00"
+    tg_id = user["tg_id"]
+    lang = _user_lang(user)
+    name = user["name"] or ("dear one" if lang == "en" else "друг")
+
+    # ── post_limit: последний limit_reached 24–48ч назад, покупки после него нет ──
+    cur = await db.execute(
+        "SELECT MAX(created_at) last_limit FROM events "
+        "WHERE tg_id=:tg_id AND name='limit_reached'",
+        {"tg_id": tg_id})
+    row = await cur.fetchone()
+    last_limit = row["last_limit"] if row else None
+    if last_limit:
+        try:
+            limit_dt = datetime.fromisoformat(last_limit)
+        except (TypeError, ValueError):
+            limit_dt = None
+        if limit_dt and timedelta(hours=24) <= now_utc - limit_dt < timedelta(hours=48):
+            event_date = limit_dt.strftime("%Y-%m-%d")
+            # покупки после лимита — стоп
+            cur = await db.execute(
+                "SELECT 1 FROM events WHERE tg_id=:tg_id "
+                "AND name IN ('payment_success','credit_pack_paid') "
+                "AND created_at > :since LIMIT 1",
+                {"tg_id": tg_id, "since": last_limit})
+            if not await cur.fetchone():
+                # 7д стоп поканальный: не чаще раза в 7 дней
+                cutoff_7d = (now_utc - timedelta(days=7)).isoformat()
+                cur = await db.execute(
+                    "SELECT 1 FROM deliveries WHERE tg_id=:tg_id AND kind='post_limit' "
+                    "AND created_at >= :cutoff_7d LIMIT 1",
+                    {"tg_id": tg_id, "cutoff_7d": cutoff_7d})
+                if await cur.fetchone():
+                    pass
+                elif await comms.already_sent(db, tg_id, "post_limit", event_date):
+                    pass
+                else:
+                    template = await content.get_text(
+                        db, "copy", "post_limit", default="", lang=lang)
+                    if template:
+                        text = template.replace("{name}", name)
+                        if await _send_once(bot, db, tg_id, "post_limit", event_date, text):
+                            await analytics.track(
+                                db, analytics.E_POST_LIMIT, tg_id, surface="system")
+
+    # ── low_balance: credit_balance_low <1ч назад, покупок после нет, post_limit не сегодня ──
+    cur = await db.execute(
+        "SELECT MAX(created_at) last_low FROM events "
+        "WHERE tg_id=:tg_id AND name='credit_balance_low'",
+        {"tg_id": tg_id})
+    row = await cur.fetchone()
+    last_low = row["last_low"] if row else None
+    if last_low:
+        try:
+            low_dt = datetime.fromisoformat(last_low)
+        except (TypeError, ValueError):
+            low_dt = None
+        if low_dt and now_utc - low_dt < timedelta(hours=1):
+            event_date = low_dt.strftime("%Y-%m-%d")
+            # post_limit ушёл сегодня — переносим на следующий день
+            if await comms.sent_since(db, tg_id, "post_limit", today_start):
+                return
+            # покупки после low_balance — стоп
+            cur = await db.execute(
+                "SELECT 1 FROM events WHERE tg_id=:tg_id "
+                "AND name IN ('payment_success','credit_pack_paid') "
+                "AND created_at > :since LIMIT 1",
+                {"tg_id": tg_id, "since": last_low})
+            if await cur.fetchone():
+                return
+            # 7д стоп поканальный
+            cutoff_7d = (now_utc - timedelta(days=7)).isoformat()
+            cur = await db.execute(
+                "SELECT 1 FROM deliveries WHERE tg_id=:tg_id AND kind='low_balance' "
+                "AND created_at >= :cutoff_7d LIMIT 1",
+                {"tg_id": tg_id, "cutoff_7d": cutoff_7d})
+            if await cur.fetchone():
+                return
+            if await comms.already_sent(db, tg_id, "low_balance", event_date):
+                return
+            template = await content.get_text(
+                db, "copy", "low_balance", default="", lang=lang)
+            if not template:
+                return
+            text = template.replace("{name}", name)
+            if await _send_once(bot, db, tg_id, "low_balance", event_date, text):
+                await analytics.track(
+                    db, analytics.E_LOW_BALANCE_SENT, tg_id, surface="system")
+
+
 async def _weekly_report(bot, db, user, now, settings_cache) -> None:
     from ..repo import dialog, readings
     if not users.sub_active(user):
@@ -694,6 +855,21 @@ async def tick(bot, db) -> None:
             await _winback(bot, db, user, now_utc=now_utc)
         except Exception as e:  # noqa: BLE001
             log.warning("ошибка сценария продления: %s", type(e).__name__)
+        await asyncio.sleep(BATCH_PAUSE)
+
+    # free→paid по событию (BUS-257 §5): post_limit (+24ч) + low_balance (<1ч)
+    for user in await _crm_post_limit_audience(db, now_utc):
+        try:
+            await _crm_free_paid(bot, db, user, now_utc)
+        except Exception as e:  # noqa: BLE001
+            log.warning("ошибка free→paid post_limit: %s", type(e).__name__)
+        await asyncio.sleep(BATCH_PAUSE)
+
+    for user in await _crm_low_balance_audience(db, now_utc):
+        try:
+            await _crm_free_paid(bot, db, user, now_utc)
+        except Exception as e:  # noqa: BLE001
+            log.warning("ошибка free→paid low_balance: %s", type(e).__name__)
         await asyncio.sleep(BATCH_PAUSE)
 
     try:

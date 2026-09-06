@@ -112,6 +112,25 @@ async def mark_failed(db, tg_id: int, kind: str, key: str) -> None:
 # через claim() (он обновляет failed → sending атомарно).
 
 
+async def sent_since(db, tg_id: int, kind: str, since: str) -> bool:
+    """True — есть запись deliveries для kind с created_at >= since.
+
+    Поддерживает обе схемы deliveries: со status (BUS-308) и без (старые миграции).
+    """
+    try:
+        cur = await db.execute(
+            "SELECT 1 FROM deliveries WHERE tg_id=:tg_id AND kind=:kind "
+            "AND created_at >= :since LIMIT 1",
+            {"tg_id": tg_id, "kind": kind, "since": since})
+        return await cur.fetchone() is not None
+    except Exception:  # noqa: BLE001
+        cur = await db.execute(
+            "SELECT 1 FROM deliveries WHERE tg_id=:tg_id AND kind=:kind "
+            "AND created_at >= :since LIMIT 1",
+            {"tg_id": tg_id, "kind": kind, "since": since})
+        return await cur.fetchone() is not None
+
+
 async def prune(db, days: int = 120) -> int:
     """Журнал нужен только пока актуален повод — старое удаляем."""
     before = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
