@@ -156,6 +156,23 @@ CREATE TABLE IF NOT EXISTS deliveries (
     created_at TEXT,
     PRIMARY KEY (tg_id, kind, key)
 );
+-- Отзывы day-7 опроса (миграция 0009, BUS-170 §4): одна строка на отзыв
+-- пользователя на survey_kind. Свободный текст — только здесь, НЕ в events
+-- (privacy-инвариант BUS-168 §2.3). UNIQUE (tg_id, survey_kind) — анти-абьюз
+-- BUS-170 §5.1. bonus_lot_id → crystal_lots.id (source='review_bonus', BUS-177);
+-- FK нет по конвенции схемы. Индексы — в общем блоке ниже (idx_feedback_*).
+CREATE TABLE IF NOT EXISTS feedback_responses (
+    id            BIGSERIAL PRIMARY KEY,
+    tg_id         BIGINT NOT NULL,
+    survey_kind   TEXT NOT NULL DEFAULT 'day7_v1',  -- версия опроса: day7_v1, далее day7_v2...
+    answers_json  TEXT,                  -- [{question_code, choice, score}] — без свободного текста
+    free_text     TEXT,                  -- свободный текст отзыва (единственное место хранения)
+    status        TEXT NOT NULL DEFAULT 'submitted',  -- исход обработки; бонусные детали ниже
+    bonus_granted BIGINT DEFAULT 0,      -- 0|1: начислен ли бонус (одна попытка за всю жизнь, BUS-177)
+    bonus_lot_id  BIGINT,                -- crystal_lots.id гранта source='review_bonus'
+    created_at    TEXT,
+    UNIQUE (tg_id, survey_kind)
+);
 
 
 CREATE TABLE IF NOT EXISTS user_notifications (
@@ -684,6 +701,7 @@ CREATE INDEX IF NOT EXISTS idx_palm_user     ON palm_readings(tg_id, created_at)
 CREATE INDEX IF NOT EXISTS idx_events_name   ON events(name, day);
 CREATE INDEX IF NOT EXISTS idx_events_user       ON events(tg_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_events_user_name  ON events(tg_id, name);
+CREATE INDEX IF NOT EXISTS idx_events_tg_name_day ON events(tg_id, name, day);  -- migration 0005
 CREATE INDEX IF NOT EXISTS idx_events_day        ON events(day);
 CREATE INDEX IF NOT EXISTS idx_task_jobs_status_available ON task_jobs(status, available_at);
 CREATE INDEX IF NOT EXISTS idx_task_jobs_user_created ON task_jobs(tg_id, created_at DESC);
@@ -703,6 +721,7 @@ CREATE INDEX IF NOT EXISTS idx_users_seen         ON users(last_seen);
 CREATE INDEX IF NOT EXISTS idx_users_created      ON users(created_at);
 CREATE INDEX IF NOT EXISTS idx_users_created_source ON users(created_at, source);
 CREATE INDEX IF NOT EXISTS idx_users_sub     ON users(sub_until);
+CREATE INDEX IF NOT EXISTS idx_users_push_segment ON users(status, onboarded, morning_push, tz);  -- migration 0005
 CREATE INDEX IF NOT EXISTS idx_partners_user ON partners(tg_id);
 CREATE INDEX IF NOT EXISTS idx_syn_user      ON synastry_cache(tg_id, partner_key);
 CREATE INDEX IF NOT EXISTS idx_notes_user    ON user_notes(tg_id, created_at);
@@ -731,4 +750,6 @@ CREATE INDEX IF NOT EXISTS idx_safety_user   ON safety_events(tg_id, created_at)
 CREATE INDEX IF NOT EXISTS idx_horo_day      ON horoscopes(day);
 CREATE INDEX IF NOT EXISTS idx_practice_user ON practices(tg_id, code);
 CREATE INDEX IF NOT EXISTS idx_events_created ON events(created_at);
+CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback_responses(created_at);
+CREATE INDEX IF NOT EXISTS idx_feedback_status ON feedback_responses(status, created_at);
 
