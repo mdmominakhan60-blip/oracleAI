@@ -481,13 +481,17 @@ async def redeem_promo(db, tg_id: int, code: str) -> dict | None:
 
     Счётчик использований кода и сама выдача — одной транзакцией: сбой между
     «код засчитан» и «товар выдан» не сжигает промокод впустую.
+    kind='invite' — входной билет контролируемой беты (BUS-269): доступ не
+    расширяет, только фиксирует вход в когорту волны через атрибуцию source.
     """
     async with transaction(db):
         promo = await growth.redeem(db, code, tg_id)
         if not promo:
             return None
         kind = promo["kind"]
-        if kind == "crystals":
+        if kind == "invite":
+            granted = None
+        elif kind == "crystals":
             granted = await _apply_grant(db, tg_id, "crystals", promo["code"],
                                          qty=promo["crystals"], source="promo")
         elif kind == "product" and promo["sku"]:
@@ -501,9 +505,10 @@ async def redeem_promo(db, tg_id: int, code: str) -> dict | None:
         else:
             granted = await _apply_grant(db, tg_id, "plan", promo["plan_code"],
                                          valid_days=promo["days"], source="promo")
+        # код не попадает в события: user-redeemable secret живёт в
+        # promo_redemptions (правило code-пропа словаря аналитики)
         await analytics.track(db, analytics.E_PROMO, tg_id,
-                              props={"code": promo["code"], "batch": promo["batch"],
-                                     "kind": kind})
+                              props={"batch": promo["batch"], "kind": kind})
         # партия промокода = канал привлечения: без него нельзя посчитать,
         # какой листинг приводит платящих
         user = await users.get(db, tg_id)

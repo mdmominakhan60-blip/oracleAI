@@ -97,15 +97,43 @@ async def _menu(db, tg_id: int):
 
 # ─────────────────────────────── /start ───────────────────────────────────────
 
+async def _beta_gate_refused(db, message: Message, user) -> bool:
+    """Гейт контролируемой беты (BUS-269): новых без инвайта — waitlist-ответ.
+
+    Действует только при включённом флаге `beta_invite_gate` и только для
+    не-onboarded профилей: существующие клиентки гейта не замечают. Отказ
+    мягкий, без техдеталей — «места по приглашениям», не «код не принят».
+    """
+    if not await content_repo.is_on(db, "beta_invite_gate"):
+        return False
+    if user["onboarded"]:
+        return False
+    en = _lang(user) == "en"
+    await message.answer(
+        "✨ Oracle is opening gradually, by personal invitation — so we can get "
+        "to know everyone with care.\n\n"
+        "Join the waitlist and we’ll invite you in the next wave: "
+        "webapp/waitlist\n\n"
+        "Your chart is already waiting for you 🌙" if en else
+        "✨ Оракул сейчас открывается постепенно, по личным приглашениям — "
+        "так мы бережно знакомимся с каждой.\n\n"
+        "Оставь заявку в листе ожидания — и мы позовём тебя в ближайшей волне: "
+        "webapp/waitlist\n\n"
+        "Твоя карта уже ждёт тебя 🌙")
+    return True
+
+
 @router.message(CommandStart(deep_link=True))
 async def start_deeplink(message: Message, command: CommandObject,
                          state: FSMContext, db):
-    """`/start ref_123` — приглашение, `/start КОД` — промокод с Etsy."""
+    """`/start ref_123` — реферал, `/start ИНВАЙТ` — промокод беты."""
     await users.ensure(db, message.from_user.id, message.from_user.first_name,
                        message.from_user.username, lang=message.from_user.language_code)
+    user = await users.get(db, message.from_user.id)
     arg = (command.args or "").strip()
 
     ref_id = referrals.parse_ref(arg)
+    invite_granted = False
     if ref_id:
         result = await referrals.apply(db, message.from_user.id, ref_id)
         if result:
@@ -128,8 +156,15 @@ async def start_deeplink(message: Message, command: CommandObject,
                 log.info("не смогла уведомить пригласившую %s: %s", ref_id, e)
     elif arg:
         granted = await billing_svc.redeem_promo(db, message.from_user.id, arg)
-        if granted:
+        if granted and granted.get("kind") == "invite":
+            invite_granted = True
             await message.answer(_promo_text(granted))
+
+    # Гейт контролируемой беты (BUS-269): новые без валидного инвайта — waitlist.
+    if await content_repo.is_on(db, "beta_invite_gate") and not user["onboarded"]:
+        if not invite_granted:
+            await _beta_gate_refused(db, message, user)
+            return
 
     await analytics.track(db, analytics.E_START, message.from_user.id,
                           props={"arg": arg[:40]})
@@ -140,6 +175,10 @@ async def start_deeplink(message: Message, command: CommandObject,
 async def start(message: Message, state: FSMContext, db):
     await users.ensure(db, message.from_user.id, message.from_user.first_name,
                        message.from_user.username, lang=message.from_user.language_code)
+    user = await users.get(db, message.from_user.id)
+    if await content_repo.is_on(db, "beta_invite_gate") and not user["onboarded"]:
+        await _beta_gate_refused(db, message, user)
+        return
     await analytics.track(db, analytics.E_START, message.from_user.id)
     await _begin(message, state, db)
 
@@ -733,7 +772,12 @@ def _promo_text(granted: dict, lang: str = "ru") -> str:
     BOT-018: копия на языке интерфейса."""
     en = lang == "en"
     item = granted.get("granted") or {}
-    kind = item.get("kind")
+    # invite: granted=None, kind живёт на верхнем уровне результата redeem
+    kind = item.get("kind") or granted.get("kind")
+    if kind == "invite":
+        if en:
+            return ("🎟 Invite code accepted — welcome to the beta! ✨")
+        return ("🎟 Инвайт принят — добро пожаловать в бету! ✨")
     if kind == "plan":
         if en:
             return (f"🎟 <b>Golden ticket accepted!</b>\n"
