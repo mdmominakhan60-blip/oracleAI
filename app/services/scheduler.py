@@ -49,27 +49,29 @@ def _user_lang(user) -> str:
     return "en" if user["lang"] == "en" else "ru"
 
 
-async def _deliver(bot, tg_id: int, text: str, markup=None) -> bool:
-    """Отправляет сообщение. False — стоит попробовать позже.
+async def _deliver(bot, tg_id: int, text: str, markup=None) -> tuple[str, str | None]:
+    """Отправляет сообщение. Возвращает (status, error_class_or_None).
 
-    Блокировка бота и удалённый чат — навсегда: возвращаем True, чтобы отметка
-    осталась и планировщик не долбился в этот чат каждые десять минут.
+    status: sent | forbidden | failed
+    - sent: сообщение доставлено
+    - forbidden: бот заблокирован или чат удалён (навсегда)
+    - failed: временный сбой, попробуем позже
     """
     from aiogram.exceptions import (TelegramBadRequest, TelegramForbiddenError,
                                     TelegramRetryAfter)
     try:
         await bot.send_message(tg_id, text, reply_markup=markup)
-        return True
+        return "sent", None
     except TelegramRetryAfter as e:
         log.warning("флуд-контроль: пауза %s с", e.retry_after)
         await asyncio.sleep(e.retry_after + 1)
-        return False
+        return "failed", None
     except (TelegramForbiddenError, TelegramBadRequest) as e:
         log.info("рассылка пропущена навсегда: %s", type(e).__name__)
-        return True
+        return "forbidden", type(e).__name__
     except Exception as e:  # noqa: BLE001
         log.warning("рассылка не удалась, повторю позже: %s", type(e).__name__)
-        return False
+        return "failed", None
 
 
 async def _send_once(bot, db, tg_id: int, kind: str, key: str, text: str,
@@ -77,9 +79,15 @@ async def _send_once(bot, db, tg_id: int, kind: str, key: str, text: str,
     """Отправка с защитой от дубля. False — уже отправляли или не вышло."""
     if not await comms.claim(db, tg_id, kind, key):
         return False
-    if await _deliver(bot, tg_id, text, markup):
+    result, error_class = await _deliver(bot, tg_id, text, markup)
+    if result == "sent":
+        await comms.mark_sent(db, tg_id, kind, key)
         return True
-    await comms.unclaim(db, tg_id, kind, key)   # временный сбой — попробуем позже
+    if result == "forbidden":
+        await comms.mark_sent(db, tg_id, kind, key, status='forbidden',
+                              error=error_class)
+        return False
+    await comms.mark_failed(db, tg_id, kind, key)
     return False
 
 

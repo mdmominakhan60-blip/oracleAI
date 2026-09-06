@@ -11,6 +11,9 @@ import asyncio
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
+from aiogram.exceptions import TelegramForbiddenError
+from aiogram.methods import SendMessage
+
 from app.repo import comms, users
 from app.services import scheduler
 
@@ -18,25 +21,38 @@ from app.services import scheduler
 class RecordingBot:
     """Фейковый бот: фиксирует тексты и умеет «падать» по флагу."""
 
-    def __init__(self, fail_times: int = 0):
+    def __init__(self, fail_times: int = 0, forbidden: bool = False):
         self.sent: list[tuple[int, str]] = []
         self.fail_times = fail_times
+        self.forbidden = forbidden
 
     async def send_message(self, tg_id, text, reply_markup=None):
         if self.fail_times > 0:
             self.fail_times -= 1
             raise ConnectionError("временный сбой сети")
+        if self.forbidden:
+            raise TelegramForbiddenError(
+                method=SendMessage(chat_id=tg_id, text=text),
+                message="Forbidden: bot was blocked by the user")
         self.sent.append((tg_id, text))
 
 
 async def test_claim_race_single_winner(db):
-    """Два параллельных claim одного kind+key — выигрывает ровно один."""
+    """Два параллельных claim одного kind+key — выигрывает ровно один.
+
+    Победитель оставляет строку в status='sending' — ещё НЕ терминальное
+    состояние: until mark_sent/failed already_sent обязан быть False.
+    """
     results = await asyncio.gather(
         comms.claim(db, 3001, "welcome_chain", "d1:3001"),
         comms.claim(db, 3001, "welcome_chain", "d1:3001"),
     )
     assert sorted(results) == [False, True], "оба claim прошли: дубль гарантирован"
-    assert await comms.already_sent(db, 3001, "welcome_chain", "d1:3001")
+    assert not await comms.already_sent(db, 3001, "welcome_chain", "d1:3001"), \
+        "sending — не терминальный статус, already_sent не должен срабатывать"
+    cur = await db.execute(
+        "SELECT status FROM deliveries WHERE tg_id=3001 AND kind='welcome_chain' AND key='d1:3001'")
+    assert (await cur.fetchone())["status"] == "sending"
 
 
 async def _vip_user(db, tg_id: int):
@@ -102,17 +118,64 @@ async def test_two_parallel_ticks_send_once(db, monkeypatch):
 
 
 async def test_send_once_retries_after_temporary_failure(db):
-    """Временный сбой доставки возвращает claim — повтор позже отправит."""
+    """Временный сбой → failed-строка остаётся в журнале, retry пере-занимает."""
     bot = RecordingBot(fail_times=1)
     ok = await scheduler._send_once(bot, db, 3003, "winback2", "k1", "текст")
     assert not ok, "сбой не распознан"
     assert not await comms.already_sent(db, 3003, "winback2", "k1"), \
-        "claim не снят после временного сбоя — повтор невозможен"
+        "failed не должен считаться терминальным"
+    cur = await db.execute(
+        "SELECT status FROM deliveries WHERE tg_id=3003 AND kind='winback2' AND key='k1'")
+    assert (await cur.fetchone())["status"] == "failed", \
+        "строка после временного сбоя должна остаться в журнале как failed"
 
     bot2 = RecordingBot()
     ok2 = await scheduler._send_once(bot2, db, 3003, "winback2", "k1", "текст")
-    assert ok2, "повтор после сбоя не отправился"
+    assert ok2, "повтор после сбоя не отправился (claim не пере-занял failed)"
     assert await comms.already_sent(db, 3003, "winback2", "k1")
+
+
+async def test_forbidden_marks_row_and_never_retries(db):
+    """Forbidden (бот заблокирован) → forbidden-строка навсегда, повтор молчит."""
+    bot = RecordingBot(forbidden=True)
+    ok = await scheduler._send_once(bot, db, 3005, "winback2", "f1", "текст")
+    assert not ok, "forbidden не должен считаться успешной отправкой"
+    assert await comms.already_sent(db, 3005, "winback2", "f1"), \
+        "forbidden — терминальный статус: already_sent обязан защитить от повтора"
+    cur = await db.execute(
+        "SELECT status, error FROM deliveries WHERE tg_id=3005 AND kind='winback2' AND key='f1'")
+    row = await cur.fetchone()
+    assert row["status"] == "forbidden", \
+        f"ожидали forbidden, получили {row['status']!r}"
+    assert row["error"] == "TelegramForbiddenError", \
+        f"в error ждём только класс исключения, получили {row['error']!r}"
+
+    # Повторный вызов с тем же kind+key — никаких попыток отправки, строка не меняется.
+    bot2 = RecordingBot()
+    assert not await scheduler._send_once(bot2, db, 3005, "winback2", "f1", "текст")
+    assert bot2.sent == [], "forbidden-строка ретраится — повтор уйдёт клиентке"
+    cur = await db.execute(
+        "SELECT status, error FROM deliveries WHERE tg_id=3005 AND kind='winback2' AND key='f1'")
+    row = await cur.fetchone()
+    assert row["status"] == "forbidden" and row["error"] == "TelegramForbiddenError"
+
+
+async def test_forbidden_row_not_reset_by_other_success(db):
+    """Успех по другому kind/key (и другой ошибке) не сбрасывает чужой forbidden-статус."""
+    await scheduler._send_once(RecordingBot(forbidden=True), db,
+                               3006, "winback2", "fx", "текст")
+    assert await comms.already_sent(db, 3006, "winback2", "fx")
+
+    # Успешная отправка другого kind и другого key того же юзера.
+    assert await scheduler._send_once(RecordingBot(), db, 3006, "reactivate", "fx", "ок")
+    # Успех того же kind, но другого key.
+    assert await scheduler._send_once(RecordingBot(), db, 3006, "winback2", "fy", "ок")
+
+    cur = await db.execute(
+        "SELECT status, error FROM deliveries WHERE tg_id=3006 AND kind='winback2' AND key='fx'")
+    row = await cur.fetchone()
+    assert row["status"] == "forbidden" and row["error"] == "TelegramForbiddenError", \
+        "успех соседних доставок перезаписал forbidden-строку"
 
 
 async def test_send_once_never_resends_after_success(db):
