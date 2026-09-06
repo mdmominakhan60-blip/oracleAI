@@ -40,6 +40,7 @@ __pycache__/
 *.log
 !docs/RELEASE/evidence/*.log
 *.qa_*.py
+logs/
 
 # Frontend dependency/build outputs
 node_modules/
