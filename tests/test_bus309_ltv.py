@@ -430,3 +430,13 @@ async def test_api_user_card_contains_ltv(admin_client, db):
     assert ltv["next_best_action"] is None
     assert isinstance(ltv["timeline"], list)
     assert ltv["channel_closed"] is False
+
+
+async def test_api_dashboard_attention_summary(admin_client, db):
+    """BUS-284 §2.3: /api/admin/dashboard несёт attention-счётчики (counts/overdue)."""
+    await _ensure(db, 3431, ltv_stars=200, last_seen=_iso(days_ago=20))
+    res = await admin_client.get("/api/admin/dashboard", params=_admin_params())
+    assert res.status_code == 200, res.text
+    attention = res.json()["attention"]
+    assert {"counts", "overdue"} <= set(attention)
+    assert attention["counts"]["p1"] >= 1  # 3431 в Q2 (VIP sleeping) = P1

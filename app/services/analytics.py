@@ -246,7 +246,22 @@ async def dashboard(db, *, days: int = 30) -> dict:
         "llm_costs": await repo.llm_costs(db, days=days),
         "monetization": await repo.monetization_kpis(db, days=days),
         "monetization_v2": await _monetization_v2_dashboard(db, days=days),
+        # BUS-284 §2.3: счётчики очереди внимания в блоке «сегодня»
+        "attention": await _attention_summary(db),
     }
+
+
+async def _attention_summary(db) -> dict:
+    """counts/overdue очереди внимания — для блока «сегодня» в Dashboard.
+
+    Отдельно от ltv_tier.attention_queue: карточки строить не нужно,
+    поэтому лимит 1 не режет набор правил — каждая карточка короткая,
+    а счётчики считаются по всем сработавшим правилам.
+    """
+    from ..repo import ltv_tier as ltv_repo
+
+    queue = await ltv_repo.attention_queue(db, limit=1)
+    return {"counts": queue["counts"], "overdue": queue["overdue"]}
 
 
 async def demo_dashboard(*, days: int = 30) -> dict:
