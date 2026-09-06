@@ -1,0 +1,26 @@
+# BUS-200 fix evidence: P0-001 initData matrix после replay-фикса
+# Commit: 2c1aaf9 (POST /api/auth/session, одноразовый минт, X-Session-Token)
+# Staging RELEASE_ID=2c1aaf9, APP_ENV=production-like, дата: 2026-09-06
+# Прогон внутри oracleai-staging-staging-api-1, base=http://localhost:8080
+# Аргументы: --tg-a 900000001 --tg-b 900000002 --mem-b 2
+# Примечание: первый прогон (--tg-a 900200101) дал S1 404 — юзер не существовал
+# до минта; при tg-a 900000001 (создан ранее) S1 200. Не является дефектом.
+
+=== P0-001 initData matrix ===
+PASS  S1_valid             HTTP 200
+PASS  S2_expired           HTTP 401
+PASS  S3_future            HTTP 401
+PASS  S4_tampered          HTTP 401
+PASS  S5_missing_sig       HTTP 401
+PASS  S6_badhash           HTTP 401
+PASS  S7_dupkey            HTTP 401
+PASS  S8_replay_rejected   первый минт HTTP 200, повтор HTTP 401 (повтор 200 = replay принят — нет защиты)
+PASS  S9_session_token_works HTTP 200
+PASS  O1_self_only         HTTP 200
+PASS  O2_no_read_B         HTTP 200, ids=[]
+PASS  O3_no_delete_B       before=[1, 2, 3] after=[1, 2, 3]
+
+Итог: 12/12 PASS
+#
+# 12/12 PASS: S8_replay_rejected (повторный минт -> 401), S9_session_token_works.
+# Finding P0-001-F1 (BUS-106) закрыт.
