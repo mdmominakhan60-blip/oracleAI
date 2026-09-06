@@ -72,11 +72,18 @@ Monetization events are emitted only from authenticated server-owned transitions
 
 ## Feedback survey events
 
-Событие задаётся словарём до реализации кода (инженерный эпик BUS-180): имя войдёт в server-owned allowlist `app/repo/analytics.py`, триггер и тест добавляются при реализации. Параметры бонуса — спека BUS-170 §7 rev3 (решение BUS-177, принято CEO: 40✦, `source='review_bonus'`, 90 дней).
+События задаются словарём до реализации кода (инженерный эпик BUS-180): имена войдут в server-owned allowlist `app/repo/analytics.py`, триггер и тест добавляются при реализации. Это три шага одной воронки day-7 опроса: `feedback_survey_sent` (касалась) → `feedback_survey_completed` (ответила) → `survey_grant_issued` (получила бонус). Параметры бонуса — спека BUS-170 §7 rev3 (решение BUS-177, принято CEO: 40✦, `source='review_bonus'`, 90 дней).
 
 | Event | Момент | Allowed props | Surface | Owner | KPI |
 |---|---|---|---|---|---|
+| `feedback_survey_sent` | Scheduler успешно доставил сообщение day-7 опроса в Telegram-чат (после записи строки `deliveries` `kind='feedback_survey'`). Эмитится на каждое касание — приглашение и одно напоминание; НЕ `track_once`. | `survey_code`: `day7_v1`; `delivery_key`: `day7_v1` (приглашение) \| `day7_v1_remind` (напоминание) — server-owned значение dedup-ключа `deliveries.key` | `bot` | Product | Invitation reach; знаменатель response rate; разбивка invite vs reminder. |
+| `feedback_survey_completed` | Сервер принял `POST /api/feedback` и записал ответы в `feedback_responses` (заполнен ≥1 вопрос). Записывается один раз на `(tg_id, survey_code)`: повторный POST отклоняется анти-абьюзом (BUS-170 §5). | `survey_code`: `day7_v1`; `bonus_granted`: `true` \| `false` (пройдены ли гейты бонуса BUS-170 §5.3a/3b — активность и текст ≥50 симв.); `question_count`: целое `1`–`5` (сколько вопросов заполнено) | `miniapp` | Product | Response rate (completed/sent); bonus-grant rate (`bonus_granted=true` / completed); полнота заполнения. |
 | `survey_grant_issued` | Серверный триггер в момент успешного идемпотентного гранта бонуса за day-7 опрос: одна транзакция с записью ответов (`feedback_responses`) и `crystal_lot`-грантом (`source='review_bonus'`, `expires_at` = момент гранта + 90d). Не эмитируется при отклонённом POST (анти-абьюз — спека BUS-170 §5) и при повторной выдаче (один бонус на пользователя за всю жизнь). | `survey_code`: `day7_v1`; `bonus_kind`: `crystals_40`; `amount`: `40`; `expires_at`: server-derived ISO timestamp (грант + 90d, совпадает с `expires_at` лота) | `miniapp` | Product | Claim rate, claim→spend за 90d, claim→paid vs baseline (CFO-метрики, BUS-170 §8.1). |
+
+**Сверка naming с постановкой BUS-238 (ревью CEO):**
+- `survey_code` (не `survey_kind`) — единое имя с уже принятым `survey_grant_issued` и с колонкой `feedback_responses.survey_code`; значение `day7_v1` из спеки BUS-167 §2 / BUS-170 §3.
+- `delivery_key` (не `delivery_id`) — в таблице `deliveries` нет колонки-id (PK `(tg_id, kind, key)`, baseline.sql:147); privacy-safe low-cardinality представление касания — сам dedup-ключ `deliveries.key` (`day7_v1` / `day7_v1_remind`), он и идёт в проп.
+- NPS-оценка (`score`) и свободный текст отзыва в `feedback_survey_completed` НЕ пишутся: детальная разбивка ответов (включая NPS 0–10) живёт в `feedback_responses` и просматривается через админ-панель (BUS-168), а событие остаётся воронковым (privacy-правило §«Запрещено во всех product events»). Это уточнение к черновику BUS-167 §4, где `score` числился пропом.
 
 `tg_id` — в авторской колонке `events` (server-owned), не в props. Все props — server-owned значения: клиент не влияет ни на имя события, ни на сумму, ни на `survey_code`. Свободный текст отзыва в события не попадает (спека BUS-170 §5.5).
 
@@ -88,6 +95,7 @@ Monetization events are emitted only from authenticated server-owned transitions
 | First ritual rate | Unique users with `first_ritual` divided by cohort users. | Do not count `practice_start` alone. |
 | First question rate | Unique users with `first_question` divided by cohort users. | Failed/denied question is not completion. |
 | D1 / D7 return | Cohort users with milestone event divided by cohort users with first open. | No push/open pressure interpretation. |
+| Survey response rate | Unique users with `feedback_survey_completed` divided by unique users with `feedback_survey_sent`. | Reminder touches collapse to one recipient (COUNT DISTINCT tg_id), so the denominator is reached users, not messages. |
 | Survey claim rate | Unique users with `survey_grant_issued` divided by users who received the survey invitation. | Responses without bonus (anti-abuse gates, BUS-170 §5) are not claims. |
 | Claim→spend (90d) | Users spending the granted lot within 90d of `survey_grant_issued`, divided by grant recipients. | Only the granted `review_bonus` lot counts, not user's own crystals. |
 | Fallback rate | `llm_fallback` operational records divided by successful provider completions, segmented by purpose/provider/language outside event table. | Never attach prompt, answer or memory. |
