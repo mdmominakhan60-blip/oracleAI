@@ -222,7 +222,7 @@ async def test_feedback_duplicate_returns_409(client, db):
 
     r2 = await _post(client, user, body)
     assert r2.status_code == 409
-    assert r2.json()["code"] == "survey_already_completed"
+    assert r2.json()["detail"]["code"] == "survey_already_completed"
 
 
 async def test_feedback_wrong_survey_code_rejected(client, db):
@@ -233,7 +233,7 @@ async def test_feedback_wrong_survey_code_rejected(client, db):
         "survey_code": "day7_v2",
     })
     assert resp.status_code == 422
-    assert resp.json()["code"] == "survey_version_unknown"
+    assert resp.json()["detail"]["code"] == "survey_version_unknown"
 
 
 async def test_feedback_allowlist_invalid_choice(client, db):
@@ -245,7 +245,7 @@ async def test_feedback_allowlist_invalid_choice(client, db):
         "survey_code": feedback_repo.SURVEY_CODE,
     })
     assert resp.status_code == 422
-    assert resp.json()["code"] == "no_valid_answers"
+    assert resp.json()["detail"]["code"] == "no_valid_answers"
 
 
 async def test_feedback_allowlist_score_out_of_range(client, db):

@@ -88,18 +88,23 @@ def normalize_answers(items: list[dict]) -> tuple[list[dict], str]:
             if not 0 <= score <= 10:
                 continue
             entry["score"] = score
+        elif question in TEXT_QUESTIONS:
+            # Текстовые вопросы (dream) не имеют choice-кнопок — валиден сам
+            # текст; без него ответ не несёт информации.
+            text = str(item.get("text") or "").strip()[:4000]
+            if not text:
+                continue
+            entry["text"] = True
+            dream_text = text
         else:
             choice = str(item.get("choice") or "")[:32]
             if choice not in ALLOWED_CHOICES.get(question, set()):
                 continue
             entry["choice"] = choice
-            # Свой вариант по Q2/Q5 ('other') и текст Q4 — в free_text:
-            # событие остаётся категориальным (privacy-правило словаря).
-            text = str(item.get("text") or "").strip()[:4000]
-            if question in TEXT_QUESTIONS:
-                dream_text = text or dream_text
-            elif question in ("blocker", "next") and choice == "other":
-                other_text = other_text or text
+            # Свой вариант по Q2/Q5 ('other') — в free_text: событие остаётся
+            # категориальным (privacy-правило словаря).
+            if question in ("blocker", "next") and choice == "other":
+                other_text = other_text or str(item.get("text") or "").strip()[:4000]
         answers.append(entry)
     free_text = dream_text or other_text
     return answers, free_text
