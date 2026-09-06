@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import asyncio
 
-import pytest
 
 
 async def _flag_on(*_, **__) -> bool:
@@ -21,14 +20,13 @@ async def _flag_on(*_, **__) -> bool:
 
 async def _flag_off(*_, **__) -> bool:
     return False
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.storage.base import StorageKey
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import Message
+from aiogram.fsm.context import FSMContext  # noqa: E402 — моки определяются до импортов
+from aiogram.fsm.storage.base import StorageKey  # noqa: E402 — моки определяются до импортов
+from aiogram.fsm.storage.memory import MemoryStorage  # noqa: E402 — моки определяются до импортов
 
-from app.bot import onboarding
-from app.repo import content as content_repo, growth, users
-from app.services import analytics, billing as billing_svc
+from app.bot import onboarding  # noqa: E402 — моки определяются до импортов
+from app.repo import content as content_repo, growth, users  # noqa: E402
+from app.services import analytics, billing as billing_svc  # noqa: E402
 
 
 # ──────────────────────────── моки (совместимо с test_bot_fsm.py) ──────────────

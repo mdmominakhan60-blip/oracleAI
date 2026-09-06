@@ -16,15 +16,14 @@ import hmac
 import json
 import os
 import time
-from urllib.parse import parse_qsl, urlencode
+from urllib.parse import urlencode
 
 import pytest
 
 from conftest import TEST_DEV_KEY
 from app.api.auth_common import sign_session_token, verify_session_token
 from app.api.routers.auth_router import _init_data_hash
-from app.api.security import MAX_AGE_SECONDS, parse_init_data
-from app.repo import admin as admin_repo
+from app.api.security import MAX_AGE_SECONDS
 from app.repo import users
 
 

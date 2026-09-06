@@ -15,7 +15,6 @@ from ...core import agent as agent_core
 from ...core import product_cost
 from ...core import astro, chart_rendering, geo, memory
 from ...pdfgen import builder, render
-from ...pdfgen.builder import Order
 from ...core.chart_contract import (
     EPHEMERIS_BACKEND,
     EPHEMERIS_NAME,
