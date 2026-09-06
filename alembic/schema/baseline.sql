@@ -3,6 +3,12 @@
 -- Загружается ТОЛЬКО из Alembic baseline (0001_pg_native_baseline).
 -- Никогда не применяется как runtime CREATE — schema.py и pg_schema.py удалены.
 -- Изменения существующих таблиц описываются последующими Alembic-ревизиями.
+--
+-- ПРАВИЛО (BUS-298, инцидент 2026-09-06): изменения схемы — ТОЛЬКО через новую
+-- alembic-ревизию в alembic/versions/; правки этого файла без ревизии запрещены
+-- (baseline оторвался от прода — бот терял INSERT'ы). После ревизии зеркалить
+-- сюда её DDL и проверять паритет: apply baseline.sql vs upgrade head с нуля
+-- на двух scratch-БД → pg_dump --schema-only → diff (методика BUS-231).
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE IF NOT EXISTS alembic_version (version_num VARCHAR(255) PRIMARY KEY);
 
