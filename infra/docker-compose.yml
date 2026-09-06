@@ -208,6 +208,14 @@ services:
       - prometheus_data:/prometheus
     networks:
       - oracle_internal
+      # BUS-270: скрейп staging-api. Сеть создаёт staging-стек; external,
+      # чтобы прод-компоуз её не создавал/не удалял.
+      - oracle_staging_external
+    extra_hosts:
+      # BUS-270: доступ к omniroute (host-сеть) из контейнеров прод-стека.
+      # Работает вместе с nftables-фиксом (docs/RELEASE/2026-09-06-bus270-nftables-fix-runbook.md)
+      # — без правила input хост дропает bridge→host TCP.
+      - "host.docker.internal:host-gateway"
     depends_on:
       loki:
         condition: service_started
@@ -391,3 +399,8 @@ volumes:
 networks:
   oracle_internal:
     driver: bridge
+  # BUS-270: staging-сеть для скрейпа. external + фиксированное имя — сеть
+  # принадлежит staging-стеку (oracle_staging_internal), прод только читает.
+  oracle_staging_external:
+    name: oracle_staging_internal
+    external: true

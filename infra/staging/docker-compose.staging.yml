@@ -104,6 +104,11 @@ services:
         condition: service_healthy
     expose:
       - "8080"
+    extra_hosts:
+      # BUS-270: omniroute работает в host-сети (port 20128 на шлюзе моста).
+      # Без nftables-правила input bridge→host TCP дропается — см.
+      # docs/RELEASE/2026-09-06-bus270-nftables-fix-runbook.md.
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
       interval: 15s
@@ -141,6 +146,9 @@ services:
       staging-redis:
         condition: service_healthy
     stop_grace_period: 60s
+    extra_hosts:
+      # BUS-270: LLM-вызовы делает и worker (llm-очередь) — см. staging-api.
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD-SHELL", "celery -A app.queue:celery_app inspect ping -d celery@$$HOSTNAME >/dev/null 2>&1"]
       interval: 30s

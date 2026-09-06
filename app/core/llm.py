@@ -36,8 +36,19 @@ from collections import deque
 from contextlib import asynccontextmanager
 from typing import Awaitable, Callable
 
+from prometheus_client import Counter
+
 from ..config import settings
 from .observability import log_event
+
+#: BUS-270: счётчик исходов LLM-вызовов для алерта «доля ok=0» (alerts.yml:
+#: OracleAILLMFailureRateHigh). Живёт здесь, а не в api/main.py: record_usage
+#: зовут и api, и worker-процессы — метрика должна инкрементиться в каждом.
+LLM_USAGE = Counter(
+    "oracleai_llm_usage_total",
+    "LLM call outcomes recorded to llm_usage.",
+    ("ok", "provider", "purpose"),
+)
 
 #: Аудит AI-001: последний успешный провайдер/модель в рамках текущей задачи.
 #: Сервисный слой читает это для proof-конверта, чтобы жалобу на качество можно
@@ -203,6 +214,7 @@ async def record_usage(db, *, provider: str, model: str, purpose: str,
     if db is None:
         return
     cost_usd = estimate_cost(model, prompt_tokens, completion_tokens)
+    LLM_USAGE.labels(ok=str(int(ok)), provider=provider, purpose=purpose).inc()
     try:
         from ..repo import analytics as analytics_repo
         from ..data.session import utcnow

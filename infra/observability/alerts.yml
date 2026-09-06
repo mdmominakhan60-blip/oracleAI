@@ -40,3 +40,48 @@ groups:
         annotations:
           summary: "VPS disk space is low"
           description: "Less than 15% of root filesystem space remains."
+
+# ── BUS-270: базовые алерты бета-наблюдаемости ──
+# Порог 5xx-бurst согласован: >5 ошибок за 5 минут — ранний сигнал при бета-трафике
+# (даёт 1-2 ложных срабатывания в неделю на фоновых ботоходах; ложный позитив дешевле
+# пропущенного инцидента). Канал доставки — Prometheus → → Alertmanager добавляется
+# в BUS-270-2; до тех пор выгрузка алертов — scripts/metrics-snapshot.sh + review on-call.
+  - name: oracleai-beta-health
+    rules:
+      # 1) 5xx burst: >5 серверных ошибок суммарно за 5 минут.
+      - alert: OracleAI5xxBurst
+        expr: increase(oracleai_http_requests_total{status=~"5.."}[5m]) > 5
+        for: 1m
+        labels:
+          severity: critical
+          stack: oracleai
+        annotations:
+          summary: "5xx burst: {{ $value | printf \"%.0f\" }} server errors in 5m"
+          description: "Маршрут {{ $labels.route }} отвечает 5xx. Первое действие: docker logs infra-api-1 --since 10m | grep -E 'ERROR|Traceback'."
+
+      # 2) Rate-limit fail-closed: 429 при недоступном backend'е лимитера.
+      # RATE_LIMIT_FAIL_CLOSED=1 роняет лимитер → все ответы 429 (deps.py:88-98);
+      # backend="unknown"/degraded отличает fail-closed от честного 429 per-user.
+      - alert: OracleAIRateLimitFailClosed
+        expr: increase(oracleai_http_requests_total{status="429",route=~"api.*"}[5m]) > 20
+        for: 2m
+        labels:
+          severity: critical
+          stack: oracleai
+        annotations:
+          summary: "Массовые 429 — вероятно rate-limit fail-closed (backend недоступен)"
+          description: "Первое действие: проверить Redis (docker logs infra-redis-1; docker exec infra-api-1 env | grep REDIS_URL) и лог 'rate_limit_denied backend='. При backend=redis-недоступен → fail-closed роняет ВСЕ запросы."
+
+      # 3) Доля ok=0 в llm_usage: деградация LLM-канала (записывает record_usage,
+      # app/core/llm.py:198-231). Экспортируется api /metrics кастомным счётчиком
+      # oracleai_llm_usage_total{ok="0|1"} (BUS-270, метрика добавляется рядом).
+      # Алерт: в 10-минутном окне были вызовы и >50% неуспешны — канал фактически лежит.
+      - alert: OracleAILLMFailureRateHigh
+        expr: (sum(increase(oracleai_llm_usage_total{ok="0"}[10m])) / clamp_min(sum(increase(oracleai_llm_usage_total[10m])), 1)) > 0.5 and sum(increase(oracleai_llm_usage_total[10m])) > 3
+        for: 5m
+        labels:
+          severity: warning
+          stack: oracleai
+        annotations:
+          summary: "LLM-канал деградировал: >50% ok=0 в llm_usage за 10m"
+          description: "Первое действие: curl http://<host-gateway>:20128/healthz (omniroute) и docker logs infra-worker-1 | grep -i llm. Продукт при этом деградирует в офлайн-ответы (runtime.py:175)."
