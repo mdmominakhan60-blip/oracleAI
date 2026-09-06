@@ -635,15 +635,28 @@ async def _welcome_onboard_done_at(db, tg_id: int) -> datetime | None:
         return None
 
 
+async def _welcome_has_first_value(db, tg_id: int) -> bool:
+    """Появилась ли первая ценность — стоп §1 «немедленный выход»."""
+    cur = await db.execute(
+        "SELECT 1 FROM events WHERE tg_id=:tg_id "
+        "AND name IN ('first_ritual','first_question') LIMIT 1",
+        {"tg_id": tg_id})
+    return await cur.fetchone() is not None
+
+
 async def _welcome_chain(bot, db, user, now_utc: datetime) -> None:
     """Одно касание за прогон: W1 → W3, срок каждого — от onboard_done.
 
     Если отправка d1 запоздала (сутки простоя), d3 уйдёт лишь в свой срок —
-    касания не слипаются в один день. Стоп «действие совершено» реализован
-    самим отбором: появление first-события выводит юзера из аудитории
-    между прогонами, а «кнопка нажата» без действия цепочку не останавливает.
+    касания не слипаются в один день. Стоп «действие совершено» дважды:
+    отбором (юзер покидает аудиторию между прогонами) и здесь, в момент
+    отправки, — юзер мог достичь first-ценности, пока sweep идёт по партии
+    (аудитория снимается один раз в начале прогона). «Кнопка нажата» без
+    действия цепочку не останавливает.
     """
     tg_id = user["tg_id"]
+    if await _welcome_has_first_value(db, tg_id):
+        return
     onboarded_at = await _welcome_onboard_done_at(db, tg_id)
     if onboarded_at is None:
         return
