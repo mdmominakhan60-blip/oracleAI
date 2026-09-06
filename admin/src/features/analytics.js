@@ -6,6 +6,26 @@ import { segmentLabel } from './users.js';
 
 // BUS-178: аналитический раздел — срезы воронки/retention/revenue + сегменты аудитории.
 // Источники — существующие агрегаты /api/admin/dashboard и /api/admin/users.
+// Методология и data_quality — по спеке BUS-176 (metrics/reports/BUS-176-owner-analytics-spec.md):
+// retention в админке считается по активности (activity fallback, §5.2), воронка —
+// по registrations-когорте (§5.3); таргеты §6 — гипотезы, только подсветка, без алертов.
+
+function setDq(id, { status, note }) {
+  const el = $(id);
+  if (!el) return;
+  const labels = { full: '✓', partial: '~', empty: '∅' };
+  const titles = {
+    full: 'Данные полные за выбранный период',
+    partial: note || 'Данные частичные — смотри методологию',
+    empty: 'Данных за период нет',
+  };
+  // sr-only текст нужен axe: title и aria-label на span без роли axe не
+  // считает именем, а голый глиф ✓/~ — non-text content без контраста
+  el.dataset.dq = status;
+  el.textContent = labels[status] || '?';
+  el.title = titles[status] || '';
+  el.innerHTML = `${labels[status] || '?'}<span class="sr-only">${titles[status] || ''}</span>`;
+}
 
 const ACTIVATION_LABELS = {
   first_ritual: 'Первая практика',
@@ -27,6 +47,16 @@ const MONEY_EVENTS = [
   ['report_delivered', 'Разбор доставлен'],
   ['refund_completed', 'Возврат завершён'],
 ];
+
+// Пороги воронки — из §6 спеки BUS-176: Visit→Signup и Signup→Activation.
+// Все таргеты — гипотезы до ≥2 недель прод-трафика; подсветка без алертов.
+const FUNNEL_TARGETS = {
+  'Пришли': null,
+  'Прошли знакомство': { green: 25, red: 10 },
+  'Задали вопрос': { green: 25, red: 15 },
+  'Вернулись на 2-й день': null,
+  'Заплатили': { green: 2, red: 1 },
+};
 
 // Карточки-сегменты: показываем только те коды, чей размер можно честно
 // посчитать из overview без отдельного counts-эндпоинта.
@@ -58,6 +88,10 @@ export class AnalyticsFeature {
   bind() {
     if (this.bound) return;
     this.bound = true;
+    $('anx-period').addEventListener('change', (event) => {
+      state.period = +event.target.value;
+      this.loadMetrics().catch(fail);
+    });
     $('anx-q').addEventListener('input', (event) => {
       clearTimeout(this.searchTimer);
       this.searchTimer = setTimeout(() => {
@@ -108,8 +142,39 @@ export class AnalyticsFeature {
     this.renderActivation(dash.activation);
     this.renderFunnel(dash.funnel);
     this.renderRetention(dash.retention);
+    this.renderSources(dash.sources);
     this.renderMoney(dash);
     this.renderSegments(dash.overview);
+    this.renderDataQuality(dash);
+  }
+
+  // BUS-176 §4: каждый виджет несёт метку качества данных. Бэкенд пока не
+  // отдаёт data_quality в /dashboard — честные пометки считаем на фронте
+  // из известных ограничений (спека §7).
+  renderDataQuality(dash) {
+    const d30Matured = (dash.retention || []).some((row) => (row.d30 ?? 0) > 0);
+    setDq('anx-funnel-dq', {
+      status: 'partial',
+      note: 'по регистрациям окна; visit-сессии — после BUS-144',
+    });
+    setDq('anx-retention-dq', {
+      status: 'partial',
+      note: 'по активности; D30 нематюрит у свежих когорт',
+    });
+    setDq('anx-activation-dq', {
+      status: dash.activation?.cohort ? 'full' : 'empty',
+      note: dash.activation?.cohort ? null : 'открытий за период нет',
+    });
+    setDq('anx-sources-dq', { status: (dash.sources || []).length ? 'full' : 'empty' });
+    setDq('anx-rev-dq', {
+      status: dash.monetization_v2 ? 'full' : 'empty',
+      note: dash.monetization_v2 ? 'gross в Stars, не revenue' : null,
+    });
+    setDq('anx-sku-dq', { status: (dash.monetization_v2?.revenue?.by_sku || []).length ? 'full' : 'empty' });
+    setDq('anx-tiers-dq', { status: Object.keys(dash.monetization_v2?.subscription?.active_by_tier || {}).length ? 'full' : 'empty' });
+    setDq('anx-crystals-dq', { status: (dash.monetization_v2?.crystals?.by_source || []).length ? 'full' : 'empty' });
+    setDq('anx-money-dq', { status: dash.monetization_v2?.funnel ? 'full' : 'empty' });
+    setDq('anx-segments-dq', { status: dash.overview ? 'full' : 'empty' });
   }
 
   renderActivation(activation) {
@@ -132,9 +197,29 @@ export class AnalyticsFeature {
       ? funnel.map((step, index) => {
           const previous = index ? funnel[index - 1].value : step.value;
           const drop = previous ? Math.round((1 - step.value / previous) * 100) : 0;
-          return `<div class="funnel-step"><div class="funnel-top"><span>${esc(step.step)}</span><span>${num(step.value)} · ${pct(step.of_total)}${index && drop > 0 ? `<span class="funnel-drop">−${drop}%</span>` : ''}</span></div><div class="funnel-bar"><div class="funnel-fill" style="width:${Math.max(1, step.of_total)}%"></div></div></div>`;
+          // Таргет §6 — доля от первого шага (visit→paid для «Заплатили»).
+          const target = FUNNEL_TARGETS[step.step];
+          const rate = step.of_total;
+          const tone = !target || !previous ? ''
+            : rate >= target.green ? ' good' : rate < target.red ? ' bad' : ' warn';
+          const toneTitle = tone === ' good' ? 'в таргете (гипотеза)' : tone === ' warn' ? 'в амбер-зоне (гипотеза)' : 'ниже таргета (гипотеза)';
+          return `<div class="funnel-step${tone}"><div class="funnel-top"><span>${esc(step.step)}${tone ? ` <span class="funnel-target-mark" title="${toneTitle}" aria-hidden="true">${tone === ' good' ? '●' : tone === ' warn' ? '◐' : '○'}</span><span class="sr-only">, ${toneTitle}</span>` : ''}</span><span>${num(step.value)} · ${pct(step.of_total)}${index && drop > 0 ? `<span class="funnel-drop">−${drop}%</span>` : ''}</span></div><div class="funnel-bar"><div class="funnel-fill" style="width:${Math.max(1, step.of_total)}%"></div></div></div>`;
         }).join('')
       : '<div class="muted small">Данных за период нет</div>';
+    const funnelCard = $('anx-funnel').closest('.card');
+    if (funnelCard) {
+      funnelCard.title = 'Воронка по клиентам, зарегистрированным в окне. Подсветка — гипотетические таргеты (BUS-176 §6), не алерты.';
+    }
+  }
+
+  renderSources(sources) {
+    $('anx-sources').innerHTML = table([
+      { title: 'Канал', render: (row) => esc(row.source || 'organic') },
+      { title: 'Пришло', num: true, render: (row) => num(row.users) },
+      { title: 'Платящих', num: true, render: (row) => num(row.payers) },
+      { title: 'Доля платящих', num: true, render: (row) => (row.users ? pct((row.payers * 100) / row.users) : '—') },
+      { title: 'LTV, Stars', num: true, render: (row) => num(row.stars) },
+    ], sources || [], { empty: 'Каналов за период нет' });
   }
 
   renderRetention(retention) {
@@ -235,7 +320,7 @@ export class AnalyticsFeature {
       { title: 'Клиентка', render: (row) => `<b>${esc(row.name || '—')}</b><div class="muted small">${row.username ? '@' + esc(row.username) : row.tg_id}</div>` },
       { title: 'Тариф', render: (row) => (row.sub_active ? `<span class="badge on">${esc(row.sub_level)}</span>` : '<span class="badge off">нет</span>') },
       { title: 'Теги', render: (row) => (row.tags || []).map((tag) => `<span class="badge tag">${esc(tag)}</span>`).join(' ') },
-      { title: '✦', num: true, render: (row) => num(row.crystals) },
+      { title: 'Кристаллы', num: true, render: (row) => num(row.crystals) },
       { title: 'Stars', num: true, render: (row) => num(row.ltv_stars) },
       { title: 'Была', render: (row) => date(row.last_seen, true) },
       { title: 'Пришла', render: (row) => date(row.created_at) },

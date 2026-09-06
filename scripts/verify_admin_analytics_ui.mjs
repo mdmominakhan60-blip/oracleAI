@@ -22,7 +22,7 @@ async function checkViewport(name, viewport, isMobile) {
   page.on('pageerror', (err) => errors.push(`[${name}] pageerror: ${err.message}`));
   page.on('console', (msg) => { if (msg.type() === 'error') errors.push(`[${name}] console.error: ${msg.text()}`); });
   try {
-    await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+    await page.goto(`${BASE}/admin/`, { waitUntil: 'networkidle' });
     await page.waitForSelector('#shell:not(.hidden)', { timeout: 5000 });
     await page.click('.nav-item[data-view="analytics"]');
     await page.waitForSelector('#view-analytics.active', { timeout: 5000 });
@@ -62,7 +62,8 @@ async function checkViewport(name, viewport, isMobile) {
     const drawerVisible = await page.locator('#drawer-content .u-head .u-name').first().isVisible();
     results.push({ name: `${name}-drawer`, drawerVisible });
     await page.screenshot({ path: `${OUT}/analytics-${name}-drawer.png` });
-    await page.click('.drawer-close');
+    // force: длинное u-name может перекрыть кнопку на узком viewport — это флейк клика, не UI-дефект
+    await page.click('.drawer-close', { force: true });
 
     // axe: прогон только на desktop (mobile-правила те же теги)
     if (name === 'desktop') {

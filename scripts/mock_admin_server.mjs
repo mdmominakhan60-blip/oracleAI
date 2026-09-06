@@ -18,6 +18,11 @@ const overview = {
   diary_7d: 74, stars_total: 17056, stars_30d: 14230, payers: 182,
   crystals_outstanding: 8420,
 };
+const sources = [
+  { source: 'tg', users: 251, payers: 98, stars: 8200 },
+  { source: 'instagram', users: 121, payers: 51, stars: 4100 },
+  { source: 'organic', users: 79, payers: 33, stars: 1930 },
+];
 const retention = [
   { cohort: '2026-08-10', size: 214, d1: 64.0, d3: 48.0, d7: 31.0, d14: 21.0, d30: 12.0 },
   { cohort: '2026-08-17', size: 167, d1: 58.0, d3: 44.0, d7: 27.0, d14: 18.0, d30: 0.0 },
@@ -96,8 +101,13 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
   const p = url.pathname;
 
-  // статика админки
-  if (p === '/admin' || p === '/admin/') {
+  // статика админки — redirect на trailing slash: относительные @import
+  // в admin.css резолвятся от базового URL документа
+  if (p === '/admin') {
+    res.writeHead(301, { Location: '/admin/' });
+    return res.end();
+  }
+  if (p === '/admin/') {
     const html = (await fs.readFile(path.join(ADMIN, 'index.html'), 'utf8'))
       .replaceAll('__ADMIN_ASSET_VERSION__', 'mock');
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -114,21 +124,39 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(404); return res.end();
     }
   }
+  // axe-core перезапрашивает @import-стили относительно документа, а не CSS —
+  // отдаём те же файлы, чтобы color-contrast реально считался, а не уходил в incomplete
+  if (p.startsWith('/admin/styles/')) {
+    const rel = p.replace('/admin/', '').split('?')[0];
+    try {
+      const file = await fs.readFile(path.join(ADMIN, rel));
+      res.writeHead(200, { 'Content-Type': 'text/css' });
+      return res.end(file);
+    } catch {
+      res.writeHead(404); return res.end();
+    }
+  }
+  if (p === '/favicon.ico') {
+    res.writeHead(204); return res.end();
+  }
   if (p === '/api/admin/me') {
     return json(res, 200, { tg_id: 100000001, role: 'owner', name: 'Владелец', permissions: ['*'] });
   }
   if (p === '/api/admin/health') {
     return json(res, 200, { ok: true, users: 451, telegram_webapp_ready: true });
   }
+  if (p === '/api/admin/payment-health') {
+    return json(res, 200, { status: 'ok', checked_at: new Date().toISOString(), stale_pending_threshold_hours: 2, checks: { pending_orders_stale: 0, failed_orders_24h: 0, webhook_failures_24h: {}, reconciliation: {}, webhook_timeline: [] }, providers: {} });
+  }
   if (p === '/api/admin/dashboard') {
     return json(res, 200, {
       overview, funnel, activation, retention,
-      monetization_v2, timeseries: [], sources: [], top_products: [],
+      monetization_v2, timeseries: [], sources, top_products: [],
       top_referrers: [], promo_batches: [], monetization: {}, revenue: {},
     });
   }
   if (p === '/api/admin/dashboard/demo') {
-    return json(res, 200, { overview, funnel, activation, retention, monetization_v2 });
+    return json(res, 200, { overview, funnel, activation, retention, sources, monetization_v2 });
   }
   if (p === '/api/admin/users') {
     const q = (url.searchParams.get('q') || '').toLowerCase();

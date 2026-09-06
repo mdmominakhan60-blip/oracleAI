@@ -109,45 +109,89 @@ export const adminShellTemplate = String.raw`
     <section class="view" id="view-analytics">
       <div class="card">
         <div class="card-head"><h3>Аудитория</h3>
-          <span class="muted small">Нажми на карточку, чтобы отфильтровать список ниже</span></div>
+          <span class="anx-dq-wrap">
+            <span class="muted small">Нажми на карточку, чтобы отфильтровать список ниже</span>
+            <span id="anx-segments-dq" class="anx-dq"></span>
+            <label class="sr-only" for="anx-period">Период аналитики</label>
+            <select id="anx-period" class="input slim" aria-label="Период аналитики">
+              <option value="7">7 дней</option>
+              <option value="30" selected>30 дней</option>
+              <option value="90">90 дней</option>
+              <option value="180">180 дней</option>
+              <option value="365">365 дней</option>
+            </select>
+          </span>
+        </div>
         <div id="anx-segments" class="segment-grid" role="group" aria-label="Сегменты аудитории"></div>
       </div>
 
       <div class="row-2">
         <div class="card">
-          <div class="card-head"><h3>Воронка активации Mini App</h3>
-            <span id="anx-activation-cohort" class="muted small"></span></div>
-          <div id="anx-activation"></div>
+          <div class="card-head"><h3>Воронка</h3>
+            <span class="anx-dq-wrap">
+              <span class="muted small"><span id="anx-funnel-days"></span> дн.</span>
+              <span id="anx-funnel-dq" class="anx-dq"></span>
+            </span>
+          </div>
+          <div id="anx-funnel"></div>
         </div>
         <div class="card">
-          <div class="card-head"><h3>CRM-воронка</h3>
-            <span class="muted small">период: <span id="anx-funnel-days"></span> дн.</span></div>
-          <div id="anx-funnel"></div>
+          <div class="card-head"><h3>Удержание по когортам</h3>
+            <span id="anx-retention-dq" class="anx-dq"></span></div>
+          <div id="anx-retention" class="table-wrap"></div>
         </div>
       </div>
 
       <div class="row-2">
         <div class="card">
-          <div class="card-head"><h3>Удержание по когортам</h3></div>
-          <div id="anx-retention" class="table-wrap"></div>
+          <div class="card-head"><h3>Активация Mini App</h3>
+            <span class="anx-dq-wrap">
+              <span id="anx-activation-cohort" class="muted small"></span>
+              <span id="anx-activation-dq" class="anx-dq"></span>
+            </span>
+          </div>
+          <div id="anx-activation"></div>
         </div>
         <div class="card">
-          <div class="card-head"><h3>События монетизации</h3>
-            <span class="muted small">от пейволла до доставки разбора</span></div>
-          <div id="anx-money-funnel" class="table-wrap"></div>
+          <div class="card-head"><h3>Каналы привлечения</h3>
+            <span id="anx-sources-dq" class="anx-dq"></span></div>
+          <div id="anx-sources" class="table-wrap"></div>
         </div>
       </div>
 
-      <div id="anx-rev-kpi" class="kpi-grid"></div>
+      <div class="card">
+        <div class="card-head"><h3>Деньги</h3>
+          <span class="anx-dq-wrap">
+            <span class="muted small">gross booking в Stars — не revenue</span>
+            <span id="anx-rev-dq" class="anx-dq"></span>
+          </span>
+        </div>
+        <div id="anx-rev-kpi" class="kpi-grid"></div>
+      </div>
 
       <div class="row-3">
-        <div class="card"><div class="card-head"><h3>Выручка по SKU</h3></div>
+        <div class="card"><div class="card-head"><h3>Выручка по SKU</h3>
+          <span id="anx-sku-dq" class="anx-dq"></span></div>
           <div id="anx-rev-sku" class="table-wrap"></div></div>
-        <div class="card"><div class="card-head"><h3>Активные тарифы</h3></div>
+        <div class="card"><div class="card-head"><h3>Активные тарифы</h3>
+          <span id="anx-tiers-dq" class="anx-dq"></span></div>
           <div id="anx-tiers" class="table-wrap"></div></div>
         <div class="card"><div class="card-head"><h3>Кристаллы</h3>
-          <span id="anx-crystal-sub" class="muted small"></span></div>
+          <span class="anx-dq-wrap">
+            <span id="anx-crystal-sub" class="muted small"></span>
+            <span id="anx-crystals-dq" class="anx-dq"></span>
+          </span></div>
           <div id="anx-crystals" class="table-wrap"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>События монетизации</h3>
+          <span class="anx-dq-wrap">
+            <span class="muted small">от пейволла до доставки разбора</span>
+            <span id="anx-money-dq" class="anx-dq"></span>
+          </span>
+        </div>
+        <div id="anx-money-funnel" class="table-wrap"></div>
       </div>
 
       <div class="card">

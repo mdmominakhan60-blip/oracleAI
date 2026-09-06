@@ -14,6 +14,23 @@
 .segment-value { font-size: 19px; font-weight: 600; }
 .segment-label { font-size: 11px; color: var(--muted); }
 
+/* ── аналитика: метка качества данных (BUS-176 §4) ──
+   Символьный бейдж с расшифровкой в title/aria-label: ✓ полные, ~ частичные,
+   ∅ пусто. Контраст на тёмной панели проверен (AA для мелкого текста). */
+.anx-dq {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1px solid var(--line-strong); background: var(--panel-2);
+  font-size: 11px; line-height: 1; cursor: help; flex: 0 0 auto;
+}
+.anx-dq[data-dq='full'] { color: var(--green); border-color: rgba(127, 216, 168, .4); }
+.anx-dq[data-dq='partial'] { color: var(--gold); border-color: rgba(232, 197, 107, .4); }
+.anx-dq[data-dq='empty'] { color: var(--muted); }
+.anx-dq-wrap {
+  display: inline-flex; align-items: center; gap: 7px; min-width: 0; flex-wrap: wrap;
+}
+.card-head .anx-period-select { align-self: center; }
+
 /* ── список контента ── */
 .list { max-height: 620px; overflow-y: auto; }
 .list-item {
