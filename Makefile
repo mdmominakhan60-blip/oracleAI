@@ -1,4 +1,6 @@
-COMPOSE := docker compose -f infra/docker-compose.yml
+# .env участвует в интерполяции ${VAR:?} до чтения env_file сервисов — без --env-file
+# любой вызов compose из чистого шелла падает ("required variable ... missing").
+COMPOSE := docker compose --env-file .env -f infra/docker-compose.yml
 
 .PHONY: init up down restart ps logs observability build migrate selfcheck docs-check shell worker-scale up-local-llm backup restore backup-drill test p004-audit config
 
