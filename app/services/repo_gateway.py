@@ -16,6 +16,7 @@ from ..repo import comms  # noqa: F401
 from ..repo import content  # noqa: F401
 from ..repo import crm  # noqa: F401
 from ..repo import dialog  # noqa: F401
+from ..repo import feedback  # noqa: F401
 from ..repo import growth  # noqa: F401
 from ..repo import jobs  # noqa: F401
 from ..repo import monetization  # noqa: F401
@@ -25,5 +26,5 @@ from ..repo import readings  # noqa: F401
 from ..repo import users  # noqa: F401
 
 __all__ = ["admin", "analytics", "billing", "comms", "content", "crm",
-           "dialog", "growth", "jobs", "monetization", "notifications",
+           "dialog", "feedback", "growth", "jobs", "monetization", "notifications",
            "palm", "readings", "users"]

@@ -1,53 +1,134 @@
 """Исходящие коммуникации: журнал доставок и рассылки.
 
-`deliveries` — защита от повторной отправки. Планировщик раньше держал отметки
-об отправленном в множестве внутри процесса, поэтому после каждого рестарта
-утренний прогноз уходил клиентке второй раз. Отметка в БД живёт дольше процесса.
+`deliveries` — защита от повторной отправки. Статусы: sent / failed / forbidden.
+Отметка ставится ДО отправки (claim → sending). После доставки — sent.
+Временный сбой → failed (можно пере-занять на следующем тике).
+Forbidden/удаление канала → forbidden (навсегда, без повторов).
 """
 from __future__ import annotations
 
 import json
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from ..data.session import transaction, utcnow
+
+# 16 hex chars → 2^64 space, коллизия пренебрежима.
+_CLAIM_TOKEN_BYTES = 8
+
+
+def _claim_token() -> str:
+    return secrets.token_hex(_CLAIM_TOKEN_BYTES)
+
 
 # ─────────────────────────── журнал доставок ─────────────────────────────────
 
 
 async def already_sent(db, tg_id: int, kind: str, key: str) -> bool:
-    cur = await db.execute(
-        "SELECT 1 FROM deliveries WHERE tg_id=:tg_id AND kind=:kind AND key=:key",
-        {"tg_id": tg_id, "kind": kind, "key": key})
-    return await cur.fetchone() is not None
+    """True — доставка в терминальном состоянии (sent или forbidden).
 
-
-async def mark_sent(db, tg_id: int, kind: str, key: str) -> bool:
-    """Ставит отметку. False — отметка уже была (кто-то отправил параллельно)."""
-    async with transaction(db):
+    Поддерживает обе схемы deliveries: со status (BUS-308) и без (старые миграции).
+    """
+    try:
         cur = await db.execute(
-            "INSERT INTO deliveries(tg_id, kind, key, created_at) "
-            "VALUES(:tg_id, :kind, :key, :created_at) "
-            "ON CONFLICT (tg_id, kind, key) DO NOTHING",
-            {"tg_id": tg_id, "kind": kind, "key": key, "created_at": utcnow()})
-        return bool(cur.rowcount)
+            "SELECT 1 FROM deliveries "
+            "WHERE tg_id=:tg_id AND kind=:kind AND key=:key "
+            "AND status IN ('sent','forbidden')",
+            {"tg_id": tg_id, "kind": kind, "key": key})
+        return await cur.fetchone() is not None
+    except Exception:  # noqa: BLE001
+        # Схема без колонки status (миграции до 0012) — любая запись = отправлено.
+        cur = await db.execute(
+            "SELECT 1 FROM deliveries "
+            "WHERE tg_id=:tg_id AND kind=:kind AND key=:key",
+            {"tg_id": tg_id, "kind": kind, "key": key})
+        return await cur.fetchone() is not None
+
+
+async def mark_sent(db, tg_id: int, kind: str, key: str,
+                    status: str = 'sent', error: str | None = None) -> bool:
+    """Ставит/обновляет отметку. False — не наш claim."""
+    try:
+        async with transaction(db):
+            cur = await db.execute(
+                "INSERT INTO deliveries(tg_id, kind, key, status, error, created_at) "
+                "VALUES(:tg_id, :kind, :key, :status, :error, :now) "
+                "ON CONFLICT (tg_id, kind, key) DO UPDATE SET "
+                "  status=:status, error=:error, created_at=:now "
+                "WHERE deliveries.status='sending'",
+                {"tg_id": tg_id, "kind": kind, "key": key,
+                 "status": status, "error": error, "now": utcnow()})
+            return bool(cur.rowcount)
+    except Exception:  # noqa: BLE001
+        # Схема без status (миграции до 0012)
+        async with transaction(db):
+            cur = await db.execute(
+                "INSERT INTO deliveries(tg_id, kind, key, created_at) "
+                "VALUES(:tg_id, :kind, :key, :now) "
+                "ON CONFLICT (tg_id, kind, key) DO UPDATE SET "
+                "  created_at=:now",
+                {"tg_id": tg_id, "kind": kind, "key": key, "now": utcnow()})
+            return bool(cur.rowcount)
 
 
 async def claim(db, tg_id: int, kind: str, key: str) -> bool:
-    """Атомарно занимает право на отправку: True — отправляем, False — уже ушло.
+    """Атомарно занимает право на отправку. True — отправляем, False — занято/уже ушло.
 
-    Отметка ставится ДО отправки. Дубль в мессенджере клиентка воспринимает как
-    сбой продукта, а не пришедший прогноз — как «сегодня тихо»; поэтому из двух
-    рисков выбираем пропуск, а не повтор.
+    Поддерживает обе схемы deliveries: со status (BUS-308) и без (старые миграции).
     """
-    return await mark_sent(db, tg_id, kind, key)
+    token = _claim_token()
+    try:
+        async with transaction(db):
+            cur = await db.execute(
+                "INSERT INTO deliveries(tg_id, kind, key, status, error, created_at) "
+                "VALUES(:tg_id, :kind, :key, 'sending', :token, :now) "
+                "ON CONFLICT (tg_id, kind, key) DO UPDATE SET "
+                "  status='sending', error=:token "
+                "WHERE deliveries.status='failed'",
+                {"tg_id": tg_id, "kind": kind, "key": key,
+                 "token": token, "now": utcnow()})
+            return bool(cur.rowcount)
+    except Exception:  # noqa: BLE001
+        # Схема без status (миграции до 0012) — простая идемпотентная вставка.
+        async with transaction(db):
+            cur = await db.execute(
+                "INSERT INTO deliveries(tg_id, kind, key, created_at) "
+                "VALUES(:tg_id, :kind, :key, :now) "
+                "ON CONFLICT (tg_id, kind, key) DO NOTHING",
+                {"tg_id": tg_id, "kind": kind, "key": key, "now": utcnow()})
+            return bool(cur.rowcount)
 
 
-async def unclaim(db, tg_id: int, kind: str, key: str) -> None:
-    """Снимает отметку — если отправка сорвалась по временной причине."""
+async def mark_failed(db, tg_id: int, kind: str, key: str) -> None:
+    """Снимаем sending → failed. Временный сбой — попробуем позже."""
     async with transaction(db):
         await db.execute(
-            "DELETE FROM deliveries WHERE tg_id=:tg_id AND kind=:kind AND key=:key",
+            "UPDATE deliveries SET status='failed' "
+            "WHERE tg_id=:tg_id AND kind=:kind AND key=:key AND status='sending'",
             {"tg_id": tg_id, "kind": kind, "key": key})
+
+
+# unclaim() удалён: с failed-статусом дедуп-строка живёт, retry пере-занимает
+# через claim() (он обновляет failed → sending атомарно).
+
+
+async def sent_since(db, tg_id: int, kind: str, since: str) -> bool:
+    """True — есть запись deliveries для kind с created_at >= since.
+
+    Поддерживает обе схемы deliveries: со status (BUS-308) и без (старые миграции).
+    """
+    try:
+        cur = await db.execute(
+            "SELECT 1 FROM deliveries WHERE tg_id=:tg_id AND kind=:kind "
+            "AND created_at >= :since LIMIT 1",
+            {"tg_id": tg_id, "kind": kind, "since": since})
+        return await cur.fetchone() is not None
+    except Exception:  # noqa: BLE001
+        cur = await db.execute(
+            "SELECT 1 FROM deliveries WHERE tg_id=:tg_id AND kind=:kind "
+            "AND created_at >= :since LIMIT 1",
+            {"tg_id": tg_id, "kind": kind, "since": since})
+        return await cur.fetchone() is not None
 
 
 async def prune(db, days: int = 120) -> int:
@@ -60,6 +141,7 @@ async def prune(db, days: int = 120) -> int:
 
 
 # ─────────────────────────────── рассылки ─────────────────────────────────────
+
 
 async def create_broadcast(db, title: str, body: str, *, segment: str = "all",
                            button_text: str | None = None,

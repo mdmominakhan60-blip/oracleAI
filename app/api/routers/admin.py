@@ -466,11 +466,25 @@ class GrantIn(BaseModel):
 @router.post("/users/{tg_id}/grant")
 async def grant(tg_id: int, item: GrantIn, ctx=Depends(require("grants")),
                 db=Depends(get_db)):
-    """Подарок, компенсация или тест. Всё пишется в аудит."""
+    """Подарок, компенсация или тест. Всё пишется в аудит.
+
+    Каппинг по роли — матрица компенсаций BUS-284 §4.2: прямой grant подписки
+    admin ≤7 дней, owner ≤30; кристаллы admin/owner ≤30✦ (сверх — owner).
+    Проверка на уровне endpoint, до billing_svc.grant_manually.
+    """
     if item.kind not in billing_svc.GRANT_KINDS:
         raise HTTPException(400, f"неизвестный вид: {item.kind}")
     if not await users.get(db, tg_id):
         raise HTTPException(404, "пользователь не найден")
+    if item.kind == "plan" and ctx.role == "admin" and (item.days or 0) > 7:
+        raise HTTPException(403, {
+            "code": "grant_days_cap", "role": ctx.role, "max_days": 7})
+    if item.kind == "plan" and ctx.role == "owner" and (item.days or 0) > 30:
+        raise HTTPException(403, {
+            "code": "grant_days_cap", "role": ctx.role, "max_days": 30})
+    if item.kind == "crystals" and ctx.role == "admin" and item.qty > 30:
+        raise HTTPException(403, {
+            "code": "grant_crystals_cap", "role": ctx.role, "max_qty": 30})
     granted = await billing_svc.grant_manually(
         db, tg_id, item.kind, item.code, qty=item.qty, days=item.days,
         admin_id=ctx.tg_id)
@@ -479,6 +493,96 @@ async def grant(tg_id: int, item: GrantIn, ctx=Depends(require("grants")),
                                     "qty": item.qty, "days": item.days,
                                     "reason": item.reason})
     return granted
+
+
+# ─────────────── операторские подарки (BUS-310, BUS-284 §4) ──────────────────
+
+#: Сколько дней trial доступно роли (матрица §4.2): support — 3; admin — 3/7/10;
+#: owner — 3/7/10/14 (усиление PB-3).
+OP_GIFT_DAYS = {"support": (3,), "admin": (3, 7, 10), "owner": (3, 7, 10, 14)}
+
+#: Анти-абьюз: 3/7-дневные подарки — окно 60 дней; усиление 10/14 — 90 (PB-3).
+OP_GIFT_COOLDOWN_DAYS = {3: 60, 7: 60, 10: 90, 14: 90}
+
+
+class GiftIn(BaseModel):
+    days: int
+    reason: str = Field(min_length=1, max_length=500)
+
+
+def _gift_error(code: str, status: int = 400, **extra) -> HTTPException:
+    """Machine-readable ошибка подарка: FE рендерит по code, не по тексту."""
+    return HTTPException(status, {"error": {"code": code, **extra}})
+
+
+async def _gift_state(db, tg_id: int) -> dict:
+    """Доступность подарков клиентке: окно анти-абьюза по последней выдаче.
+
+    Окно определяется размером последнего подарка: 60д для 3/7-дневных,
+    90д для усиления 10/14 (PB-3).
+    """
+    last_at = await growth.last_op_gift_at(db, tg_id)
+    last_days = await growth.last_op_gift_days(db, tg_id)
+    next_at = None
+    if last_at:
+        last = datetime.fromisoformat(last_at)
+        window = OP_GIFT_COOLDOWN_DAYS.get(last_days, 60)
+        next_at = last + timedelta(days=window)
+    return {"last_at": last_at, "next_at": next_at}
+
+
+@router.get("/users/{tg_id}/gift/eligibility")
+async def gift_eligibility(tg_id: int, ctx=Depends(require("crm:write")),
+                           db=Depends(get_db)):
+    """Машин-readable готовность клиентки к подарку — для серых кнопок формы.
+
+    FE строит форму по can() и этому статусу заранее (тред BUS-312 LTV3):
+    не текстовое сообщение после submit, а окно/доступность до него.
+    """
+    if not await users.get(db, tg_id):
+        raise HTTPException(404, "пользователь не найден")
+    state = await _gift_state(db, tg_id)
+    now = datetime.now(timezone.utc)
+    ok = state["next_at"] is None or now >= state["next_at"]
+    return {
+        "allowed_days": list(OP_GIFT_DAYS.get(ctx.role, ())),
+        "eligible": bool(OP_GIFT_DAYS.get(ctx.role)) and ok,
+        "cooldown": not ok,
+        "next_available_at": state["next_at"].isoformat() if not ok else None,
+        "last_gift_at": state["last_at"],
+    }
+
+
+@router.post("/users/{tg_id}/gift")
+async def gift(tg_id: int, item: GiftIn, ctx=Depends(require("crm:write")),
+               db=Depends(get_db)):
+    """Выдать операторский подарок: промокод из партии op_* (BUS-284 §4.1).
+
+    Роль-гейтинг: support — 3д, admin — до 10, owner — до 14. Причина
+    обязательна и пишется в аудит (user.gift) — объяснимость задним числом.
+    Анти-абьюз §4.1.3: окно 60д (усиление — 90д) с последнего подарка.
+    """
+    allowed = OP_GIFT_DAYS.get(ctx.role, ())
+    if item.days not in allowed:
+        raise _gift_error("gift_days_not_allowed", 403,
+                          role=ctx.role, allowed_days=list(allowed))
+    if not await users.get(db, tg_id):
+        raise HTTPException(404, "пользователь не найден")
+    state = await _gift_state(db, tg_id)
+    now = datetime.now(timezone.utc)
+    if state["next_at"] and now < state["next_at"]:
+        raise _gift_error("gift_cooldown", 409,
+                          next_available_at=state["next_at"].isoformat())
+    code = await growth.reserve_op_gift(db, item.days)
+    if not code:
+        raise _gift_error("gift_batch_empty", 409)
+    # Факт выдачи конкретной клиентке — под её tg_id (анти-абьюз, таймлайн),
+    # статус sent: код оператор передаёт в личном сообщении, не через бота.
+    await comms.mark_sent(db, tg_id, "op_gift", code)
+    await admin_repo.audit(db, ctx.tg_id, "user.gift", target=str(tg_id),
+                           payload={"code": code, "days": item.days,
+                                    "reason": item.reason})
+    return {"code": code, "days": item.days, "reason": item.reason}
 
 
 class StatusIn(BaseModel):
@@ -701,6 +805,17 @@ async def promo_redemptions(batch: str | None = None,
                             ctx=Depends(require("promo")), db=Depends(get_db)):
     """Кто и когда активировал купоны."""
     return await growth.list_redemptions(db, batch=batch, limit=limit)
+
+
+@router.get("/promo/op-report")
+async def promo_op_report(months: int = Query(default=6, ge=1, le=24),
+                          ctx=Depends(require("dashboard")), db=Depends(get_db)):
+    """Месячный отчёт по партиям op_*: redemption rate + конверсия в оплату.
+
+    Данные для KPI §5 плейбука (BUS-284): экономика операторских подарков
+    видна без права promo — право dashboard, как у прочих отчётов панели.
+    """
+    return {"batches": await growth.op_batches_report(db, months=months)}
 
 
 @router.get("/promo/export")

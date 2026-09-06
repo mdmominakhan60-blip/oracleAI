@@ -24,11 +24,12 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+from ..config import settings
 from ..data.session import transaction
 
 from ..core import agent as agent_core
 from ..core import astro
-from ..repo import comms, content, growth, users
+from ..repo import comms, content, feedback as feedback_repo, growth, users
 from . import analytics, broadcast, horoscopes, payment_monitor, practices as practices_svc
 
 log = logging.getLogger("oracle.scheduler")
@@ -49,27 +50,29 @@ def _user_lang(user) -> str:
     return "en" if user["lang"] == "en" else "ru"
 
 
-async def _deliver(bot, tg_id: int, text: str, markup=None) -> bool:
-    """Отправляет сообщение. False — стоит попробовать позже.
+async def _deliver(bot, tg_id: int, text: str, markup=None) -> tuple[str, str | None]:
+    """Отправляет сообщение. Возвращает (status, error_class_or_None).
 
-    Блокировка бота и удалённый чат — навсегда: возвращаем True, чтобы отметка
-    осталась и планировщик не долбился в этот чат каждые десять минут.
+    status: sent | forbidden | failed
+    - sent: сообщение доставлено
+    - forbidden: бот заблокирован или чат удалён (навсегда)
+    - failed: временный сбой, попробуем позже
     """
     from aiogram.exceptions import (TelegramBadRequest, TelegramForbiddenError,
                                     TelegramRetryAfter)
     try:
         await bot.send_message(tg_id, text, reply_markup=markup)
-        return True
+        return "sent", None
     except TelegramRetryAfter as e:
         log.warning("флуд-контроль: пауза %s с", e.retry_after)
         await asyncio.sleep(e.retry_after + 1)
-        return False
+        return "failed", None
     except (TelegramForbiddenError, TelegramBadRequest) as e:
         log.info("рассылка пропущена навсегда: %s", type(e).__name__)
-        return True
+        return "forbidden", type(e).__name__
     except Exception as e:  # noqa: BLE001
         log.warning("рассылка не удалась, повторю позже: %s", type(e).__name__)
-        return False
+        return "failed", None
 
 
 async def _send_once(bot, db, tg_id: int, kind: str, key: str, text: str,
@@ -77,9 +80,15 @@ async def _send_once(bot, db, tg_id: int, kind: str, key: str, text: str,
     """Отправка с защитой от дубля. False — уже отправляли или не вышло."""
     if not await comms.claim(db, tg_id, kind, key):
         return False
-    if await _deliver(bot, tg_id, text, markup):
+    result, error_class = await _deliver(bot, tg_id, text, markup)
+    if result == "sent":
+        await comms.mark_sent(db, tg_id, kind, key)
         return True
-    await comms.unclaim(db, tg_id, kind, key)   # временный сбой — попробуем позже
+    if result == "forbidden":
+        await comms.mark_sent(db, tg_id, kind, key, status='forbidden',
+                              error=error_class)
+        return False
+    await comms.mark_failed(db, tg_id, kind, key)
     return False
 
 
@@ -131,6 +140,66 @@ async def _audience(db, zones: set[str]) -> list:
             f"AND tg_id>:last_id AND COALESCE(tz,'Europe/Moscow') = ANY(:zones) "
             f"ORDER BY tg_id LIMIT {AUDIENCE_CAP}",
             {"last_id": last_id, "zones": zones_list})
+        batch = await cur.fetchall()
+        if not batch:
+            return out
+        out.extend(batch)
+        last_id = batch[-1]["tg_id"]
+
+
+async def _crm_post_limit_audience(db, now_utc: datetime) -> list:
+    """Кому пора post_limit: limit_reached 24–48ч назад, нет покупки после."""
+    cutoff_24 = (now_utc - timedelta(hours=24)).isoformat()
+    cutoff_48 = (now_utc - timedelta(hours=48)).isoformat()
+    out: list = []
+    last_id = 0
+    while True:
+        cur = await db.execute(
+            "SELECT * FROM users WHERE onboarded=1 AND status='active' "
+            "AND tg_id>:last_id AND (sub_until IS NULL OR sub_until <= :now) "
+            "AND EXISTS (SELECT 1 FROM events e "
+            "  WHERE e.tg_id=users.tg_id AND e.name='limit_reached' "
+            "    AND e.created_at >= :cut_48 AND e.created_at <= :cut_24) "
+            "AND NOT EXISTS (SELECT 1 FROM events e "
+            "  WHERE e.tg_id=users.tg_id AND e.name IN ("
+            "    'payment_success','credit_pack_paid') "
+            "    AND e.created_at > (SELECT MAX(created_at) FROM events e2 "
+            "      WHERE e2.tg_id=users.tg_id AND e2.name='limit_reached')) "
+            f"ORDER BY tg_id LIMIT {AUDIENCE_CAP}",
+            {"last_id": last_id, "now": now_utc.isoformat(),
+             "cut_24": cutoff_24, "cut_48": cutoff_48})
+        batch = await cur.fetchall()
+        if not batch:
+            return out
+        out.extend(batch)
+        last_id = batch[-1]["tg_id"]
+
+
+async def _crm_low_balance_audience(db, now_utc: datetime) -> list:
+    """Кому пора low_balance: credit_balance_low <1ч назад, не ушли post_limit сегодня."""
+    cutoff_1h = (now_utc - timedelta(hours=1)).isoformat()
+    today = now_utc.strftime("%Y-%m-%d")
+    out: list = []
+    last_id = 0
+    while True:
+        cur = await db.execute(
+            "SELECT * FROM users WHERE onboarded=1 AND status='active' "
+            "AND tg_id>:last_id AND (sub_until IS NULL OR sub_until <= :now) "
+            "AND NOT EXISTS (SELECT 1 FROM events e "
+            "  WHERE e.tg_id=users.tg_id AND e.name IN ("
+            "    'payment_success','credit_pack_paid') "
+            "    AND e.created_at > (SELECT MAX(created_at) FROM events e2 "
+            "      WHERE e2.tg_id=users.tg_id AND e2.name='credit_balance_low')) "
+            "AND NOT EXISTS (SELECT 1 FROM deliveries d "
+            "  WHERE d.tg_id=users.tg_id AND d.kind='post_limit' "
+            "    AND d.created_at >= :today_start) "
+            "AND EXISTS (SELECT 1 FROM events e "
+            "  WHERE e.tg_id=users.tg_id AND e.name='credit_balance_low' "
+            "    AND e.created_at >= :cutoff) "
+            f"ORDER BY tg_id LIMIT {AUDIENCE_CAP}",
+            {"last_id": last_id, "now": now_utc.isoformat(),
+             "cutoff": cutoff_1h,
+             "today_start": today + "T00:00:00+00:00"})
         batch = await cur.fetchall()
         if not batch:
             return out
@@ -486,6 +555,107 @@ async def _winback_batch(db, now_utc: datetime) -> str:
     return batch
 
 
+# ─────────────────────────── free→paid по событию (BUS-257 §5) ───────────────
+
+async def _crm_free_paid(bot, db, user, now_utc: datetime) -> None:
+    """post_limit (+24ч после limit_reached) и low_balance (<1ч).
+
+    Оба канала — событийные, вне guardrail 1/7д. Между собой разводим:
+    если post_limit ушёл сегодня, low_balance переносится на завтра
+    (требование BUS-190 §5).
+    """
+    if users.sub_active(user):
+        return
+    today_start = now_utc.strftime("%Y-%m-%d") + "T00:00:00+00:00"
+    tg_id = user["tg_id"]
+    lang = _user_lang(user)
+    name = user["name"] or ("dear one" if lang == "en" else "друг")
+
+    # ── post_limit: последний limit_reached 24–48ч назад, покупки после него нет ──
+    cur = await db.execute(
+        "SELECT MAX(created_at) last_limit FROM events "
+        "WHERE tg_id=:tg_id AND name='limit_reached'",
+        {"tg_id": tg_id})
+    row = await cur.fetchone()
+    last_limit = row["last_limit"] if row else None
+    if last_limit:
+        try:
+            limit_dt = datetime.fromisoformat(last_limit)
+        except (TypeError, ValueError):
+            limit_dt = None
+        if limit_dt and timedelta(hours=24) <= now_utc - limit_dt < timedelta(hours=48):
+            event_date = limit_dt.strftime("%Y-%m-%d")
+            # покупки после лимита — стоп
+            cur = await db.execute(
+                "SELECT 1 FROM events WHERE tg_id=:tg_id "
+                "AND name IN ('payment_success','credit_pack_paid') "
+                "AND created_at > :since LIMIT 1",
+                {"tg_id": tg_id, "since": last_limit})
+            if not await cur.fetchone():
+                # 7д стоп поканальный: не чаще раза в 7 дней
+                cutoff_7d = (now_utc - timedelta(days=7)).isoformat()
+                cur = await db.execute(
+                    "SELECT 1 FROM deliveries WHERE tg_id=:tg_id AND kind='post_limit' "
+                    "AND created_at >= :cutoff_7d LIMIT 1",
+                    {"tg_id": tg_id, "cutoff_7d": cutoff_7d})
+                if await cur.fetchone():
+                    pass
+                elif await comms.already_sent(db, tg_id, "post_limit", event_date):
+                    pass
+                else:
+                    template = await content.get_text(
+                        db, "copy", "post_limit", default="", lang=lang)
+                    if template:
+                        text = template.replace("{name}", name)
+                        if await _send_once(bot, db, tg_id, "post_limit", event_date, text):
+                            await analytics.track(
+                                db, analytics.E_POST_LIMIT, tg_id, surface="system")
+
+    # ── low_balance: credit_balance_low <1ч назад, покупок после нет, post_limit не сегодня ──
+    cur = await db.execute(
+        "SELECT MAX(created_at) last_low FROM events "
+        "WHERE tg_id=:tg_id AND name='credit_balance_low'",
+        {"tg_id": tg_id})
+    row = await cur.fetchone()
+    last_low = row["last_low"] if row else None
+    if last_low:
+        try:
+            low_dt = datetime.fromisoformat(last_low)
+        except (TypeError, ValueError):
+            low_dt = None
+        if low_dt and now_utc - low_dt < timedelta(hours=1):
+            event_date = low_dt.strftime("%Y-%m-%d")
+            # post_limit ушёл сегодня — переносим на следующий день
+            if await comms.sent_since(db, tg_id, "post_limit", today_start):
+                return
+            # покупки после low_balance — стоп
+            cur = await db.execute(
+                "SELECT 1 FROM events WHERE tg_id=:tg_id "
+                "AND name IN ('payment_success','credit_pack_paid') "
+                "AND created_at > :since LIMIT 1",
+                {"tg_id": tg_id, "since": last_low})
+            if await cur.fetchone():
+                return
+            # 7д стоп поканальный
+            cutoff_7d = (now_utc - timedelta(days=7)).isoformat()
+            cur = await db.execute(
+                "SELECT 1 FROM deliveries WHERE tg_id=:tg_id AND kind='low_balance' "
+                "AND created_at >= :cutoff_7d LIMIT 1",
+                {"tg_id": tg_id, "cutoff_7d": cutoff_7d})
+            if await cur.fetchone():
+                return
+            if await comms.already_sent(db, tg_id, "low_balance", event_date):
+                return
+            template = await content.get_text(
+                db, "copy", "low_balance", default="", lang=lang)
+            if not template:
+                return
+            text = template.replace("{name}", name)
+            if await _send_once(bot, db, tg_id, "low_balance", event_date, text):
+                await analytics.track(
+                    db, analytics.E_LOW_BALANCE_SENT, tg_id, surface="system")
+
+
 async def _weekly_report(bot, db, user, now, settings_cache) -> None:
     from ..repo import dialog, readings
     if not users.sub_active(user):
@@ -551,6 +721,118 @@ async def _practice_reminder(bot, db, user, now, settings_cache) -> None:
     await _send_once(bot, db, user["tg_id"], "practice", day, text)
 
 
+async def _feedback_survey(bot, db, user, now_utc: datetime) -> None:
+    """Day-7 опрос: приглашение на день 7, напоминание на день 10.
+
+    Opt-out — через deliveries kind='feedback_optout' (key=str(tg_id)):
+    после этого опрос никогда не отправляется. Напоминание уходит только
+    если приглашение уже ушло И ответов ещё нет (feedback_responses).
+    """
+    tg_id = user["tg_id"]
+    if await comms.already_sent(db, tg_id, "feedback_optout", str(tg_id)):
+        return
+    if not await content.is_on(db, "feedback_survey", tg_id, default=True):
+        return
+    if not settings.webapp_url:
+        return
+
+    try:
+        created = datetime.fromisoformat(user["created_at"])
+    except (TypeError, ValueError):
+        return
+
+    now_user = now_utc.astimezone(users.user_tz(user))
+    if now_user.hour < 10 or now_user.hour > 21:
+        return
+
+    invite_key = "day7_v1"
+    remind_key = "day7_v1_remind"
+    sent_invite = await comms.already_sent(db, tg_id,
+                                            "feedback_survey", invite_key)
+    sent_remind = await comms.already_sent(db, tg_id,
+                                           "feedback_survey", remind_key)
+    answered = await feedback_repo.get_response(db, tg_id) is not None
+
+    # День 7: приглашение (однократно).
+    if not sent_invite and not answered and now_utc >= created + timedelta(days=7):
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+        lang = _user_lang(user)
+        name = user["name"] or ("dear one" if lang == "en" else "друг")
+        text = await content.get_text(
+            db, "copy", "feedback_survey_invite",
+            ("{name}, a week with me — time to look back.\n"
+             "Tell me how you're finding Oracle — it takes a minute, "
+             "and I'll gift you 40 Crystals ✦"
+             if lang == "en" else
+             "{name}, неделя с нами — время оглянуться 🌙\n"
+             "Расскажи, как тебе Оракул — это займёт минуту, "
+             "а взамен подарю 40 кристаллов ✦"),
+            lang=lang)
+        text = text.replace("{name}", name)
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text=await content.get_text(
+                    db, "copy", "feedback_btn_webapp",
+                    "Answer and get 40 Crystals" if lang == "en"
+                    else "Ответить и получить 40 кристаллов",
+                    lang=lang),
+                web_app=WebAppInfo(url=settings.webapp_url + "/survey"))],
+            [InlineKeyboardButton(
+                text=await content.get_text(
+                    db, "copy", "feedback_btn_later",
+                    "Not now" if lang == "en" else "Не сейчас",
+                    lang=lang),
+                callback_data="feedback_later")],
+        ])
+        if await _send_once(bot, db, tg_id, "feedback_survey",
+                            invite_key, text, markup=markup):
+            await analytics.track(
+                db, analytics.E_FEEDBACK_SURVEY_SENT, tg_id,
+                props={"survey_code": feedback_repo.SURVEY_CODE,
+                       "delivery_key": invite_key},
+                surface="system")
+        return
+
+    # День 10: одно напоминание (только если приглашение ушло, ответов нет,
+    # напоминание ещё не уходило и final opt-out не нажимался).
+    if not sent_remind and sent_invite and not answered \
+            and now_utc >= created + timedelta(days=10):
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+        lang = _user_lang(user)
+        name = user["name"] or ("dear one" if lang == "en" else "друг")
+        text = await content.get_text(
+            db, "copy", "feedback_survey_remind",
+            ("{name}, I'm still gathering first-week impressions. "
+             "A couple of your minutes = 40 Crystals ✦"
+             if lang == "en" else
+             "{name}, я всё ещё собираю впечатления о первой неделе. "
+             "Твоя пара минут = 40 кристаллов ✦"),
+            lang=lang)
+        text = text.replace("{name}", name)
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text=await content.get_text(
+                    db, "copy", "feedback_btn_webapp",
+                    "Answer and get 40 Crystals" if lang == "en"
+                    else "Ответить и получить 40 кристаллов",
+                    lang=lang),
+                web_app=WebAppInfo(url=settings.webapp_url + "/survey"))],
+            [InlineKeyboardButton(
+                text=await content.get_text(
+                    db, "copy", "feedback_btn_never",
+                    "Don't ask again" if lang == "en" else "Не спрашивать",
+                    lang=lang),
+                callback_data="feedback_never")],
+        ])
+        if await _send_once(bot, db, tg_id, "feedback_survey",
+                            remind_key, text, markup=markup):
+            await analytics.track(
+                db, analytics.E_FEEDBACK_SURVEY_SENT, tg_id,
+                props={"survey_code": feedback_repo.SURVEY_CODE,
+                       "delivery_key": remind_key},
+                surface="system")
+
+
 async def _tick_user(bot, db, user, now_utc, settings_cache) -> None:
     now = now_utc.astimezone(users.user_tz(user))
     if await content.is_on(db, "daily_push", user["tg_id"], default=True):
@@ -559,6 +841,7 @@ async def _tick_user(bot, db, user, now_utc, settings_cache) -> None:
         await _weekly_report(bot, db, user, now, settings_cache)
     await _monthly_report(bot, db, user, now, settings_cache)
     await _practice_reminder(bot, db, user, now, settings_cache)
+    await _feedback_survey(bot, db, user, now_utc)
 
 
 # ────────────────────────────── общий цикл ────────────────────────────────────
@@ -686,6 +969,21 @@ async def tick(bot, db) -> None:
             await _winback(bot, db, user, now_utc=now_utc)
         except Exception as e:  # noqa: BLE001
             log.warning("ошибка сценария продления: %s", type(e).__name__)
+        await asyncio.sleep(BATCH_PAUSE)
+
+    # free→paid по событию (BUS-257 §5): post_limit (+24ч) + low_balance (<1ч)
+    for user in await _crm_post_limit_audience(db, now_utc):
+        try:
+            await _crm_free_paid(bot, db, user, now_utc)
+        except Exception as e:  # noqa: BLE001
+            log.warning("ошибка free→paid post_limit: %s", type(e).__name__)
+        await asyncio.sleep(BATCH_PAUSE)
+
+    for user in await _crm_low_balance_audience(db, now_utc):
+        try:
+            await _crm_free_paid(bot, db, user, now_utc)
+        except Exception as e:  # noqa: BLE001
+            log.warning("ошибка free→paid low_balance: %s", type(e).__name__)
         await asyncio.sleep(BATCH_PAUSE)
 
     try:

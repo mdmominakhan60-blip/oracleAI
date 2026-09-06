@@ -378,3 +378,25 @@ async def build_report_callback(cb: CallbackQuery, db):
     await _send_long(cb.message, f"<b>{result['title']}</b>\n\n{result['body']}",
                      reply_markup=back_menu())
     await cb.answer()
+
+
+# ─────────────────────────────── day-7 опрос (BUS-170) ────────────────────────
+
+@router.callback_query(F.data == "feedback_later")
+async def feedback_later(cb: CallbackQuery, db):
+    """«Не сейчас» — просто закрываем клавиатуру, без opt-out."""
+    await cb.message.edit_reply_markup(reply_markup=None)
+    await cb.answer()
+
+
+@router.callback_query(F.data == "feedback_never")
+async def feedback_never(cb: CallbackQuery, db):
+    """Финальный opt-out: фиксируем доставку feedback_optout — scheduler больше
+    не шлёт приглашение/напоминание этому пользователю."""
+    tg_id = cb.from_user.id
+    from ..repo import comms
+    from ..data.session import transaction
+    async with transaction(db):
+        await comms.mark_sent(db, tg_id, "feedback_optout", str(tg_id))
+    await cb.message.edit_reply_markup(reply_markup=None)
+    await cb.answer("Ок, больше не напомню 🌙")

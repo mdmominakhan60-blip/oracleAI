@@ -15,6 +15,7 @@ from ...data.session import healthcheck
 from ...services.repo_gateway import billing, content, dialog, readings, users
 from ...services.repo_gateway import monetization as monetization_repo
 from ...services import analytics, chat, limits, referrals
+from ...services.repo_gateway import feedback
 from ...services.entitlements import entitlements
 from ..deps import (
     confirmed_age_user,
@@ -146,6 +147,8 @@ async def me(user=Depends(touched_user), db=Depends(get_db),
         },
         "agents": await agents.agent_list(db, user),
         "flags": flags,
+        "feedback_pending": bool(user["onboarded"]) and await feedback.pending(
+            db, user["tg_id"]),
         "webapp_url": settings.webapp_url,
     }
 

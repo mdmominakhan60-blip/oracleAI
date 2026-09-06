@@ -159,10 +159,12 @@ CREATE TABLE IF NOT EXISTS deliveries (
     tg_id      BIGINT NOT NULL,
     kind       TEXT NOT NULL,                -- forecast|weekly|expiry|winback|broadcast|feedback_survey
     key        TEXT NOT NULL,                -- день/идентификатор повода
+    status     TEXT NOT NULL DEFAULT 'sent', -- sent|failed|forbidden
+    error      TEXT,                         -- класс исключения, без PII
     created_at TEXT,
     PRIMARY KEY (tg_id, kind, key)
 );
-COMMENT ON TABLE deliveries IS 'Журнал дедупа исходящих: tg_id+kind+key уникальны. kind: forecast|weekly|expiry|winback|broadcast|feedback_survey (key: day7_v1|day7_v1_remind)';
+COMMENT ON TABLE deliveries IS 'Журнал дедупа исходящих: tg_id+kind+key уникальны. kind: forecast|weekly|expiry|winback|broadcast|feedback_survey. status: sent|failed|forbidden (BUS-308)';
 -- Отзывы day-7 опроса (миграция 0009, BUS-170 §4): одна строка на отзыв
 -- пользователя на survey_code. Свободный текст — только здесь, НЕ в events
 -- (privacy-инвариант BUS-168 §2.3). UNIQUE (tg_id, survey_code) — анти-абьюз
