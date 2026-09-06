@@ -136,6 +136,23 @@ DEFAULT_EN_CONTENT: dict[tuple[str, str], dict[str, str]] = {
                  "{top_first_step}. But your step can be anything at all — "
                  "it's yours."),
     },
+    # onboarding-дожим O1-O2 (BUS-259, §2; копирайт BUS-263 §5)
+    ("copy", "onboard_d1"): {
+        "title": "Onboarding: day 1",
+        "body": ("Just one step left — tell me your name, and I'll build your "
+                 "chart of the day: the stars have already arranged themselves "
+                 "into a pattern ✨\n\nIt only takes a minute."),
+    },
+    ("copy", "onboard_d3"): {
+        "title": "Onboarding: day 3",
+        "body": ("It seems this isn't the moment — and that's perfectly fine ✨\n\n"
+                 "I won't bother you again: the stars can wait. I'll be here "
+                 "when you call."),
+    },
+    ("copy", "onboard_btn_continue"): {
+        "title": "Onboarding: continue button",
+        "body": "✨ Continue",
+    },
     # day-7 опрос (BUS-234)
     ("copy", "feedback_survey_invite"): {
         "title": "Survey: day-7 invite",

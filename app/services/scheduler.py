@@ -702,6 +702,108 @@ async def _welcome_chain(bot, db, user, now_utc: datetime) -> None:
         return
 
 
+# ────────────────── onboarding-дожим O1-O2 (BUS-259, §2) ─────────────────────
+
+#: Сегмент вне _audience (§0 дизайна): start ≥24ч назад, onboarded всё ещё 0.
+ONBOARD_D1_DELAY = timedelta(hours=24)
+#: O2 — трое суток от первого /start (не от O1): касания раз в двое суток.
+ONBOARD_D3_DELAY = timedelta(days=3)
+#: Ключ setting с датой последнего суточного прогона (идемпотентность sweep).
+ONBOARD_LAST_RUN_KEY = "crm.onboard_last_run"
+
+
+async def _onboard_audience(db, now_utc: datetime) -> list:
+    """Неонбордингнутые активные, чей первый /start 24+ часа назад.
+
+    Отбор по событию start (первое касание бота), не по users.created_at:
+    триггер дизайна §2 — именно /start. morning_push не проверяем — он
+    проставляется позже, в онбординге, и для стартовавших бота дефолтен.
+    """
+    cutoff = (now_utc - ONBOARD_D1_DELAY).isoformat()
+    out: list = []
+    last_id = 0
+    while True:
+        cur = await db.execute(
+            "SELECT * FROM users WHERE onboarded=0 AND status='active' "
+            "AND tg_id>:last_id "
+            "AND EXISTS (SELECT 1 FROM events e "
+            "  WHERE e.tg_id=users.tg_id AND e.name='start' "
+            "  AND e.created_at <= :cutoff) "
+            f"ORDER BY tg_id LIMIT {AUDIENCE_CAP}",
+            {"last_id": last_id, "cutoff": cutoff})
+        batch = await cur.fetchall()
+        if not batch:
+            return out
+        out.extend(batch)
+        last_id = batch[-1]["tg_id"]
+
+
+async def _onboard_start_at(db, tg_id: int) -> datetime | None:
+    """Момент входа в цепочку — самое первое событие start."""
+    cur = await db.execute(
+        "SELECT MIN(created_at) at FROM events "
+        "WHERE tg_id=:tg_id AND name='start'", {"tg_id": tg_id})
+    row = await cur.fetchone()
+    if not row or not row["at"]:
+        return None
+    try:
+        return datetime.fromisoformat(row["at"])
+    except (TypeError, ValueError):
+        return None
+
+
+async def _onboard_chain(bot, db, user, now_utc: datetime) -> None:
+    """O1 (день 1) и O2 (день 3) — затем сегмент заморожен навсегда.
+
+    Заморозка держится на дедупе kind+key в deliveries: O2 уходит ровно один
+    раз, новых шагов у цепочки нет (урок BUS-124 — не преследуем неактивиро-
+    ванных). Fail-closed: даже прямой вызов цепочки не шлёт, если onboarded=1.
+    """
+    tg_id = user["tg_id"]
+    if user.get("onboarded"):
+        return
+    start_at = await _onboard_start_at(db, tg_id)
+    if start_at is None:
+        return
+    elapsed = now_utc - start_at
+    lang = _user_lang(user)
+
+    # O2 — финальное: после него касаний больше не планируется никаких.
+    if elapsed >= ONBOARD_D3_DELAY:
+        if await comms.already_sent(db, tg_id, "onboard_nudge", f"d3:{tg_id}"):
+            return
+        template = await content.get_text(db, "copy", "onboard_d3",
+                                          default="", lang=lang)
+        if not template:
+            log.warning("onboard: нет шаблона copy/onboard_d3 — пропуск")
+            return
+        await _send_once(bot, db, tg_id, "onboard_nudge",
+                         f"d3:{tg_id}", template)
+        return
+
+    if elapsed >= ONBOARD_D1_DELAY:
+        if await comms.already_sent(db, tg_id, "onboard_nudge", f"d1:{tg_id}"):
+            return
+        template = await content.get_text(db, "copy", "onboard_d1",
+                                          default="", lang=lang)
+        if not template:
+            log.warning("onboard: нет шаблона copy/onboard_d1 — пропуск")
+            return
+        markup = None
+        if settings.webapp_url:
+            from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+            btn_label = await content.get_text(db, "copy", "onboard_btn_continue",
+                                               default="", lang=lang)
+            markup = InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(
+                    text=btn_label or ("✨ Continue" if lang == "en"
+                                       else "✨ Продолжить"),
+                    web_app=WebAppInfo(url=settings.webapp_url)),
+            ]])
+        await _send_once(bot, db, tg_id, "onboard_nudge",
+                         f"d1:{tg_id}", template, markup=markup)
+
+
 # ────────────────────── общий суточный sweep (BUS-190 §2) ─────────────────────
 
 async def _daily_sweep_due(db, key: str, now_utc: datetime) -> bool:
@@ -720,17 +822,31 @@ async def _daily_sweep_due(db, key: str, now_utc: datetime) -> bool:
 
 
 async def _daily_sweeps(bot, db, now_utc: datetime) -> None:
-    """Суточные CRM-цепочки вне почасовых сценариев (welcome, далее 3.4/3.5)."""
+    """Суточные CRM-цепочки вне почасовых сценариев (welcome, onboard 3.4, 3.5).
+
+    Каждая цепочка имеет собственную отметку дня: сбой/пропуск одной не глушит
+    остальные (BUS-190 §0 — expand-migrate-contract).
+    """
     if now_utc.hour != WELCOME_SWEEP_HOUR:
         return
-    if not await _daily_sweep_due(db, WELCOME_LAST_RUN_KEY, now_utc):
-        return
-    for user in await _welcome_audience(db, now_utc):
-        try:
-            await _welcome_chain(bot, db, user, now_utc)
-        except Exception as e:  # noqa: BLE001
-            log.warning("ошибка welcome-цепочки: %s", type(e).__name__)
-        await asyncio.sleep(BATCH_PAUSE)
+
+    # Welcome-цепочка (BUS-258 §1) — независимая отметка дня.
+    if await _daily_sweep_due(db, WELCOME_LAST_RUN_KEY, now_utc):
+        for user in await _welcome_audience(db, now_utc):
+            try:
+                await _welcome_chain(bot, db, user, now_utc)
+            except Exception as e:  # noqa: BLE001
+                log.warning("ошибка welcome-цепочки: %s", type(e).__name__)
+            await asyncio.sleep(BATCH_PAUSE)
+
+    # Onboarding-дожим (BUS-259 §2): сегмент вне _audience, отбор по start.
+    if await _daily_sweep_due(db, ONBOARD_LAST_RUN_KEY, now_utc):
+        for user in await _onboard_audience(db, now_utc):
+            try:
+                await _onboard_chain(bot, db, user, now_utc)
+            except Exception as e:  # noqa: BLE001
+                log.warning("ошибка onboard-цепочки: %s", type(e).__name__)
+            await asyncio.sleep(BATCH_PAUSE)
 
 
 # ─────────────────────────── free→paid по событию (BUS-257 §5) ───────────────
