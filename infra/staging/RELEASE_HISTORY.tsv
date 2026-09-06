@@ -6,3 +6,4 @@
 2026-09-05T22:43:12Z	rollback	staging-r1	0007_add_tarot_deck
 2026-09-05T22:45:01Z	rollback	staging-r1	0007_add_tarot_deck
 2026-09-05T22:47:26Z	deploy	staging-r3	0008_funnel_session_id
+2026-09-06T09:25:13Z	deploy	2c1aaf9	0011_promo_is_active

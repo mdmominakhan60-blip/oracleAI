@@ -555,6 +555,171 @@ async def _winback_batch(db, now_utc: datetime) -> str:
     return batch
 
 
+# ───────────────────── welcome-цепочка W1-W3 (BUS-258, §1) ────────────────────
+
+#: Суточный sweep бежит только в этом часе UTC: отбор и шаги цепочки привязаны
+#: к суткам от onboard_done, а не к часу клиентки, поэтому окно тика не нужно.
+WELCOME_SWEEP_HOUR = 10
+#: Первое касание — ≥24 ч после onboard_done (дизайн §1: не сразу после онбординга).
+WELCOME_D1_DELAY = timedelta(hours=24)
+#: Интервалы между касаниями: d1 → d3 → d7 от входа в сегмент.
+WELCOME_D3_DELAY = timedelta(days=3)
+WELCOME_D7_DELAY = timedelta(days=7)
+#: Плейсхолдеры W3 без значения: текст уходит с честной формулировкой, а не с
+#: «самый частый первый шаг — » (BUS-263 §4: подстановка — обязанность Backend).
+WELCOME_TOP_FIRST_STEP_DEFAULT = "карта дня"
+WELCOME_TOP_FIRST_STEP_DEFAULT_EN = "card of the day"
+#: Ключ setting с датой последнего суточного прогона (идемпотентность sweep).
+WELCOME_LAST_RUN_KEY = "crm.welcome_last_run"
+
+
+async def _welcome_top_first_step(db, lang: str) -> str:
+    """Самый частый первый шаг за 90 дней (агрегат по событиям).
+
+    Считаем на лету: события за окно — единицы-десятки тысяч, один GROUP BY
+    раз в сутки это дешевле, чем seed-константа, которая устаревает молча.
+    """
+    since = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
+    cur = await db.execute(
+        "SELECT name, COUNT(*) c FROM events "
+        "WHERE name IN ('first_ritual','first_question') AND created_at>=:since "
+        "GROUP BY name ORDER BY c DESC LIMIT 1",
+        {"since": since})
+    row = await cur.fetchone()
+    if not row:
+        return (WELCOME_TOP_FIRST_STEP_DEFAULT_EN if lang == "en"
+                else WELCOME_TOP_FIRST_STEP_DEFAULT)
+    return ("practices" if row["name"] == "first_ritual" else "questions") \
+        if lang == "en" else ("практика" if row["name"] == "first_ritual" else "вопрос")
+
+
+async def _welcome_audience(db, now_utc: datetime) -> list:
+    """Onboarded без first-ценности, чьим onboard_done 24+ часа.
+
+    morning_push=0 и статус != active отсекаются самим отбором (стопы §1).
+    Курсор по tg_id без внешнего лимита: аудитория суточная и малая
+    (вошли за сутки минус совершившие первый шаг).
+    """
+    cutoff = (now_utc - WELCOME_D1_DELAY).isoformat()
+    out: list = []
+    last_id = 0
+    while True:
+        cur = await db.execute(
+            "SELECT * FROM users WHERE onboarded=1 AND status='active' "
+            "AND morning_push=1 AND tg_id>:last_id "
+            "AND NOT EXISTS (SELECT 1 FROM events e "
+            "  WHERE e.tg_id=users.tg_id AND e.name IN ('first_ritual','first_question')) "
+            "AND EXISTS (SELECT 1 FROM events e "
+            "  WHERE e.tg_id=users.tg_id AND e.name='onboard_done' "
+            "  AND e.created_at <= :cutoff) "
+            f"ORDER BY tg_id LIMIT {AUDIENCE_CAP}",
+            {"last_id": last_id, "cutoff": cutoff})
+        batch = await cur.fetchall()
+        if not batch:
+            return out
+        out.extend(batch)
+        last_id = batch[-1]["tg_id"]
+
+
+async def _welcome_onboard_done_at(db, tg_id: int) -> datetime | None:
+    """Момент входа в цепочку — самое свежее событие onboard_done."""
+    cur = await db.execute(
+        "SELECT MAX(created_at) at FROM events "
+        "WHERE tg_id=:tg_id AND name='onboard_done'", {"tg_id": tg_id})
+    row = await cur.fetchone()
+    if not row or not row["at"]:
+        return None
+    try:
+        return datetime.fromisoformat(row["at"])
+    except (TypeError, ValueError):
+        return None
+
+
+async def _welcome_chain(bot, db, user, now_utc: datetime) -> None:
+    """Одно касание за прогон: W1 → W3, срок каждого — от onboard_done.
+
+    Если отправка d1 запоздала (сутки простоя), d3 уйдёт лишь в свой срок —
+    касания не слипаются в один день. Стоп «действие совершено» реализован
+    самим отбором: появление first-события выводит юзера из аудитории
+    между прогонами, а «кнопка нажата» без действия цепочку не останавливает.
+    """
+    tg_id = user["tg_id"]
+    onboarded_at = await _welcome_onboard_done_at(db, tg_id)
+    if onboarded_at is None:
+        return
+    elapsed = now_utc - onboarded_at
+    lang = _user_lang(user)
+    name = user["name"] or ("dear one" if lang == "en" else "друг")
+
+    steps = (
+        ("d1", WELCOME_D1_DELAY, "welcome_d1"),
+        ("d3", WELCOME_D3_DELAY, "welcome_d3"),
+        ("d7", WELCOME_D7_DELAY, "welcome_d7"),
+    )
+    for suffix, delay, copy_key in steps:
+        if elapsed < delay:
+            return
+        if await comms.already_sent(db, tg_id, "welcome_chain",
+                                    f"{suffix}:{tg_id}"):
+            continue
+        template = await content.get_text(db, "copy", copy_key,
+                                          default="", lang=lang)
+        if not template:
+            log.warning("welcome: нет шаблона copy/%s — пропуск шага", copy_key)
+            return
+        text = template.replace("{name}", name)
+        markup = None
+        if suffix == "d1" and settings.webapp_url:
+            from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+            markup = InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(
+                    text=("✨ Open Oracle" if lang == "en"
+                          else "✨ Открыть Оракула"),
+                    web_app=WebAppInfo(url=settings.webapp_url)),
+            ]])
+        if suffix == "d7":
+            top_step = await _welcome_top_first_step(db, lang)
+            text = text.replace("{top_first_step}", top_step)
+            if "{top_first_step}" in text:
+                log.error("welcome d7: шаблон без подстановки {top_first_step} "
+                          "— отправка отменена")
+                return
+        await _send_once(bot, db, tg_id, "welcome_chain",
+                         f"{suffix}:{tg_id}", text, markup=markup)
+        return
+
+
+# ────────────────────── общий суточный sweep (BUS-190 §2) ─────────────────────
+
+async def _daily_sweep_due(db, key: str, now_utc: datetime) -> bool:
+    """True — раз в сутки: суточные отборы не должны жить в почасовом тике.
+
+    Отметка дня пишется до отбора: повтор в тот же день исключён даже при
+    падении между отметкой и отправкой (дубли касаний всё равно исключает
+    _send_once по deliveries). setting-ключи: crm.welcome_last_run и далее
+    crm.onboard_last_run / crm.reactivate_last_run (задачи 3.4/3.5).
+    """
+    today = now_utc.strftime("%Y-%m-%d")
+    if await content.get_setting(db, key) == today:
+        return False
+    await content.set_setting(db, key, today)
+    return True
+
+
+async def _daily_sweeps(bot, db, now_utc: datetime) -> None:
+    """Суточные CRM-цепочки вне почасовых сценариев (welcome, далее 3.4/3.5)."""
+    if now_utc.hour != WELCOME_SWEEP_HOUR:
+        return
+    if not await _daily_sweep_due(db, WELCOME_LAST_RUN_KEY, now_utc):
+        return
+    for user in await _welcome_audience(db, now_utc):
+        try:
+            await _welcome_chain(bot, db, user, now_utc)
+        except Exception as e:  # noqa: BLE001
+            log.warning("ошибка welcome-цепочки: %s", type(e).__name__)
+        await asyncio.sleep(BATCH_PAUSE)
+
+
 # ─────────────────────────── free→paid по событию (BUS-257 §5) ───────────────
 
 async def _crm_free_paid(bot, db, user, now_utc: datetime) -> None:
@@ -985,6 +1150,12 @@ async def tick(bot, db) -> None:
         except Exception as e:  # noqa: BLE001
             log.warning("ошибка free→paid low_balance: %s", type(e).__name__)
         await asyncio.sleep(BATCH_PAUSE)
+
+    # Суточные CRM-цепочки (BUS-258): welcome-дожим вне почасовых сценариев
+    try:
+        await _daily_sweeps(bot, db, now_utc)
+    except Exception as e:  # noqa: BLE001
+        log.error("суточные CRM-sweeps: %s", e)
 
     try:
         await _pregen_forecasts(db, now_utc, settings_cache)

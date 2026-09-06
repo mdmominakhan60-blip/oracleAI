@@ -67,7 +67,7 @@ backup-drill:
 
 ensure-test-role:
 	$(COMPOSE) run --rm --entrypoint "" \
-		-e POSTGRES_ADMIN_DATABASE_URL=postgresql://oracle:$(POSTGRES_PASSWORD)@postgres:5432/postgres \
+		-e POSTGRES_ADMIN_DATABASE_URL=postgresql://oracle:$$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)@postgres:5432/postgres \
 		api python scripts/ensure_test_role.py
 
 # BUS-277: read-only роль для MCP-сервера (второй слой защиты поверх
@@ -81,14 +81,33 @@ ensure-mcp-role:
 		-e ORACLEAI_MCP_ROLE_PASSWORD=$$(grep '^ORACLEAI_MCP_ROLE_PASSWORD=' .env | cut -d= -f2-) \
 		api python scripts/ensure_mcp_role.py
 
+# BUS-334: тесты гоняются против РАБОЧЕЙ КОПИИ, а не против кода образа
+# (урок BUS-269/BUS-257). Ключевые решения:
+#  - --no-deps: штатная зависимость api→migrate гоняла alembic upgrade из
+#    (возможно stale) образа против общей БД → «Can't locate revision».
+#    Схему поднимаем сами из монтированной alembic/ рабочей копии.
+#  - Монтируются app/alembic/miniapp/web (ro где только чтение): тесты читают
+#    исходники через ROOT/ (test_miniapp_actions, test_architecture_boundaries).
+#  - ensure_test_role перед reset: нормализует пароль oracle_test к .env
+#    (BUS-303/329: InvalidPasswordError при рассинхроне ранее созданной роли).
+#  - APP_ENV=test перекрывает env_file-наследие .env (production ронял сбор).
+#  - Пароль достаём grep'ом из .env: make не читает .env и $(POSTGRES_PASSWORD)
+#    раскрылся бы в пустоту (прецедент — таргет ensure-mcp-role).
 test:
 	$(CURDIR)/.venv/bin/python scripts/check_test_env.py || python3 scripts/check_test_env.py
-	$(COMPOSE) run --rm --entrypoint "" -e DEV_MODE=1 -e DEV_KEY=test-dev-key \
+	$(COMPOSE) up -d --wait postgres
+	$(COMPOSE) run --rm --no-deps --entrypoint "" -e APP_ENV=test \
+		-e DEV_MODE=1 -e DEV_KEY=test-dev-key \
 		-e ALLOW_DB_RESET=1 \
-		-e TEST_DATABASE_URL=postgresql+asyncpg://oracle_test:$(POSTGRES_PASSWORD)@postgres:5432/oracle_test \
-		-e DATABASE_URL=postgresql+asyncpg://oracle_test:$(POSTGRES_PASSWORD)@postgres:5432/oracle_test \
-		-e POSTGRES_ADMIN_DATABASE_URL=postgresql://oracle:$(POSTGRES_PASSWORD)@postgres:5432/postgres \
+		-e TEST_DATABASE_URL=postgresql+asyncpg://oracle_test:$$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)@postgres:5432/oracle_test \
+		-e DATABASE_URL=postgresql+asyncpg://oracle_test:$$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)@postgres:5432/oracle_test \
+		-e POSTGRES_ADMIN_DATABASE_URL=postgresql://oracle:$$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)@postgres:5432/postgres \
 		-v $(CURDIR)/tests:/opt/oracle/tests \
+		-v $(CURDIR)/app:/opt/oracle/app \
+		-v $(CURDIR)/alembic:/opt/oracle/alembic \
+		-v $(CURDIR)/alembic.ini:/opt/oracle/alembic.ini:ro \
+		-v $(CURDIR)/miniapp:/opt/oracle/miniapp:ro \
+		-v $(CURDIR)/web:/opt/oracle/web:ro \
 		-v $(CURDIR)/infra:/opt/oracle/infra \
 		-v $(CURDIR)/data:/opt/oracle/data:ro \
 		-v $(CURDIR)/.env.production.example:/opt/oracle/.env.production.example:ro \
@@ -100,7 +119,7 @@ test:
 		-v $(CURDIR)/load:/opt/oracle/load \
 		-v $(CURDIR)/requirements-dev.txt:/opt/oracle/requirements-dev.txt \
 		-v $(CURDIR)/pytest.ini:/opt/oracle/pytest.ini \
-		api bash -c "python scripts/reset_test_database.py && alembic upgrade head && pip install --quiet -r requirements-dev.txt && python -m pytest tests -q"
+		api bash -c "python scripts/ensure_test_role.py && python scripts/reset_test_database.py && alembic upgrade head && pip install --quiet -r requirements-dev.txt && python -m pytest tests -q"
 
 p004-audit:
 	python3 scripts/check_p004_infrastructure.py

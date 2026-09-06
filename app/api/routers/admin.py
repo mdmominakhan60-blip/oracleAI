@@ -26,8 +26,8 @@ from ...services import broadcast as broadcast_svc
 from ...services import payment_monitor
 from ...services import telegram
 from ...services.admin import (analytics_repo, billing, comms, content, crm,
-                               growth, users)
-from ...services.admin import admin_repo
+                               growth, ltv_tier, users)
+from ...services.admin import admin_repo, feedback_admin
 from ..deps import current_admin, get_db, rate_limit, require
 
 log = logging.getLogger("oracle.api.admin")
@@ -305,6 +305,87 @@ async def safety_incidents(days: int = Query(default=30, ge=1, le=365),
     return await analytics_repo.safety_events(db, days=days, limit=limit)
 
 
+# ─────────────── отзывы day-7 опроса (R6, BUS-237) ────────────────────────────
+
+def _feedback_params(days: int, nps_min: int | None, nps_max: int | None,
+                     question: str | None, choice: str | None,
+                     moderation: str | None, text_query: str | None) -> dict:
+    """Валидация фильтров R6: коды вопросов/вариантов — по allowlist day7_v1,
+    модерация — только известные статусы. Невалидное значение → 422."""
+    if question is not None:
+        question = question[:32]
+        allowed_choices = feedback_admin.CHOICES.get(question)
+        if allowed_choices is None and question not in (
+                *feedback_admin.SCORE_QUESTIONS, *feedback_admin.TEXT_QUESTIONS):
+            raise HTTPException(422, f"неизвестный вопрос: {question}")
+        if choice is not None:
+            if question not in feedback_admin.CHOICES:
+                raise HTTPException(422, "вариант выбирается для категориального вопроса")
+            if choice not in allowed_choices:
+                raise HTTPException(422, f"неизвестный вариант: {choice}")
+    if moderation is not None and moderation not in feedback_admin.MODERATION_MAP.values():
+        raise HTTPException(422, f"неизвестный статус модерации: {moderation}")
+    if (nps_min is None) != (nps_max is None):
+        raise HTTPException(422, "NPS-диапазон задаётся обеими границами")
+    if nps_min is not None and nps_min > nps_max:
+        raise HTTPException(422, "nps_min должен быть не больше nps_max")
+    return {}
+
+
+@router.get("/feedback/summary")
+async def feedback_summary(days: int = Query(default=90, ge=1, le=365),
+                           ctx=Depends(require("dashboard")), db=Depends(get_db)):
+    """NPS-сводка и распределения Q1/Q2/Q5 + response rate (R6)."""
+    return await feedback_admin.summary(db, days=days)
+
+
+@router.get("/feedback/responses")
+async def feedback_responses(days: int = Query(default=90, ge=1, le=365),
+                             nps_min: int | None = Query(default=None, ge=0, le=10),
+                             nps_max: int | None = Query(default=None, ge=0, le=10),
+                             question: str | None = Query(default=None, max_length=32),
+                             choice: str | None = Query(default=None, max_length=32),
+                             moderation: str | None = Query(default=None, max_length=16),
+                             text_query: str | None = Query(default=None, max_length=100),
+                             limit: int = Query(default=50, ge=1, le=200),
+                             offset: int = Query(default=0, ge=0),
+                             ctx=Depends(require("dashboard")), db=Depends(get_db)):
+    """Список отзывов с фильтрами (дата, NPS-диапазон, вопрос+вариант,
+    модерация, поиск по free text). Free text — только здесь, не в CSV."""
+    _feedback_params(days, nps_min, nps_max, question, choice, moderation, text_query)
+    items, total = await feedback_admin.list_responses(
+        db, days=days, nps_min=nps_min, nps_max=nps_max, question=question,
+        choice=choice, moderation=moderation, text_query=text_query,
+        limit=limit, offset=offset)
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+
+@router.get("/feedback/export")
+async def feedback_export(days: int = Query(default=90, ge=1, le=365),
+                          ctx=Depends(require("dashboard")), db=Depends(get_db)):
+    """CSV-экспорт отзывов (R8-срез): категориальные ответы и NPS, free text
+    НЕ выгружается (только по явному разрешению владельца — вне MVP+).
+    Экспорт owner/admin + audit trail (финальные права analyst — волна 2)."""
+    if ctx.role not in ("owner", "admin"):
+        raise HTTPException(403, "экспорт отзывов доступен владельцу и админу")
+    rows = await feedback_admin.export_rows(db, days=days)
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(["tg_id", "created_at", "nps", "like", "blocker", "next",
+                     "moderation", "bonus_granted"])
+    for row in rows:
+        writer.writerow([row["tg_id"], row["created_at"], row["nps"],
+                         row["like"], row["blocker"], row["next"],
+                         row["moderation"], row["bonus_granted"]])
+    await admin_repo.audit(db, ctx.tg_id, "feedback.export",
+                           target=feedback_admin.SURVEY_CODE,
+                           payload={"count": len(rows), "days": days})
+    return Response(content=buf.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="feedback-day7.csv"',
+                             "Cache-Control": "no-store", "Pragma": "no-cache",
+                             "X-Content-Type-Options": "nosniff"})
+
+
 @router.get("/horoscopes")
 async def horoscopes_day(day: str | None = None,
                          ctx=Depends(require("content:read")), db=Depends(get_db)):
@@ -397,6 +478,16 @@ async def audience_goals(ctx=Depends(require("dashboard")),
                          db=Depends(get_db)):
     """Разбивка аудитории по мотивации (G-11 BUS-175): GROUP BY goal."""
     return await analytics_repo.goal_split(db)
+
+
+@router.get("/attention-queue")
+async def attention_queue(ctx=Depends(require("dashboard")),
+                          db=Depends(get_db)):
+    """Очередь внимания оператора: 7 правил, on-demand (BUS-309).
+
+    Счётчики counts/overdue — по всей очереди, не по лимиту 50.
+    """
+    return await ltv_tier.attention_queue(db, limit=50)
 
 
 @router.get("/users/{tg_id}")

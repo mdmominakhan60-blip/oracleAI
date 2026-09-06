@@ -175,3 +175,23 @@
 .chart-legend .dot {
   display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px;
 }
+
+/* ── Экран R6 «Отзывы» (BUS-237): NPS-виджет и цитаты ── */
+.fb-nps-head { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.1px; }
+.fb-nps-score { font-size: 34px; font-weight: 700; line-height: 1; }
+.fb-nps-score.good { color: var(--green); }
+.fb-nps-score.warn { color: var(--gold); }
+.fb-nps-score.bad { color: var(--red); }
+.fb-nps-score.muted { color: var(--muted); }
+.fb-nps-meta { margin: 6px 0 12px; }
+.funnel-fill.tone-good { background: var(--green); }
+.funnel-fill.tone-warn { background: var(--gold); }
+.funnel-fill.tone-bad { background: var(--red); }
+.fb-nps-cell { font-weight: 700; }
+.fb-nps-cell.tone-good { color: var(--green); }
+.fb-nps-cell.tone-warn { color: var(--gold); }
+.fb-nps-cell.tone-bad { color: var(--red); }
+.fb-quote {
+  max-width: 420px; white-space: normal; word-break: break-word;
+  font-style: italic; color: var(--ink);
+}

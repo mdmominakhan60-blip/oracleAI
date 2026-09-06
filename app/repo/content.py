@@ -115,6 +115,27 @@ DEFAULT_EN_CONTENT: dict[tuple[str, str], dict[str, str]] = {
                  "You can do it anytime — in your Profile. No rush — I'll keep "
                  "everything safe."),
     },
+    # welcome-цепочка W1-W3 (BUS-258, §1; копирайт BUS-263 §4)
+    ("copy", "welcome_d1"): {
+        "title": "Welcome: day 1",
+        "body": ("{name}, the stars are ready for your first step ✨ Begin with a "
+                 "5-minute practice — it will adapt to your rhythm and mood."),
+    },
+    ("copy", "welcome_d3"): {
+        "title": "Welcome: day 3",
+        "body": ("Three days have passed, and your first step is still waiting... "
+                 "Perhaps a practice isn't what you need right now. Try asking "
+                 "Oracle about whatever is on your mind — sometimes the answer "
+                 "comes not through ritual but through conversation ✨"),
+    },
+    ("copy", "welcome_d7"): {
+        "title": "Welcome: day 7",
+        "body": ("{name}, a week has flown by — and I'm still here whenever you "
+                 "need me ✨\n\n"
+                 "A gentle hint: the most common first step here is "
+                 "{top_first_step}. But your step can be anything at all — "
+                 "it's yours."),
+    },
     # day-7 опрос (BUS-234)
     ("copy", "feedback_survey_invite"): {
         "title": "Survey: day-7 invite",

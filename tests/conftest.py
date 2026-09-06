@@ -29,6 +29,10 @@ def pytest_configure(config):
     if problem:
         raise pytest.UsageError(problem)
 
+# APP_ENV=test безоговорочно: compose env_file наливает APP_ENV из .env
+# (BUS-334: production ронял сбор тестов — config.py требует dev|test при
+# DEV_MODE=1). Паттерн как у ADMIN_ID выше: перекрываем, а не setdefault.
+os.environ["APP_ENV"] = "test"
 # Выключаем провайдеров до импорта настроек: иначе тесты полезут в сеть.
 os.environ["LLM_PROVIDER"] = "off"
 # Tests use deterministic keyword memory; never inherit a sandbox embedding key.

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ..data.session import transaction, utcnow
 from . import analytics, billing, dialog, growth, readings, users
+from .ltv_tier import user_card_ltv
 
 # ─────────────────────────────── заметки ──────────────────────────────────────
 
@@ -95,4 +96,5 @@ async def user_card(db, tg_id: int) -> dict | None:
         "referrals": await growth.referral_stats(db, tg_id),
         "referrer": await growth.referrer_of(db, tg_id),
         "events": await analytics.user_events(db, tg_id, limit=60),
+        "ltv": await user_card_ltv(db, tg_id),
     }

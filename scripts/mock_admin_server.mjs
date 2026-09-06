@@ -139,6 +139,58 @@ const server = http.createServer(async (req, res) => {
   if (p === '/favicon.ico') {
     res.writeHead(204); return res.end();
   }
+  // BUS-237: экран R6 «Отзывы» — шейпы из app/api/routers/admin.py
+  if (p === '/api/admin/feedback/summary') {
+    return json(res, 200, {
+      survey_code: 'day7_v1', window_days: +url.searchParams.get('days') || 90,
+      total_responses: 2, invited: 3, response_rate_pct: 66.7,
+      nps: { score: 0, nps_responses: 2, promoters: 1, passives: 0, detractors: 1 },
+      distributions: {
+        like: [
+          { choice: 'forecasts', count: 1 }, { choice: 'tarot', count: 1 },
+          { choice: 'diary', count: 0 }, { choice: 'voice', count: 0 },
+          { choice: 'chart', count: 0 },
+        ],
+        blocker: [
+          { choice: 'offtopic', count: 0 }, { choice: 'slow', count: 1 },
+          { choice: 'paywall', count: 0 }, { choice: 'lost', count: 0 },
+          { choice: 'nothing', count: 0 }, { choice: 'other', count: 0 },
+        ],
+        next: [
+          { choice: 'compat', count: 0 }, { choice: 'practices', count: 1 },
+          { choice: 'lunar', count: 0 }, { choice: 'personal', count: 0 },
+          { choice: 'other', count: 0 },
+        ],
+      },
+    });
+  }
+  if (p === '/api/admin/feedback/responses') {
+    const rows = [
+      { id: 2, tg_id: 3002, user_name: 'Марина', sub_level: 'free', user_status: 'active',
+        created_at: '2026-09-05T12:00:00+00:00',
+        answers: [
+          { question_code: 'nps', score: 5 },
+          { question_code: 'blocker', choice: 'slow' },
+          { question_code: 'next', choice: 'practices' },
+        ],
+        nps: 5, free_text: 'Иногда медленно грузятся расклады, но в целом нравится.',
+        moderation: 'pending', bonus_granted: true },
+      { id: 1, tg_id: 3001, user_name: 'Алиса', sub_level: 'vip', user_status: 'active',
+        created_at: '2026-09-04T09:30:00+00:00',
+        answers: [
+          { question_code: 'nps', score: 9 },
+          { question_code: 'like', choice: 'forecasts' },
+        ],
+        nps: 9, free_text: 'Очень тёплые прогнозы, спасибо!',
+        moderation: 'ok', bonus_granted: true },
+    ];
+    return json(res, 200, { items: rows, total: rows.length, limit: 50, offset: 0 });
+  }
+  if (p === '/api/admin/feedback/export') {
+    const csv = 'tg_id,created_at,nps,like,blocker,next,moderation,bonus_granted\n3001,2026-09-04T09:30:00+00:00,9,forecasts,,,ok,1\n';
+    res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8' });
+    return res.end(csv);
+  }
   if (p === '/api/admin/me') {
     return json(res, 200, { tg_id: 100000001, role: 'owner', name: 'Владелец', permissions: ['*'] });
   }

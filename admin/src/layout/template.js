@@ -18,6 +18,7 @@ export const adminShellTemplate = String.raw`
       <button class="nav-item" data-view="analytics"><i>🔭</i>Аналитика</button>
       <button class="nav-item" data-view="audience"><i>👤</i>Аудитория</button>
       <button class="nav-item" data-view="cohorts"><i>📈</i>Когорты</button>
+      <button class="nav-item" data-view="feedback"><i>💬</i>Отзывы</button>
       <button class="nav-item" data-view="users"><i>👥</i>Клиентки</button>
       <button class="nav-item" data-view="orders"><i>💳</i>Заказы</button>
       <button class="nav-item" data-view="reconciliation"><i>🧾</i>Сверка платежей</button>
@@ -314,6 +315,67 @@ export const adminShellTemplate = String.raw`
         <button id="users-prev" class="btn ghost">← Назад</button>
         <span id="users-page" class="muted"></span>
         <button id="users-next" class="btn ghost">Вперёд →</button>
+      </div>
+    </section>
+
+    <!-- ОТЗЫВЫ (R6, BUS-237) -->
+    <section class="view" id="view-feedback">
+      <div class="card">
+        <div class="card-head">
+          <div><h3>Day-7 опрос: сводка</h3><p class="muted small">NPS: промоутеры 9–10, нейтральные 7–8, критики 0–6</p></div>
+          <label class="sr-only" for="fb-days">Период</label>
+          <select id="fb-days" class="input slim" aria-label="Период отзывов">
+            <option value="7">7 дней</option>
+            <option value="30">30 дней</option>
+            <option value="90" selected>90 дней</option>
+            <option value="365">Всё время</option>
+          </select>
+        </div>
+        <div id="fb-kpi" class="kpi-grid"></div>
+        <div class="row-2">
+          <div class="card-subsection">
+            <div class="funnel-top"><span class="fb-nps-head">NPS</span><b id="fb-nps-score" class="fb-nps-score">—</b></div>
+            <p id="fb-nps-meta" class="muted small"></p>
+            <div id="fb-nps-bars"></div>
+          </div>
+          <div id="fb-distributions"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3>Ответы</h3>
+          <button id="fb-export" class="btn ghost" type="button">Экспорт CSV (агрегаты)</button>
+        </div>
+        <p class="muted small">Свободный текст виден только здесь — в CSV его нет (приватность).</p>
+        <div class="toolbar">
+          <label class="sr-only" for="fb-question">Фильтр по вопросу</label>
+          <select id="fb-question" class="input slim" aria-label="Фильтр по вопросу">
+            <option value="">Все вопросы</option>
+            <option value="like">Понравилось</option>
+            <option value="blocker">Помешало</option>
+            <option value="next">Хочется дальше</option>
+          </select>
+          <span id="fb-choice-wrap" class="hidden">
+            <label class="sr-only" for="fb-choice">Фильтр по варианту</label>
+            <select id="fb-choice" class="input slim" aria-label="Фильтр по варианту"></select>
+          </span>
+          <label class="sr-only" for="fb-moderation">Модерация</label>
+          <select id="fb-moderation" class="input slim" aria-label="Статус модерации">
+            <option value="">Любая модерация</option>
+            <option value="pending">На проверке</option>
+            <option value="ok">Ок</option>
+            <option value="flagged">Флаг</option>
+          </select>
+          <label class="sr-only" for="fb-text">Поиск по отзывам</label>
+          <input id="fb-text" class="input" aria-label="Поиск по тексту отзыва" placeholder="Поиск по тексту отзыва…">
+          <span id="fb-total" class="muted"></span>
+        </div>
+        <div id="fb-responses" class="table-wrap" aria-live="polite"></div>
+        <div class="pager">
+          <button id="fb-prev" class="btn ghost" type="button">← Назад</button>
+          <span id="fb-page" class="muted"></span>
+          <button id="fb-next" class="btn ghost" type="button">Вперёд →</button>
+        </div>
       </div>
     </section>
 
