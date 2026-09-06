@@ -85,3 +85,40 @@ groups:
         annotations:
           summary: "LLM-канал деградировал: >50% ok=0 в llm_usage за 10m"
           description: "Первое действие: curl http://<host-gateway>:20128/healthz (omniroute) и docker logs infra-worker-1 | grep -i llm. Продукт при этом деградирует в офлайн-ответы (runtime.py:175)."
+
+# ── BUS-343: видимость сбоя replay-store (BUS-342 условие) ──
+# Решение EL по BUS-342: fail-open на проде допустим только при наблюдаемости
+# инцидента. Счётчик oracleai_replay_store_total{result="open|closed"} пишет
+# auth_router._mark_init_data_used только в exception-ветке (сбой Redis на
+# минте) — нулевой ряд = норма, любой рост = инцидент.
+  - name: oracleai-replay-store
+    rules:
+      # 1) Fail-open: Redis был недоступен, минт прошёл без replay-брони.
+      # Украденная initData в это окно может отминтиться повторно (до 24ч жизни
+      # подписи). severity=warning: доступность не пострадала, но replay-защита
+      # была немой.
+      - alert: OracleAIReplayStoreFailOpen
+        expr: increase(oracleai_replay_store_total{result="open"}[10m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          stack: oracleai
+        annotations:
+          summary: "Replay-store недоступен: минт сессии идёт fail-open"
+          description: "Redis-ошибка в POST /api/auth/session (auth_router.py, auth_replay_store_down fail-open). Replay-защита на минте не работает до восстановления Redis. Первое действие: docker logs infra-api-1 --since 10m | grep auth_replay_store_down; проверить контейнер redis (docker ps | grep redis, docker logs infra-redis-1)."
+
+      # 2) Fail-closed (REPLAY_FAIL_CLOSED=1): Redis недоступен → минт полностью
+      # лежит (401 на каждую попытку). Отказ авторизации для новых сессий —
+      # критичнее fail-open. Ветка result="closed" инкрементится только при
+      # включённом REPLAY_FAIL_CLOSED=1 (условие внутри if в коде), поэтому
+      # счётчик сам является индикатором режима: честные replay-отказы (тоже
+      # 401) инкремента не дают и ложного срабатывания не устроит.
+      - alert: OracleAIReplayStoreFailClosed
+        expr: increase(oracleai_replay_store_total{result="closed"}[10m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          stack: oracleai
+        annotations:
+          summary: "Replay-store fail-closed: минт сессии отклоняется (401) при недоступном Redis"
+          description: "REPLAY_FAIL_CLOSED=1 и Redis недоступен — новые сессии не выдаются (POST /api/auth/session → 401). Первое действие: восстановить redis (docker start infra-redis-1) либо согласовать снятие флага. Лог: docker logs infra-api-1 --since 10m | grep 'fail-closed'."

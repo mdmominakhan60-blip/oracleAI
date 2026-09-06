@@ -27,6 +27,12 @@ from app.api.security import MAX_AGE_SECONDS
 from app.repo import users
 
 
+def _replay_store_sample(result: str) -> float | None:
+    from prometheus_client import REGISTRY
+    return REGISTRY.get_sample_value(
+        "oracleai_replay_store_total", {"result": result})
+
+
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "test:token")
 
 
@@ -183,3 +189,84 @@ class TestReplayProtection:
                 assert r.status_code == 429, r.text
                 break
         assert ok == 10
+
+
+# ─────────────────── метрика replay-store (BUS-343) ────────────────────────
+
+class TestReplayStoreMetric:
+    """Счётчик oracleai_replay_store_total{result=...} инкрементится только в
+    exception-ветке _mark_init_data_used: solution EL по BUS-342 — fail-open
+    допустим только при видимости инцидента. Успех и replay счётчик не трогают.
+
+    Сбой Redis эмулируется _redis=None (RuntimeError внутри функции) — это
+    детерминированно и не зависит от состояния внешнего контейнера.
+    """
+
+    @pytest.fixture
+    async def client(self, db):
+        from httpx import ASGITransport, AsyncClient
+        from app.api.deps import get_db
+        from app.api import main as api_main
+        api_main.app.dependency_overrides[get_db] = lambda: db
+        transport = ASGITransport(app=api_main.app)
+        async with AsyncClient(transport=transport, base_url="http://test",
+                               headers={"X-Dev-Key": TEST_DEV_KEY}) as http:
+            yield http
+        api_main.app.dependency_overrides.clear()
+
+    async def test_fail_open_increments_open_counter(self, client, db, monkeypatch):
+        from app.api.routers import auth_router
+        monkeypatch.setattr(auth_router, "_redis", None)
+        before = _replay_store_sample("open") or 0
+
+        init_data = _build_init_data(900210001)
+        r = await client.post("/api/auth/session", json={"init_data": init_data})
+        assert r.status_code == 200
+
+        after = _replay_store_sample("open")
+        assert after is not None
+        assert after - before == 1
+
+    async def test_fail_open_does_not_touch_closed_counter(self, client, db, monkeypatch):
+        from app.api.routers import auth_router
+        monkeypatch.setattr(auth_router, "_redis", None)
+        before = _replay_store_sample("closed") or 0
+
+        r = await client.post("/api/auth/session",
+                              json={"init_data": _build_init_data(900210002)})
+        assert r.status_code == 200
+        assert (_replay_store_sample("closed") or 0) - before == 0
+
+    async def test_success_does_not_increment_counter(self, client, db, monkeypatch):
+        # Redis доступен → успех минта: обе ветки счётчика молчат.
+        # Свежий клиент обязателен: модульный _redis держит пул с соединением
+        # прошлого event loop'а (loop закрыт → "Event loop is closed" → уходит
+        # в exception-ветку fail-open и честно инкрементит счётчик).
+        from redis.asyncio import Redis
+        from app.api.routers import auth_router
+        from app.config import settings
+        monkeypatch.setattr(
+            auth_router, "_redis",
+            Redis.from_url(settings.redis_url, decode_responses=True))
+        before_open = _replay_store_sample("open") or 0
+        before_closed = _replay_store_sample("closed") or 0
+
+        r = await client.post("/api/auth/session",
+                              json={"init_data": _build_init_data(900210003)})
+        assert r.status_code == 200
+        assert (_replay_store_sample("open") or 0) - before_open == 0
+        assert (_replay_store_sample("closed") or 0) - before_closed == 0
+
+    async def test_fail_closed_increments_closed_counter(self, client, db, monkeypatch):
+        from app.api.routers import auth_router
+        monkeypatch.setattr(auth_router, "_redis", None)
+        monkeypatch.setattr(auth_router.settings, "replay_fail_closed", True)
+        before = _replay_store_sample("closed") or 0
+
+        r = await client.post("/api/auth/session",
+                              json={"init_data": _build_init_data(900210004)})
+        assert r.status_code == 401
+
+        after = _replay_store_sample("closed")
+        assert after is not None
+        assert after - before == 1

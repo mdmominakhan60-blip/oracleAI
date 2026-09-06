@@ -24,6 +24,7 @@ import logging
 import time
 
 from fastapi import APIRouter, Depends, HTTPException
+from prometheus_client import Counter
 from pydantic import BaseModel
 
 from ...config import settings
@@ -34,6 +35,17 @@ from ..deps import get_db, rate_limit
 from ..security import MAX_AGE_SECONDS, parse_init_data
 
 log = logging.getLogger("oracle.api.auth")
+
+#: BUS-343: видимость сбоя replay-store. Решение EL по BUS-342 — fail-open
+#: валиден только при наблюдаемости инцидента: без этой метрики немой fail-open
+#: незаметен оператору. Инкремент в _mark_init_data_used (и api, и локальные
+#: сценарии без прометея должны просто работать — Counter сам регистрируется
+#: в дефолтном реестре /metrics).
+REPLAY_STORE = Counter(
+    "oracleai_replay_store_total",
+    "Replay-store outcomes at init-data mint: fail-open/fail-closed on Redis errors.",
+    ("result",),
+)
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -76,8 +88,10 @@ async def _mark_init_data_used(raw: str) -> bool:
     except Exception as e:
         if settings.replay_fail_closed:
             log.error("auth_replay_store_down fail-closed: %s", e)
+            REPLAY_STORE.labels(result="closed").inc()
             return False
         log.warning("auth_replay_store_down fail-open: %s", e)
+        REPLAY_STORE.labels(result="open").inc()
         return True
 
 
