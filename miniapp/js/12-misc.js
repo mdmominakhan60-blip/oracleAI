@@ -113,6 +113,10 @@
           </button>
           <div class="spacer"></div>
           <div id="profile-referral"></div>
+          ${me && me.feedback_pending ? `<button class="glass language-row" data-act="survey-open" type="button" aria-label="${esc(oracleLang() === 'en' ? 'Open week survey' : 'Открыть опрос недели')}">
+            <span class="language-row__copy"><b>${esc(oracleLang() === 'en' ? 'A Week with Oracle 🌙' : 'Неделя с Оракулом 🌙')}</b><small>${esc(oracleLang() === 'en' ? '5 questions · 40 Crystals' : '5 вопросов · 40 кристаллов')}</small></span>
+            <span class="language-row__chevron" aria-hidden="true">›</span>
+          </button>` : ''}
           <div class="spacer"></div>
           <section class="glass account-center" aria-labelledby="account-center-title">
             <div class="section-kicker">АККАУНТ И ПРИВАТНОСТЬ</div>
