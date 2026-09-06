@@ -19,8 +19,13 @@ jobs:
       # с пустым ключом. QA-сервер и скрипты шлют это же значение в X-Dev-Key.
       DEV_KEY: ci-dev-key
       LLM_PROVIDER: off
-      DATABASE_URL: postgresql+asyncpg://oracle:oracle@127.0.0.1:5432/oracle
-      TEST_DATABASE_URL: postgresql+asyncpg://oracle:oracle@127.0.0.1:5432/oracle
+      # BUS-304 guard: тесты принимают только базы *_test (fail-closed против
+      # прод-DATABASE_URL). CI зеркалит локальный `make test`: оракл-юзер —
+      # суперпользователь сервис-контейнера, admin DSN нужен reset_test_database.
+      DATABASE_URL: postgresql+asyncpg://oracle_test:oracle@127.0.0.1:5432/oracle_test
+      TEST_DATABASE_URL: postgresql+asyncpg://oracle_test:oracle@127.0.0.1:5432/oracle_test
+      POSTGRES_ADMIN_DATABASE_URL: postgresql://oracle:oracle@127.0.0.1:5432/postgres
+      ALLOW_DB_RESET: "1"
       PGVECTOR_ENABLED: "1"
     services:
       postgres:
@@ -75,6 +80,17 @@ jobs:
       - name: JavaScript syntax
         shell: bash
         run: find miniapp/js admin -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+      - name: Ensure oracle_test role (BUS-303 least privilege)
+        # пароль роли = пароль сервис-контейнера postgres (тот же домен доверия,
+        # роль NOSUPERUSER/NOCREATEDB/NOCREATEROLE); TEST_ROLE_PASSWORD берёт
+        # скрипт из env, если не передан явно
+        env:
+          TEST_ROLE_PASSWORD: oracle
+        run: python scripts/ensure_test_role.py --admin-database-url postgresql://oracle:oracle@127.0.0.1:5432/postgres
+      - name: Prepare isolated test database (BUS-304 mirror of make test)
+        run: |
+          python scripts/reset_test_database.py
+          alembic upgrade head
       - name: PostgreSQL schema migration
         run: alembic upgrade head
       - name: Repository hygiene

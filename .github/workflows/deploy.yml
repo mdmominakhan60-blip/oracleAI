@@ -33,7 +33,35 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 1
 
+      - name: Secrets gate
+        id: gate
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          missing=""
+          for v in VPS_KNOWN_HOSTS VPS_HOST VPS_USER VPS_SSH_KEY; do
+            if [ -z "${!v:-}" ]; then
+              missing="$missing $v"
+            fi
+          done
+          if [ -z "$missing" ]; then
+            echo "deploy_enabled=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "deploy_enabled=false" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "::error title=VPS deploy secrets missing::Not configured in repo secrets:$missing — see docs/DEPLOYMENT.md"
+            exit 1
+          fi
+          echo "::notice title=Auto-deploy skipped::VPS deploy secrets not configured ($missing); auto-deploy after CI stays off until they are set (docs/DEPLOYMENT.md)"
+
       - name: Validate Compose definition
+        if: steps.gate.outputs.deploy_enabled == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -46,6 +74,7 @@ jobs:
           rm -f .env
 
       - name: Prepare SSH trust
+        if: steps.gate.outputs.deploy_enabled == 'true'
         shell: bash
         env:
           VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
@@ -57,6 +86,7 @@ jobs:
           chmod 600 "$HOME/.ssh/known_hosts"
 
       - name: Deploy and verify on VPS
+        if: steps.gate.outputs.deploy_enabled == 'true'
         shell: bash
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
