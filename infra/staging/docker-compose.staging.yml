@@ -190,6 +190,56 @@ services:
       start_period: 20s
     logging: *staging-logging
 
+  # Ежедневный шифрованный бэкап staging-БД — та же механика, что в проде
+  # (BUS-209, валидирована drill-ом BUS-108): pg_dump custom -> AES-256-CBC
+  # pbkdf2 -> sha256 -> off-site копия в MinIO oracleai-staging-backups.
+  # Ключ шифрования — вне репо (BACKUP_ENCRYPTION_KEY_HOST_PATH в .env.staging,
+  # per-env, не продовый /etc/oracle/backup.key). Ключи MinIO — per-bucket
+  # юзер staging-backup-writer (BUS-208, no DeleteObject). Доступ к MinIO —
+  # через bridge-сеть oracle_backup_offsite (external), изоляция прод/staging
+  # БД и приложения не нарушается; на сайте MinIO алиас oracle-backup-offsite-minio.
+  staging-backup:
+    image: oracleai-backup:local
+    env_file:
+      - ./.env.staging
+    environment:
+      PGHOST: staging-postgres
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB:-oracle_staging}
+      PGUSER: ${POSTGRES_USER:-oracle_staging}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      BACKUP_ENCRYPTION_KEY_FILE: /run/secrets/oracle-staging-backup-key
+      BACKUP_REQUIRE_ENCRYPTION: "1"
+      # Off-site обязателен: при недоступности MinIO луп ретраит каждые 5 мин,
+      # а healthcheck краснеет (свежий статус с offsite_ok=false не проходит).
+      BACKUP_REQUIRE_OFFSITE: "1"
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+      BACKUP_STATUS_FILE: /backups/backup-status.json
+      BACKUP_S3_URL: http://oracle-backup-offsite-minio:9000
+    volumes:
+      - ${BACKUP_STORAGE_PATH:-./backups}:/backups
+      - ${BACKUP_ENCRYPTION_KEY_HOST_PATH:?BACKUP_ENCRYPTION_KEY_HOST_PATH must point to a per-env key}:/run/secrets/oracle-staging-backup-key:ro
+      - ../backup-postgres.sh:/usr/local/bin/backup-postgres.sh:ro
+    networks:
+      - oracle_staging_internal
+      - oracle_backup_offsite
+    depends_on:
+      staging-postgres:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/usr/local/bin/backup-postgres.sh"]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      # Свежий успешный цикл: local_backup_ok=true, offsite_ok=true (BACKUP_REQUIRE_OFFSITE=1)
+      # и last_attempt_utc не старше 26ч (daily + суточный запас). timegm — UTC-парсинг.
+      test: ["CMD-SHELL", "python3 -c \"import calendar,json,sys,time; s=json.load(open('/backups/backup-status.json')); age=time.time()-calendar.timegm(time.strptime(s.get('last_attempt_utc',''),'%Y-%m-%dT%H:%M:%SZ')); sys.exit(0 if (s.get('local_backup_ok') is True and s.get('offsite_ok') is True and age<26*3600) else 1)\""]
+      interval: 1h
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    logging: *staging-logging
+
 volumes:
   staging_pg_data:
     name: oracleai-staging_pg_data
@@ -204,3 +254,9 @@ networks:
   oracle_staging_internal:
     name: oracle_staging_internal
     driver: bridge
+  # External: bridge для off-site копий в MinIO. Создаётся на хосте один раз
+  # (docker network create oracle_backup_offsite), MinIO подключается к ней
+  # отдельно (docker network connect). Не общая сеть приложения с продом.
+  oracle_backup_offsite:
+    external: true
+    name: oracle_backup_offsite

@@ -118,6 +118,10 @@ MinIO-ключи переведены на per-bucket least-privilege. Наст�
    `backup` (daily encrypted loop), а `docker-compose.staging.yml` — нет. Регулярный шифрованный
    бэкап staging-БД не настроен; данный drill сделал разовый бэкап вручную. Для production-like
    parity стоит завести `staging-backup` сервис (или cron) с отдельным staging-ключом.
+   **Устранено 2026-09-06 (BUS-209):** сервис `staging-backup` добавлен в `docker-compose.staging.yml`
+   (daily loop, AES-256-CBC pbkdf2, per-env ключ вне репо, off-site в `oracleai-staging-backups`
+   через external-сеть `oracle_backup_offsite`, healthcheck по backup-status.json, retention 14d).
+   Верификация: цикл backup→restore из off-site копии пройден, точные count(*) 54/54 таблиц совпали.
 2. **MinIO-ключи не per-bucket scoped.** Прод-бэкап-креды пишут в staging-бакет. Для least privilege
    нужны отдельные IAM-пользователи MinIO с политикой `s3:PutObject` только на свой бакет/префикс.
    **Устранено 2026-09-06 (BUS-208)** — см. раздел 5.1; negative-тесты AccessDenied в обе стороны зелёные.
