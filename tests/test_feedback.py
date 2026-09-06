@@ -279,3 +279,59 @@ async def test_feedback_pending_flag_in_me(client, db, user):
     r3 = await client.get("/api/me", params=_as_user(user))
     assert r3.status_code == 200
     assert r3.json()["feedback_pending"] is False
+
+
+# ─────────────────── граничные ветки OR-гейта (BUS-177 §5.3a) ─────────────────
+
+async def test_feedback_no_bonus_two_days_four_events(client, db):
+    """2 дня × 4 события = 8 событий: дней <3, событий ≥5, НО условие —
+    ≥3 дней ИЛИ ≥5 событий… проверяем именно ветку «дней мало, событий
+    достаточно» — здесь 8 событий ≥5 → бонус ДОЛЖЕН быть выдан (OR-гейт)."""
+    user = await _ensure_active_user(db, 2006, "ДваДня")
+    await _seed_activity(db, 2006, days=2, events_per_day=4)
+
+    resp = await _post(client, user, {
+        "answers": _answers(),
+        "survey_code": feedback_repo.SURVEY_CODE,
+    })
+    assert resp.status_code == 200
+    assert resp.json()["bonus_granted"] is True
+
+
+async def test_feedback_no_bonus_five_events_one_day(client, db):
+    """1 день × 5 событий: дней <3, но событий ровно 5 → OR-гейт пройден."""
+    user = await _ensure_active_user(db, 2007, "ПятьСобытий")
+    await _seed_activity(db, 2007, days=1, events_per_day=5)
+
+    resp = await _post(client, user, {
+        "answers": _answers(),
+        "survey_code": feedback_repo.SURVEY_CODE,
+    })
+    assert resp.status_code == 200
+    assert resp.json()["bonus_granted"] is True
+
+
+async def test_feedback_no_bonus_four_events_two_days(client, db):
+    """2 дня × 2 события = 4 события: ни ≥3 дней, ни ≥5 событий → нет бонуса."""
+    user = await _ensure_active_user(db, 2008, "ЧетыреСобытия")
+    await _seed_activity(db, 2008, days=2, events_per_day=2)
+
+    resp = await _post(client, user, {
+        "answers": _answers(),
+        "survey_code": feedback_repo.SURVEY_CODE,
+    })
+    assert resp.status_code == 200
+    assert resp.json()["bonus_granted"] is False
+
+
+async def test_feedback_bonus_exactly_three_days(client, db):
+    """Ровно 3 дня активности (нижняя граница дней-гейта) → бонус."""
+    user = await _ensure_active_user(db, 2009, "ТриДня")
+    await _seed_activity(db, 2009, days=3, events_per_day=1)
+
+    resp = await _post(client, user, {
+        "answers": _answers(),
+        "survey_code": feedback_repo.SURVEY_CODE,
+    })
+    assert resp.status_code == 200
+    assert resp.json()["bonus_granted"] is True

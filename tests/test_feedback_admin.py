@@ -125,6 +125,7 @@ async def test_summary_empty_state(admin_client, db):
 # ─────────────────────────── список и фильтры ─────────────────────────────────
 
 async def test_responses_list_includes_free_text(admin_client, db):
+    await _ensure_user(db, 3011)
     await _add_response(db, 3011, nps=10, like="tarot", blocker=None,
                         next_=None, free_text="Очень тёплые прогнозы, спасибо")
     res = await admin_client.get("/api/admin/feedback/responses",
