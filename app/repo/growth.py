@@ -138,6 +138,21 @@ async def list_redemptions(db, *, batch: str | None = None,
     return [dict(r) for r in await cur.fetchall()]
 
 
+async def redeemed_mpl_voucher(db, tg_id: int) -> bool:
+    """Покупатель маркетплейс-ваучера уже активировал свой код? (B4, BUS-355)
+
+    Платный ваучер = оплаченный инвайт: гейт беты защищает её от бесплатного
+    потока, не от платящих. Проверка персистентна (promo_redemptions JOIN
+    promo_codes по batch), поэтому работает на всех путях редема — deep-link,
+    /promo, miniapp — и переживает повторный /start.
+    """
+    cur = await db.execute(
+        "SELECT 1 FROM promo_redemptions r JOIN promo_codes c ON c.code=r.code "
+        "WHERE r.tg_id=:tg_id AND c.batch LIKE 'mpl\\_%' ESCAPE '\\' LIMIT 1",
+        {"tg_id": tg_id})
+    return await cur.fetchone() is not None
+
+
 async def batch_stats(db) -> list[dict]:
     cur = await db.execute(
         "SELECT COALESCE(batch,'(без партии)') batch, COUNT(*) total, "

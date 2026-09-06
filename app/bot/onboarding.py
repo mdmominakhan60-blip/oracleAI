@@ -17,7 +17,7 @@ from aiogram.types import CallbackQuery, Message
 from ..core import astro, geo
 from ..core.personas import persona_list
 from ..services import access, analytics, billing as billing_svc, referrals
-from ..repo import content as content_repo, readings, users
+from ..repo import content as content_repo, growth, readings, users
 from .formatting import tg_esc
 from .onboarding_parsers import date_error_copy, parse_birth_date, parse_birth_time, time_error_copy
 from .keyboards import (ask_starters_kb, back_menu, city_pick_kb,
@@ -164,12 +164,20 @@ async def start_deeplink(message: Message, command: CommandObject,
             granted = None
             await message.answer(billing_svc.promo_refusal_text(exc.reason))
         if granted:
-            invite_granted = granted.get("kind") == "invite"
+            # B4 (BUS-355): платный ваучер маркетплейс-партии = оплаченный инвайт —
+            # критерий по ПАРТИИ (batch prefix mpl_), не по kind: бесплатный
+            # crystals-промокод гейт не открывает.
+            invite_granted = (granted.get("kind") == "invite"
+                              or (granted.get("batch") or "").startswith("mpl_"))
             await message.answer(_promo_text(granted))
 
     # Гейт контролируемой беты (BUS-269): новые без валидного инвайта — waitlist.
+    # B4 (BUS-355): покупатель маркетплейс-ваучера (mpl_*) = оплаченный инвайт.
+    # Проверка персистентная — покрывает также редем через /promo и miniapp,
+    # когда человек вернулся в бота повторным /start.
     if await content_repo.is_on(db, "beta_invite_gate") and not user["onboarded"]:
-        if not invite_granted:
+        if not invite_granted and not await growth.redeemed_mpl_voucher(
+                db, message.from_user.id):
             await _beta_gate_refused(db, message, user)
             return
 
@@ -838,6 +846,12 @@ async def promo_enter(message: Message, state: FSMContext, db):
     menu = await _menu(db, message.from_user.id)
     if granted:
         await message.answer(_promo_text(granted, lang), reply_markup=menu)
+        # B4 (BUS-355): mpl-ваучер, редемнутый не-onboarded покупателем вне
+        # deep-link (через /promo) — тот же «оплаченный инвайт»: запускаем
+        # онбординг здесь, иначе человек останется с waitlist-отказом при
+        # следующем /start без возможности войти.
+        if (granted.get("batch") or "").startswith("mpl_") and not user["onboarded"]:
+            await _begin(message, state, db)
 
 
 # ─────────────────────────────── помощь ───────────────────────────────────────

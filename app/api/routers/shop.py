@@ -158,6 +158,10 @@ class PromoIn(BaseModel):
 
 @router.post("/promo", dependencies=[Depends(rate_limit("write"))])
 async def redeem_promo(item: PromoIn, user=Depends(confirmed_age_user), db=Depends(get_db)):
+    # B4 (BUS-355): редем mpl-ваучера здесь неонбордингового пользователя
+    # безопасен — гейт беты живёт только в бот-флоу /start, а факт mpl-редема
+    # персистентен (promo_redemptions), поэтому повторный /start в бота пускает
+    # покупателя на онбординг (bot/onboarding.py, growth.redeemed_mpl_voucher).
     try:
         result = await billing_svc.redeem_promo(db, user["tg_id"], item.code)
     except billing_svc.PromoRedeemRefused as exc:
