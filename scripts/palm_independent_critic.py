@@ -70,7 +70,7 @@ def main() -> int:
     require(skills, "PALM_LIMITATION", "Mira weak-evidence boundary", failures)
     require(ui, "PALM_I18N", "Palm RU/EN dictionary", failures)
     require(ui, "refreshPalmLocale", "Palm locale refresh hook", failures)
-    require(ui, "folded-edge", "folded-edge guidance", failures)
+    require(ui, "foldedEdge", "folded-edge guidance", failures)
     require(locale, "refreshPalmLocale", "language-switch integration", failures)
     for needle, label in [
         ("adversarial", "adversarial visual text case"),
