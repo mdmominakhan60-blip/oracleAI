@@ -1,10 +1,10 @@
 """Feedback-опрос day7_v1: хранение отзывов (BUS-231, задача 1.5.1 BUS-172).
 
-- `feedback_responses` — одна строка на отзыв пользователя (на survey_kind):
+- `feedback_responses` — одна строка на отзыв пользователя (на survey_code):
   ответы вопросов — JSON (категориальные коды + score, allowlist на сервере),
   свободный текст — только здесь, НЕ в events (privacy-инвариант BUS-168 §2.3:
   events — rolling window 120 дней и без пользовательского текста).
-  UNIQUE (tg_id, survey_kind) — один отзыв на пользователя на версию опроса;
+  UNIQUE (tg_id, survey_code) — один отзыв на пользователя на версию опроса;
   повторный POST отклоняется на уровне БД (анти-абьюз BUS-170 §5.1).
 - `bonus_lot_id` — ссылка на строку `crystal_lots` (source='review_bonus',
   грант 40✦ на 90 дней, BUS-177). FK нет по конвенции схемы (как tg_id везде).
@@ -34,14 +34,14 @@ _FEEDBACK_RESPONSES = """
 CREATE TABLE IF NOT EXISTS feedback_responses (
     id            BIGSERIAL PRIMARY KEY,
     tg_id         BIGINT NOT NULL,
-    survey_kind   TEXT NOT NULL DEFAULT 'day7_v1',  -- версия опроса: day7_v1, далее day7_v2...
+    survey_code   TEXT NOT NULL DEFAULT 'day7_v1',  -- версия опроса: day7_v1, далее day7_v2...
     answers_json  TEXT,                  -- [{question_code, choice, score}] — без свободного текста
     free_text     TEXT,                  -- свободный текст отзыва (единственное место хранения)
     status        TEXT NOT NULL DEFAULT 'submitted',  -- исход обработки; бонусные детали ниже
     bonus_granted BIGINT DEFAULT 0,      -- 0|1: начислен ли бонус (одна попытка за всю жизнь, BUS-177)
     bonus_lot_id  BIGINT,                -- crystal_lots.id гранта source='review_bonus'
     created_at    TEXT,
-    UNIQUE (tg_id, survey_kind)
+    UNIQUE (tg_id, survey_code)
 )
 """
 

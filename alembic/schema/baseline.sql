@@ -156,22 +156,23 @@ CREATE TABLE IF NOT EXISTS deliveries (
     created_at TEXT,
     PRIMARY KEY (tg_id, kind, key)
 );
+COMMENT ON TABLE deliveries IS 'Журнал дедупа исходящих: tg_id+kind+key уникальны. kind: forecast|weekly|expiry|winback|broadcast|feedback_survey (key: day7_v1|day7_v1_remind)';
 -- Отзывы day-7 опроса (миграция 0009, BUS-170 §4): одна строка на отзыв
--- пользователя на survey_kind. Свободный текст — только здесь, НЕ в events
--- (privacy-инвариант BUS-168 §2.3). UNIQUE (tg_id, survey_kind) — анти-абьюз
+-- пользователя на survey_code. Свободный текст — только здесь, НЕ в events
+-- (privacy-инвариант BUS-168 §2.3). UNIQUE (tg_id, survey_code) — анти-абьюз
 -- BUS-170 §5.1. bonus_lot_id → crystal_lots.id (source='review_bonus', BUS-177);
 -- FK нет по конвенции схемы. Индексы — в общем блоке ниже (idx_feedback_*).
 CREATE TABLE IF NOT EXISTS feedback_responses (
     id            BIGSERIAL PRIMARY KEY,
     tg_id         BIGINT NOT NULL,
-    survey_kind   TEXT NOT NULL DEFAULT 'day7_v1',  -- версия опроса: day7_v1, далее day7_v2...
+    survey_code   TEXT NOT NULL DEFAULT 'day7_v1',  -- версия опроса: day7_v1, далее day7_v2...
     answers_json  TEXT,                  -- [{question_code, choice, score}] — без свободного текста
     free_text     TEXT,                  -- свободный текст отзыва (единственное место хранения)
     status        TEXT NOT NULL DEFAULT 'submitted',  -- исход обработки; бонусные детали ниже
     bonus_granted BIGINT DEFAULT 0,      -- 0|1: начислен ли бонус (одна попытка за всю жизнь, BUS-177)
     bonus_lot_id  BIGINT,                -- crystal_lots.id гранта source='review_bonus'
     created_at    TEXT,
-    UNIQUE (tg_id, survey_kind)
+    UNIQUE (tg_id, survey_code)
 );
 
 
