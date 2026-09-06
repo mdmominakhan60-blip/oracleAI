@@ -71,7 +71,26 @@ printf '%s\n' \
 # (см. evidence BUS-277: все три отвергнуты на проде 2026-09-06)
 ```
 
-## 5. Границы
+## 5. Ротация пароля роли
+
+Порядок (синхронно — роль и конфиг клиента, без окна неработоспособности):
+
+```bash
+# 1. Новый секрет в .env прод-каталога (openssl rand -hex 24 → ORACLEAI_MCP_ROLE_PASSWORD).
+# 2. ALTER ROLE по каноническому пути:
+make ensure-mcp-role
+# 3. Синхронно перезаписать ~/.oracleai-mcp.env (600) тем же значением:
+#    ORACLEAI_MCP_DATABASE_URL=postgresql+asyncpg://oracle_mcp_ro:<NEW_PW>@127.0.0.1:5433/oracle
+#    (runbook-формат: user:password@host — без задвоенных сегментов; парсер
+#    mcp_server.py regex'ом возьмёт всё до @ как пароль).
+# 4. Smoke: stdio db_health + негативные пробы INSERT/DELETE/DDL → denied.
+```
+
+История: 2026-09-06 — ротация после нормализации DSN (watchdog-ревью BUS-278:
+задвоенный сегмент `oracle_mcp_ro://` в старом конфиге; негативные пробы
+подтверждены после ротации).
+
+## 6. Границы
 
 - Роль не имеет прав на sequence/функции — только SELECT по таблицам.
 - Self-GRANT (`GRANT ... TO oracle_mcp_ro`) технически проходит, но не даёт
