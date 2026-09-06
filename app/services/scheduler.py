@@ -675,6 +675,8 @@ async def _welcome_chain(bot, db, user, now_utc: datetime) -> None:
         if await comms.already_sent(db, tg_id, "welcome_chain",
                                     f"{suffix}:{tg_id}"):
             continue
+        if not await _guardrail_ok(db, tg_id, now_utc):
+            return
         template = await content.get_text(db, "copy", copy_key,
                                           default="", lang=lang)
         if not template:
@@ -697,8 +699,10 @@ async def _welcome_chain(bot, db, user, now_utc: datetime) -> None:
                 log.error("welcome d7: шаблон без подстановки {top_first_step} "
                           "— отправка отменена")
                 return
-        await _send_once(bot, db, tg_id, "welcome_chain",
-                         f"{suffix}:{tg_id}", text, markup=markup)
+        sent = await _send_once(bot, db, tg_id, "welcome_chain",
+                                f"{suffix}:{tg_id}", text, markup=markup)
+        if sent:
+            await _mark_guardrail(db, tg_id, now_utc)
         return
 
 
@@ -804,6 +808,225 @@ async def _onboard_chain(bot, db, user, now_utc: datetime) -> None:
                          f"d1:{tg_id}", template, markup=markup)
 
 
+# ─────────────── реактивация спящих R1-R2 (BUS-260, §3) ──────────────────────
+
+#: Окно входа в спячку: последняя активность 14–21 день назад. Свежее 14д —
+#: «только что уснул, не трогаем» (дизайн §3).
+REACTIVATE_MIN_SLEEP = timedelta(days=14)
+REACTIVATE_MAX_SLEEP = timedelta(days=21)
+#: R2 — через 7 дней после R1 при отсутствии ответа.
+REACTIVATE_R2_DELAY = timedelta(days=7)
+#: Повторный вход в цепочку после отработанного цикла — не раньше 60 дней
+#: (дизайн §3: «возврат в сегмент возможен не ранее чем через 60 дней»).
+REACTIVATE_COOLDOWN = timedelta(days=60)
+#: Верхняя граница отбора: R2 уходит на r1+7д, т.е. до 28-го дня сна; после
+#: 28д цепочка завершена, юзер вне досягаемости до новой активности.
+REACTIVATE_AUDIENCE_MAX_SLEEP = timedelta(days=28)
+#: Ключ setting с датой последнего суточного прогона (идемпотентность sweep).
+REACTIVATE_LAST_RUN_KEY = "crm.reactivate_last_run"
+
+
+async def _reactivate_audience(db, now_utc: datetime) -> list:
+    """Спящие с push, вошедшие в спячку 14-28 день назад.
+
+    Отбор не по композитному сегменту `sleeping_14d_push` (его предикат —
+    last_seen < 14д, без верхней границы): окно «14-21 день» — точка входа
+    в спячку для R1, а R2 уходит до 28-го дня сна — обе ветки держит один
+    отбор с верхней границей 28д. onboarded=1: «спящий» — тот, кто был
+    активен и уснул; неонбордингнутых цепочка не трогает (их канал —
+    onboard-дожим §2). active и morning_push=1 — из композита.
+    Курсор по tg_id (патиция AUDIENCE_CAP) — как в welcome/onboard.
+    """
+    sleep_from = (now_utc - REACTIVATE_AUDIENCE_MAX_SLEEP).isoformat()
+    sleep_to = (now_utc - REACTIVATE_MIN_SLEEP).isoformat()
+    out: list = []
+    last_id = 0
+    while True:
+        cur = await db.execute(
+            "SELECT * FROM users WHERE status='active' AND onboarded=1 "
+            "AND morning_push=1 AND last_seen IS NOT NULL "
+            "AND last_seen >= :sleep_from AND last_seen < :sleep_to "
+            "AND tg_id>:last_id "
+            f"ORDER BY tg_id LIMIT {AUDIENCE_CAP}",
+            {"sleep_from": sleep_from, "sleep_to": sleep_to, "last_id": last_id})
+        batch = await cur.fetchall()
+        if not batch:
+            return out
+        out.extend(batch)
+        last_id = batch[-1]["tg_id"]
+
+
+async def _reactivate_last_practice(db, user) -> tuple[str, int] | None:
+    """Последняя незавершённая практика: (title, day_index) для R1.
+
+    Паттерн practice_reminder: первый элемент started и не finished из
+    list_for_user (идущие — первыми). list_for_user отдаёт title из каталога
+    (практики хранят только code). Нет незавершённой практики — None.
+    """
+    try:
+        items = await practices_svc.list_for_user(db, user)
+    except Exception as e:  # noqa: BLE001
+        log.warning("reactivate: каталог практик недоступен: %s", type(e).__name__)
+        return None
+    running = [p for p in items if p["started"] and not p["finished"]]
+    if not running:
+        return None
+    item = running[0]
+    return item["title"], int(item["day_index"] or 0)
+
+
+async def _reactivate_fresh_last_seen(db, tg_id: int):
+    """Текущий last_seen из БД — двойной стоп: юзер мог вернуться,
+    пока sweep идёт по партии (аудитория снимается один раз в начале)."""
+    cur = await db.execute(
+        "SELECT last_seen FROM users WHERE tg_id=:tg_id", {"tg_id": tg_id})
+    row = await cur.fetchone()
+    if not row or not row["last_seen"]:
+        return None
+    try:
+        return datetime.fromisoformat(row["last_seen"])
+    except (TypeError, ValueError):
+        return None
+
+
+async def _reactivate_delivery_at(db, tg_id: int, key: str):
+    """Момент доставки R1/R2 из deliveries — точка отсчёта R2 (+7д)."""
+    cur = await db.execute(
+        "SELECT created_at FROM deliveries "
+        "WHERE tg_id=:tg_id AND kind=:kind AND key=:key "
+        "AND status IN ('sent','forbidden')",
+        {"tg_id": tg_id, "kind": "reactivate", "key": key})
+    row = await cur.fetchone()
+    if not row or not row["created_at"]:
+        return None
+    try:
+        return datetime.fromisoformat(row["created_at"])
+    except (TypeError, ValueError):
+        return None
+
+
+async def _reactivate_recent_touch(db, tg_id: int, now_utc: datetime) -> bool:
+    """Было ли касание reactivate за последние 60 дней (любой шаг).
+
+    Проверка «возврат в сегмент не ранее чем через 60 дней» (§3): после
+    отработанного цикла (в т.ч. только R1-fallback) новый цикл не раньше,
+    чем через 60 дней. Continuous sleep отдельной проверки не требует:
+    key от даты входа в спячку неизменен, дедуп не пустит повтор.
+    """
+    cutoff = (now_utc - REACTIVATE_COOLDOWN).isoformat()
+    cur = await db.execute(
+        "SELECT 1 FROM deliveries WHERE tg_id=:tg_id AND kind='reactivate' "
+        "AND created_at >= :cutoff LIMIT 1",
+        {"tg_id": tg_id, "cutoff": cutoff})
+    return await cur.fetchone() is not None
+
+
+async def _reactivate_chain(bot, db, user, now_utc: datetime) -> None:
+    """R1 (вход в спячку 14-21д) → R2 (+7д без ответа) → жёсткий стоп.
+
+    «Ответ» на касание — активность юзера (last_seen обновляется touch() на
+    любом сообщении/запросе Mini App). Проверять её по events НЕЛЬЗЯ: спящие
+    с morning_push=1 получают утренний push-прогноз ежедневно, и каждый
+    system-push пишет E_FORECAST — events после R1 есть всегда. Поэтому
+    ответ = fresh last_seen из БД, новее точки отсчёта.
+
+    Дедуп kind+key в deliveries — держатель истории: key = месяц даты входа
+    в спячку (last_seen), не текущий месяц — иначе повторный вход в сегмент
+    в новом месяце дал бы повторную отправку (постановка BUS-260 п.4;
+    при непрерывном сне last_seen не меняется → key неизменен → повтора
+    нет ни через месяц, ни когда-либо).
+
+    Персонализация R1: последняя незавершённая практика. Если её нет —
+    fallback без персонализации: текст reactivate_r2 (утверждённый каркас
+    «другого типа ценности», копирайт BUS-263 §6) уходит ОДИН раз под
+    ключом r1, и цикл на этом завершён — R2 не шлём, чтобы не дублировать
+    тот же текст. Разделение в R2-ветке — по наличию незавершённой практики
+    (за время сна состояние практик не меняется: юзер неактивен).
+
+    Стоп после R2 жёсткий (урок BUS-124): новых шагов нет; юзер выходит из
+    отбора на 28-й день сна, а новый цикл начинается только после 60 дней
+    с последнего касания (_reactivate_recent_touch).
+    """
+    tg_id = user["tg_id"]
+    lang = _user_lang(user)
+    name = user["name"] or ("dear one" if lang == "en" else "друг")
+
+    last_seen = user.get("last_seen")
+    if not last_seen:
+        return
+    try:
+        seen_at = datetime.fromisoformat(last_seen)
+    except (TypeError, ValueError):
+        return
+    sleep_days = now_utc - seen_at
+
+    r1_key = f"r1:{seen_at.strftime('%Y-%m')}"
+    r2_key = f"r2:{seen_at.strftime('%Y-%m')}"
+
+    r1_sent_at = await _reactivate_delivery_at(db, tg_id, r1_key)
+    if r1_sent_at is None:
+        # Новый цикл: спим в окне [14, 21) дней от входа в спячку.
+        if not (REACTIVATE_MIN_SLEEP <= sleep_days < REACTIVATE_MAX_SLEEP):
+            return
+        # Возврат в сегмент не раньше чем через 60 дней после прошлого цикла.
+        if await _reactivate_recent_touch(db, tg_id, now_utc):
+            return
+        # Двойной стоп: вернулся, пока sweep шёл по партии.
+        fresh = await _reactivate_fresh_last_seen(db, tg_id)
+        if fresh and fresh > seen_at:
+            return
+        template = await content.get_text(db, "copy", "reactivate_r1",
+                                          default="", lang=lang)
+        if not template:
+            log.warning("reactivate: нет шаблона copy/reactivate_r1 — пропуск")
+            return
+        personal = await _reactivate_last_practice(db, user)
+        if personal:
+            title, day_index = personal
+            text = (template
+                    .replace("{name}", name)
+                    .replace("{practice_title}", title)
+                    .replace("{day_index}", str(day_index)))
+            await _send_once(bot, db, tg_id, "reactivate", r1_key, text)
+        else:
+            # Fallback-каркас без персонализации (утверждённый текст r2).
+            fallback = await content.get_text(db, "copy", "reactivate_r2",
+                                              default="", lang=lang)
+            if not fallback:
+                log.warning("reactivate: нет шаблона copy/reactivate_r2 "
+                            "для fallback — пропуск")
+                return
+            text = fallback.replace("{name}", name)
+            # Fallback идёт под отдельным ключом: R2 за ним не follows —
+            # «другая ценность» уже доставлена, дубль не нужен.
+            await _send_once(bot, db, tg_id, "reactivate",
+                             f"{r1_key}:fallback", text)
+        return
+
+    # R1 ушёл. R2: +7 дней после R1, ответа (last_seen newer R1) нет.
+    if now_utc - r1_sent_at < REACTIVATE_R2_DELAY:
+        return
+    # 60д-стоп для нового цикла уже отработан на R1; R2 — продолжение.
+    # R1 был fallback (без практики) — R2 не шлём (дубль «другой ценности»).
+    if await _reactivate_delivery_at(db, tg_id, f"{r1_key}:fallback"):
+        return
+    fresh = await _reactivate_fresh_last_seen(db, tg_id)
+    if fresh and fresh > r1_sent_at:
+        return  # ответил на R1 — цепочка свою работу сделала
+    # R2 уходит только если R1 был персональным (запись без :fallback).
+    r2_sent_at = await _reactivate_delivery_at(db, tg_id, r2_key)
+    if r2_sent_at is not None:
+        return
+    template = await content.get_text(db, "copy", "reactivate_r2",
+                                      default="", lang=lang)
+    if not template:
+        log.warning("reactivate: нет шаблона copy/reactivate_r2 — пропуск")
+        return
+    text = template.replace("{name}", name)
+    await _send_once(bot, db, tg_id, "reactivate", r2_key, text)
+
+
+
 # ────────────────────── общий суточный sweep (BUS-190 §2) ─────────────────────
 
 async def _daily_sweep_due(db, key: str, now_utc: datetime) -> bool:
@@ -846,6 +1069,15 @@ async def _daily_sweeps(bot, db, now_utc: datetime) -> None:
                 await _onboard_chain(bot, db, user, now_utc)
             except Exception as e:  # noqa: BLE001
                 log.warning("ошибка onboard-цепочки: %s", type(e).__name__)
+            await asyncio.sleep(BATCH_PAUSE)
+
+    # Реактивация спящих R1-R2 (BUS-260 §3): окно входа в спячку 14-21 день.
+    if await _daily_sweep_due(db, REACTIVATE_LAST_RUN_KEY, now_utc):
+        for user in await _reactivate_audience(db, now_utc):
+            try:
+                await _reactivate_chain(bot, db, user, now_utc)
+            except Exception as e:  # noqa: BLE001
+                log.warning("ошибка reactivate-цепочки: %s", type(e).__name__)
             await asyncio.sleep(BATCH_PAUSE)
 
 
@@ -948,6 +1180,30 @@ async def _crm_free_paid(bot, db, user, now_utc: datetime) -> None:
             if await _send_once(bot, db, tg_id, "low_balance", event_date, text):
                 await analytics.track(
                     db, analytics.E_LOW_BALANCE_SENT, tg_id, surface="system")
+
+
+async def _guardrail_ok(db, tg_id: int, now_utc: datetime) -> bool:
+    """Guardrail 1/7д: не более одной маркетинговой коммуникации в неделю.
+
+    Ключ недели — ISO '%G-W%V' (как _weekly_report). Событийные сообщения
+    (winback2, post_limit, low_balance) — вне лимита, но разводятся
+    между собой по дням через comms.already_sent по kind+event_date.
+
+    True — можно отправить маркетинговое (welcome_chain, reactivate).
+    """
+    week_key = now_utc.strftime("%G-W%V")
+    return not await comms.already_sent(db, tg_id, "guardrail", week_key)
+
+
+async def _mark_guardrail(db, tg_id: int, now_utc: datetime) -> None:
+    """Резервирует guardrail-слот на неделю."""
+    week_key = now_utc.strftime("%G-W%V")
+    async with transaction(db):
+        await db.execute(
+            "INSERT INTO deliveries(tg_id, kind, key, created_at) "
+            "VALUES(:tg_id, 'guardrail', :key, :created_at) "
+            "ON CONFLICT (tg_id, kind, key) DO NOTHING",
+            {"tg_id": tg_id, "key": week_key, "created_at": utcnow()})
 
 
 async def _weekly_report(bot, db, user, now, settings_cache) -> None:

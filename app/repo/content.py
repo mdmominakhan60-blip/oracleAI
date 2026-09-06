@@ -153,6 +153,21 @@ DEFAULT_EN_CONTENT: dict[tuple[str, str], dict[str, str]] = {
         "title": "Onboarding: continue button",
         "body": "✨ Continue",
     },
+    # реактивация спящих R1-R2 (BUS-260, §3; копирайт BUS-263 §6)
+    ("copy", "reactivate_r1"): {
+        "title": "Reactivation: R1 personal",
+        "body": ("{name}, your practice \"{practice_title}\" is still waiting "
+                 "at step {day_index} — I've kept it safe for you ✨\n\n"
+                 "It hasn't gone anywhere: return, and we'll continue right "
+                 "where we paused."),
+    },
+    ("copy", "reactivate_r2"): {
+        "title": "Reactivation: R2 fresh value",
+        "body": ("{name}, life without practices works too. Sometimes it's "
+                 "enough to simply drop by: your card of the day — a small, "
+                 "one-minute ritual ✨\n\n"
+                 "It's already waiting for you."),
+    },
     # day-7 опрос (BUS-234)
     ("copy", "feedback_survey_invite"): {
         "title": "Survey: day-7 invite",
