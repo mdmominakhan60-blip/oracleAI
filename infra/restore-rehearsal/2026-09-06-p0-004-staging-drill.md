@@ -83,7 +83,34 @@ BUS-105 (`RELEASE_HISTORY.tsv`: `rollback staging-r1 0007_add_tarot_deck`).
 | Host `infra/backups/` | каталог `755`, дампы `root:root 644` (контейнер пишет от root) | каталог world-readable; содержимое зашифровано AES-256, plaintext-дампов на диске нет. **Рекомендация:** `chmod 750`, писать от непривилегированного uid |
 | Ключ `/etc/oracle/backup.key` | `600 softis:softis`, вне репо и вне БД | OK |
 | Прод backup-контейнер | `no-new-privileges:true`, key смонтирован `:ro`, `/backups:rw` | OK |
-| MinIO buckets | `oracleai-backups` (prod), `oracleai-staging-backups` (staging) | **НАРУШЕНИЕ:** prod-ключ `BACKUP_S3_ACCESS_KEY` имеет write-доступ к staging-бакету (кросс-бакет запись подтверждена тестом). Ключи ≠ MinIO root, но не скоуплены per-bucket |
+| MinIO buckets | `oracleai-backups` (prod), `oracleai-staging-backups` (staging) | **НАРУШЕНИЕ (устранено 2026-09-06, BUS-208):** prod-ключ имел write-доступ к staging-бакету (кросс-бакет запись подтверждена тестом). Устранено: per-bucket пользователи `prod-backup-writer` / `staging-backup-writer`, см. ниже |
+
+### 5.1. Устранение нарушения (BUS-208, 2026-09-06)
+
+MinIO-ключи переведены на per-bucket least-privilege. Настройка — idempotent IaC-скрипт
+`infra/minio-setup-backup-users.sh` (запуск на хосте MinIO; секреты в репо не хранятся).
+
+| Принципал | Политика | Бакет | Действия |
+|---|---|---|---|
+| `prod-backup-writer` | `prod-backup-rw` | `oracleai-backups` | GetObject, PutObject, ListBucket, ListBucketMultipartUploads, AbortMultipartUpload — **без DeleteObject** |
+| `staging-backup-writer` | `staging-backup-rw-v2` | `oracleai-staging-backups` | те же, **без DeleteObject** |
+
+Дополнительные слои защиты:
+- **Versioning включён** на обоих бакетах: overwrite оставляет предыдущую версию восстановимой.
+- Ключи `minioadmin` (root) выведены из backup-контуров: `BACKUP_S3_ACCESS_KEY` обоих сред —
+  per-bucket пользователь; root-креды остаются только на MinIO-контейнере.
+
+Верификация (2026-09-06, probe-объекты `bus208-verify/*`, удалены после теста):
+
+| Тест | prod-ключ | staging-ключ |
+|---|---|---|
+| put+get в свой бакет | PASS | PASS |
+| put в чужой бакет | AccessDenied | AccessDenied |
+| list чужого бакета | AccessDenied | AccessDenied |
+| delete в свой бакет | AccessDenied (no-delete) | AccessDenied (no-delete) |
+
+Позитивная проверка контура: prod daily-loop после ротации ключей выгрузил
+`oracle-20260906-013036.dump.enc` (+sha256) в `oracleai-backups/oracleai/` без ошибок.
 
 ## Находки (вне acceptance-минимума, но релевантные гейту)
 
@@ -93,6 +120,7 @@ BUS-105 (`RELEASE_HISTORY.tsv`: `rollback staging-r1 0007_add_tarot_deck`).
    parity стоит завести `staging-backup` сервис (или cron) с отдельным staging-ключом.
 2. **MinIO-ключи не per-bucket scoped.** Прод-бэкап-креды пишут в staging-бакет. Для least privilege
    нужны отдельные IAM-пользователи MinIO с политикой `s3:PutObject` только на свой бакет/префикс.
+   **Устранено 2026-09-06 (BUS-208)** — см. раздел 5.1; negative-тесты AccessDenied в обе стороны зелёные.
 
 Обе находки — конфигурационные, не блокируют доказательство механики backup→restore→migration→rollback,
 которая в этом drill пройдена end-to-end на production-like инфраструктуре.

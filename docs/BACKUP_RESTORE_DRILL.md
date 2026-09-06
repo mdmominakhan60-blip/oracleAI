@@ -39,6 +39,38 @@ A production-like rehearsal ran on 2026-09-03 against the running PostgreSQL/pgv
 
 Scope note: the off-site destination here is local S3-compatible MinIO. Swapping `BACKUP_S3_URL` for a real S3/R2/Backblaze endpoint with real key custody is what remains external before public launch; the encryption/checksum/restore mechanics are unchanged by that swap.
 
+## Storage permissions (BUS-208, 2026-09-06)
+
+MinIO backup credentials are scoped **per bucket** with least privilege; the MinIO root
+credentials (`minioadmin`) are no longer used by any backup service. Provisioning is the
+idempotent IaC script [`infra/minio-setup-backup-users.sh`](../infra/minio-setup-backup-users.sh)
+(run on the MinIO host; it creates buckets, enables versioning, and creates users/policies —
+generated secrets are printed once and must be stored only in the per-environment env files).
+
+| Principal | Policy | Bucket | Allowed actions |
+|---|---|---|---|
+| `prod-backup-writer` | `prod-backup-rw` | `oracleai-backups` | GetObject, PutObject, ListBucket, ListBucketMultipartUploads, AbortMultipartUpload — **no DeleteObject** |
+| `staging-backup-writer` | `staging-backup-rw-v2` | `oracleai-staging-backups` | same, **no DeleteObject** |
+
+Additional hardening:
+
+- **Bucket versioning is enabled** on both buckets, so an overwrite keeps the previous object
+  version recoverable.
+- Backup services in both environments reference their per-bucket user via `BACKUP_S3_ACCESS_KEY`;
+  the credentials live in git-ignored env files (`.env`, `infra/staging/.env.staging`, mode 600).
+- Key rotation (2026-09-06) replaced all pre-BUS-208 backup secrets; the root credentials are
+  reserved for MinIO administration and storage setup only.
+
+Verification (probe objects under `bus208-verify/`, removed afterwards; full log in the
+[staging drill report, section 5.1](../infra/restore-rehearsal/2026-09-06-p0-004-staging-drill.md)):
+
+- **Negative:** the prod key receives `AccessDenied` for put/list against
+  `oracleai-staging-backups`; the staging key receives `AccessDenied` for put/list against
+  `oracleai-backups`; both keys receive `AccessDenied` on `DeleteObject` in their **own** bucket.
+- **Positive:** each key put+get succeeds in its own bucket; after rotation the prod daily
+  backup loop uploaded `oracle-20260906-013036.dump.enc` (+`.sha256`) to `oracleai-backups/`
+  without errors.
+
 ## References
 
 [1]: ../scripts/check_p004_infrastructure.py "P0-004 static infrastructure gate"
