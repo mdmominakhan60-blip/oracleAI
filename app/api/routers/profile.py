@@ -336,7 +336,9 @@ async def add_memory(item: MemoryIn, user=Depends(confirmed_age_user), db=Depend
 @router.delete("/memories/{memory_id}", dependencies=[Depends(rate_limit("write"))])
 async def forget(memory_id: int, user=Depends(confirmed_age_user), db=Depends(get_db)):
     """«Забудь это» — клиентка должна управлять тем, что о ней помнят."""
-    await dialog.forget_memory(db, memory_id, user["tg_id"])
+    # rowcount=0: и чужой id, и свой несуществующий — единая 404 без раскрытия существования чужих строк
+    if not await dialog.forget_memory(db, memory_id, user["tg_id"]):
+        raise HTTPException(404, "нет такой памяти")
     return {"ok": True}
 
 

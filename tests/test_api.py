@@ -1246,6 +1246,34 @@ async def test_account_delete_cannot_be_triggered_for_another_owner(client, db, 
     assert (await users.get(db, other["tg_id"]))["status"] == "deleted"
 
 
+async def test_forget_returns_ok_for_own_memory(client, db, user):
+    from app.repo import dialog as dialog_repo
+    await dialog_repo.save_memory(db, user["tg_id"], "Синтетический факт для forget")
+    memories = await dialog_repo.memories_full(db, user["tg_id"])
+    memory_id = memories[0]["id"]
+
+    response = await client.delete(f"/api/memories/{memory_id}", params=as_user(user))
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    assert not await dialog_repo.memories_full(db, user["tg_id"])
+
+
+async def test_forget_returns_404_for_missing_own_memory(client, user):
+    response = await client.delete("/api/memories/999999", params=as_user(user))
+    assert response.status_code == 404
+
+
+async def test_forget_returns_404_for_foreign_memory_and_keeps_row(client, db, user):
+    from app.repo import dialog as dialog_repo, users as users_repo
+    other = await users_repo.ensure(db, 12003, "Другая")
+    await dialog_repo.save_memory(db, other["tg_id"], "Синтетический факт другой")
+    foreign_id = (await dialog_repo.memories_full(db, other["tg_id"]))[0]["id"]
+
+    response = await client.delete(f"/api/memories/{foreign_id}", params=as_user(user))
+    assert response.status_code == 404
+    assert await dialog_repo.memories_full(db, other["tg_id"])
+
+
 async def test_chart_discloses_oracleai_engine_backend_provenance(client, user):
     response = await client.get("/api/chart", params=as_user(user))
     assert response.status_code == 200
