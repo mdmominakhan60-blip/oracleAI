@@ -20,7 +20,7 @@
 
 | Event | Момент | Allowed props | Surface | Owner | KPI |
 |---|---|---|---|---|---|
-| `miniapp_open` | Сервер успешно обработал `GET /api/me` для владельца. | none | `miniapp` | Product | Open rate, cohort start. |
+| `miniapp_open` | Сервер успешно обработал `GET /api/me` для владельца. | optional `source`: `push` \| `broadcast` (server-side из Telegram startapp-параметра, pass-through — см. CRM lifecycle §Attribution); отсутствие prop = organic | `miniapp` | Product | Open rate, cohort start, push→open атрибуция (G-1). |
 | ~~`age_confirmed`~~ | ~~Возраст-гейт завершён.~~ Удалено (GAUNTLET v2): возрастная проверка больше не выполняется. | — | — | — | Removed |
 | `first_ritual` | Первая успешная отметка дневной практики, не повторная отметка за день. | `surface_action`: `practice_done` | `bot`/`miniapp` | Product | First ritual completion, time-to-first-value. |
 | `first_question` | Первый завершённый обычный или crisis-safe вопрос с ответом. | `agent`, optional `safety=crisis` | caller surface | AI/Product | First question completion, first-value rate. |
@@ -39,7 +39,7 @@ D1/D7/D30 — это milestone пользователя, а не количес�
 | `onboard_done` | `source` from allowlist | Completed bot onboarding. |
 | `question` | `agent`, `charge` from server enums | Questions, cost/limit mix. |
 | `tarot_draw` | `spread`, `charge` from catalog/server | Tarot completion. |
-| `forecast_view` | `channel`: `bot`, `push`, `miniapp` | Daily content reach. |
+| `forecast_view` | `channel`: `bot`, `push`, `miniapp`; optional `tier`: `free` (только при `channel=push`); optional `source`: `push` \| `broadcast` (server-side, G-1) | Daily content reach; push→open атрибуция. |
 | `practice_start` | `code` from catalog | Practice intent. |
 | `practice_done` | `code`, `streak`, `finished` | Practice completion; not a shame/streak pressure metric. |
 | `practice_stop` | `code` from catalog | Voluntary stop and quality review. |
@@ -86,6 +86,35 @@ Monetization events are emitted only from authenticated server-owned transitions
 - NPS-оценка (`score`) и свободный текст отзыва в `feedback_survey_completed` НЕ пишутся: детальная разбивка ответов (включая NPS 0–10) живёт в `feedback_responses` и просматривается через админ-панель (BUS-168), а событие остаётся воронковым (privacy-правило §«Запрещено во всех product events»). Это уточнение к черновику BUS-167 §4, где `score` числился пропом.
 
 `tg_id` — в авторской колонке `events` (server-owned), не в props. Все props — server-owned значения: клиент не влияет ни на имя события, ни на сумму, ни на `survey_code`. Свободный текст отзыва в события не попадает (спека BUS-170 §5.5).
+
+## CRM lifecycle events (волна 3.6 — BUS-261, гэпы BUS-175 §3)
+
+Контекст: CRM-цепочки (BUS-190: churn_warn → renewal / winback WB1 → WB2) требуют измерения исходов триггеров. Определения гэпов — BUS-175 §1.2 (G-1, G-2), §3 (G-5, G-6, G-9), приоритеты — BUS-183.
+
+### Attribution: push→open (G-1)
+
+Триггеры на стороне Telegram (бот-сообщение с кнопкой Mini App) несут `startapp`-параметр; сервер читает его в момент аутентифицированного запроса и пишет в `miniapp_open.source` / `forecast_view.source` как pass-through из server-owned dispatch-контекста. Значение ставит **сервер из собственного контекста отправки** (scheduler/broadcast знают, что и кому отправляли), не клиент: значение из startapp сверяется с журналом исходящих касаний (`deliveries`/`broadcast_targets`) — расхождение отбрасывается. Клиентский канал не может приписать себе касание. Отсутствие prop = organic-открытие.
+
+**Ограничение:** окно атрибуции = один визит (первый open после касания); повторные open в тот же день не дублируют связь. Это гэп-закрытие первого порядка: связка «конкретная отправка → конкретный open» (per-message) не строится — для неё нужны id-колонки, которых в `deliveries` нет (PK `(tg_id, kind, key)`), а точность per-message для KPI сценариев 3.6 не требуется.
+
+### Events
+
+| Event | Момент | Allowed props | Surface | Owner | KPI |
+|---|---|---|---|---|---|
+| `renewal` | Серверная точка продления: событие эмитится в момент успешной активации подписки (`_apply_grant` для `plan`/`plan_days` в billing) с указанием, какой CRM-триггер предшествовал ей. Один `renewal` на (tg_id, платеж). | `reason`: `churn_warn` \| `winback1` \| `winback2` \| `organic` — категория триггера, предшествовавшего продлению (server-derived: см. matching-правило ниже); optional `sku`/`plan_code`; optional `promo_batch` (если продление через промокод winback-батча) | `bot` | Product | Payback winback-волн (гейт G2 BUS-197), renewal rate по триггерам, L5. |
+| — | **G-5 (winback_sent): закрыто существующим журналом `deliveries`.** Отдельное событие НЕ вводится: отправка winback1 пишется в `deliveries` (kind=`winback`, key=`{sub_until}`) в `_winback` (scheduler.py:377); WB2 по дизайну BUS-190 §4 пишет kind=`winback2`, key=`{sub_until_iso}`. Дедуп и guardrail-частота уже обеспечены `comms.claim`. | `deliveries.kind`, `deliveries.key`, `deliveries.created_at` | `system` | Product | Winback reach и частотные лимиты — прямой SQL по deliveries. |
+| — | **G-9 (история CRM-контакций): закрыто существующими таблицами.** Полная история «что клиентке отправляли»: `deliveries` (авто-касания: forecast/weekly/monthly/practice/expiry/winback/winback2/feedback_survey/broadcast), `broadcast_targets` (per-user статус и sent_at рассылок), `user_notes` + `admin_audit` (личные ответы поддержки, admin.py:352-356 — текст уже дублируется в note `[ответ поддержки]`). Отдельная таблица `crm_contacts` из черновика BUS-175 §3 НЕ создаётся — она дублирует эти три источника. | — | — | Product | Guardrail-частота касаний (не более N авто-сообщений/нед. на клиентку), анти-навязчивость. |
+| — | **G-6 (эффект broadcast): закрыто связкой broadcast_targets + source=campaign.** Delivery per-user — `broadcast_targets.sent_at` (точно, без нового события); open — существующие `miniapp_open`/`forecast_view` с optional `source`=`broadcast` (G-1-механика) и optional `campaign`=`bc:{broadcast_id}` (categorical, server-side, из контекста отправки). Сравнение рассылок — по `broadcasts.id`. Отдельное delivery/open-событие НЕ вводится. | optional `campaign`: `bc:{broadcast_id}` на `miniapp_open`/`forecast_view` | `miniapp` | Product | Delivery rate (broadcast_targets), open rate (source=broadcast), сравнение рассылок по id. |
+
+### Ограничения и решения
+
+1. **G-9 prune 120 дней** (`comms.prune`, comms.py:53): история авто-касаний старше 120 дней стирается. Для этичной частотной политики достаточно (окна касаний — дни/недели); для «пожизненной» истории — не хватает. Решение: принимаем 120д как достаточное для guardrail; если понадобится дольше — отдельная миграция архивной таблицы (через DevOps), не через события.
+2. **Matching-правило `renewal.reason`** (server-derived): в момент продления сервер смотрит на последнее недавнее касание клиентки из `deliveries`: `expiry` в последние 2 дня до платежа → `churn_warn`; `winback` → `winback1`; `winback2` (+или promo из батча `winback_*`) → `winback2`; иначе `organic`. Окно поиска — 30 дней назад от платежа; ничего не найдено → `organic`. Так `reason` — вычисляемый факт кода, не клиентский ввод, и не требует junction-таблицы.
+3. **`campaign` в значение не пишем без нужды:** prop `bc:{broadcast_id}` вводится только на событиях, где сервер знает контекст отправки (G-1 pass-through); free-form campaign-строки по-прежнему запрещены.
+
+**Privacy:** `renewal.reason` и `campaign` — categorical, server-owned; `broadcast_id` — числовой id внутренней таблицы, не пользовательский контент. `deliveries.key` содержит `sub_until` (дату) — в события не выносится, остаётся в защищённой БД.
+
+**Реализация:** имена и props добавляются в allowlist `app/repo/analytics.py` Backend Engineer'ом при реализации (BUS-172), сверяясь с этим словарём. `E_RENEWAL = "renewal"` — новое имя; `source`/`campaign` — опциональные props существующих `E_MINIAPP_OPEN`/`E_FORECAST`.
 
 ## Dashboard definitions
 
