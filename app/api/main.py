@@ -335,6 +335,20 @@ async def index():
     return HTMLResponse(_miniapp_index_body())
 
 
+@app.get("/survey", include_in_schema=False)
+async def survey_index():
+    """Вход day7/day10-опроса: web_app-кнопка из бота ведёт на /survey.
+
+    Отдельной страницы нет — отдаём SPA, boot-хук сам откроет форму по
+    feedback_pending из /api/me (BUS-375). Роут объявлен до catch-all
+    @app.get("/{filename}"), иначе его _file вернул бы 404.
+    """
+    path = MINIAPP_DIR / "index.html"
+    if not path.is_file():
+        return JSONResponse({"detail": "не найдено"}, status_code=404)
+    return HTMLResponse(_miniapp_index_body())
+
+
 @app.get("/admin", include_in_schema=False)
 @app.get("/admin/", include_in_schema=False)
 async def admin_index():

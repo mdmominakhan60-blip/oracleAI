@@ -927,6 +927,21 @@ async def test_no_cache_on_html_and_api(client):
         assert res.headers.get("cache-control") == "no-cache", path
 
 
+async def test_survey_route_serves_spa(client):
+    """BUS-375: web_app-кнопка day7/day10-приглашения ведёт на /survey.
+
+    До фикса catch-all @app.get("/{filename}") матчил /survey и _file отдавал
+    404 (файла miniapp/survey нет) — вход в опрос из чата был мёртв. Теперь
+    роут отдаёт тот же SPA, что и /, а форму открывает boot-хук по
+    feedback_pending.
+    """
+    index = await client.get("/")
+    survey = await client.get("/survey")
+    assert survey.status_code == 200
+    assert "text/html" in survey.headers["content-type"]
+    assert survey.text == index.text, "/survey должен отдавать то же SPA-тело, что и /"
+
+
 async def test_miniapp_index_uses_source_assets_in_dev(client, monkeypatch):
     """FE-001/002: dev opts INTO source assets with SOURCE_ASSETS=1;
     the default is the bundled path (see test_miniapp_index_uses_hashed_bundles_in_dev_default)."""
