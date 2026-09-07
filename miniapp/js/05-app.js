@@ -86,6 +86,9 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
     const savedLocal = (() => { try { return localStorage.getItem('oracle_lang'); } catch (e) { return null; } })();
     if (savedLocal) {
       syncDocumentLocale();
+      // Язык выбран, но интро могло не досмотреться (закрыли Mini App на слайдах —
+      // oracle_intro_seen не проставился): досматриваем, иначе интро не покажется никогда.
+      this.maybeIntro();
       return;
     }
     const ov = document.createElement('div');
@@ -104,6 +107,10 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
         </div>
       </div>`;
     const pick = async (lang) => {
+      // Гвардия от двойного тапа: во время await POST повторный клик не должен
+      // отправить второй POST. once-гвардия на boot-promise ниже не отменяет
+      // второй вызов pick() — глушим кнопки на время запроса.
+      ov.querySelectorAll('.lang-pick-btns button').forEach((b) => { b.disabled = true; });
       try { localStorage.setItem('oracle_lang', lang); } catch (e) {}
       syncDocumentLocale();
       ov.querySelector('[data-lang-sub]').textContent =
