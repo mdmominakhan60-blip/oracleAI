@@ -13,7 +13,7 @@ async def test_custom_only_provider_drops_native_json_schema(monkeypatch):
         captured.update(kwargs)
         return "{}"
 
-    monkeypatch.setattr(palm.settings, "provider_chain", ["custom"])
+    monkeypatch.setattr(palm.settings, "_provider_chain_override", ("custom",))
     monkeypatch.setattr(palm, "_ORIGINAL_COMPLETE_VISION", fake_original)
 
     await palm._complete_vision_compat(
@@ -30,7 +30,7 @@ async def test_native_schema_is_preserved_for_mixed_chain(monkeypatch):
         captured.update(kwargs)
         return "{}"
 
-    monkeypatch.setattr(palm.settings, "provider_chain", ["openai", "custom"])
+    monkeypatch.setattr(palm.settings, "_provider_chain_override", ("openai", "custom"))
     monkeypatch.setattr(palm, "_ORIGINAL_COMPLETE_VISION", fake_original)
     schema = {"type": "json_schema"}
 

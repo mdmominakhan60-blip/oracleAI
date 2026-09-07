@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import sys
 import hashlib
 import io
 from contextvars import ContextVar
@@ -180,7 +181,9 @@ def adaptive_line_ensemble(image_bytes: bytes, *, view_type: str | None = None) 
     )
     if not uncertain:
         return {**fp16, "ensemble": {"status": "fp16_stable", "models": [fp16.get("model")], "disagreements": [], "raw_masks_stored": False}}
-    int8_path = str(palm_lines.Path(__file__).resolve().parents[2] / "models" / "palm_line_student_int8.onnx")
+    # parents[2] от app/core/palm/production.py — это app/, модели живут в корне
+    # репо; resolvable относительно palm_lines.py (на уровень выше) он верен.
+    int8_path = str(palm_lines.Path(palm_lines.__file__).resolve().parents[2] / "models" / "palm_line_student_int8.onnx")
     int8 = analyze(image_bytes, model_path=int8_path)
     if int8.get("status") not in {"detected", "no_lines"}:
         return {**fp16, "ensemble": {"status": "int8_unavailable", "models": [fp16.get("model")], "disagreements": [], "raw_masks_stored": False}}
@@ -273,6 +276,11 @@ def install() -> None:
     palm_lines.analyze_ensemble = adaptive_line_ensemble
     service._data_url = canonical_data_url
     service.PALM_JSON_ATTEMPTS = 2
+    # Also update the package namespace so consumers reading
+    # `app.core.palm.PALM_JSON_ATTEMPTS` see the production value (2).
+    _palm_pkg = sys.modules.get("app.core.palm")
+    if _palm_pkg is not None:
+        _palm_pkg.PALM_JSON_ATTEMPTS = 2
     _INSTALLED = True
 
 

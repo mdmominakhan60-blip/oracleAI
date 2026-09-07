@@ -18,14 +18,14 @@ Scanned files:
 | `app/repo/__init__.py                       ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/repo/admin.py` **✅ DB-001**                |        10 |         0 |                0 |             0 |              0 |         0 |        1 |   0 |    0 |           0 |             0 |
 | `app/repo/analytics.py` **✅ DB-001**            |        28 |         0 |                0 |             0 |              0 |         0 |        3 |   0 |    0 |           0 |             0 |
-| `app/repo/billing.py` **✅ DB-001**              |        46 |         0 |                0 |             0 |              0 |         0 |        6 |   0 |    0 |           0 |             0 |
-| `app/repo/comms.py` **✅ DB-001**                |        24 |         0 |                0 |             0 |              0 |         0 |        7 |   0 |    0 |           1 |             0 |
+| `app/repo/billing.py` **✅ DB-001**              |        53 |         0 |                0 |             0 |              0 |         0 |        7 |   0 |    0 |           0 |             0 |
+| `app/repo/comms.py` **✅ DB-001**                |        28 |         0 |                0 |             0 |              0 |         0 |        8 |   0 |    0 |           1 |             0 |
 | `app/repo/content.py` **✅ DB-001**              |        11 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/repo/crm.py` **✅ DB-001**                  |         7 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/repo/dialog.py` **✅ DB-001**               |        41 |         0 |                0 |             0 |              0 |         0 |        3 |   0 |    0 |           0 |             0 |
 | `app/repo/feedback.py` **✅ DB-001**             |         4 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/repo/feedback_admin.py` **✅ DB-001**       |         7 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
-| `app/repo/growth.py` **✅ DB-001**               |        24 |         0 |                0 |             0 |              0 |         0 |        6 |   0 |    0 |           0 |             0 |
+| `app/repo/growth.py` **✅ DB-001**               |        25 |         0 |                0 |             0 |              0 |         0 |        6 |   0 |    0 |           0 |             0 |
 | `app/repo/jobs.py` **✅ DB-001**                 |         8 |         0 |                0 |             0 |              0 |         0 |        1 |   0 |    0 |           0 |             0 |
 | `app/repo/ltv_constants.py                  ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/repo/ltv_tier.py` **✅ DB-001**             |        37 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
@@ -51,16 +51,17 @@ Scanned files:
 | `app/services/invoices.py                   ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/services/jobs.py                       ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/services/limits.py                     ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
+| `app/services/monetization.py               ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/services/paddle.py                     ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/services/payment_monitor.py` **✅ DB-001**  |         9 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/services/practices.py                  ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/services/rate_limit.py                 ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/services/referrals.py                  ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/services/repo_gateway.py               ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
-| `app/services/scheduler.py` **✅ DB-001**        |        29 |         0 |                0 |             0 |              0 |         0 |        2 |   0 |    0 |           0 |             0 |
+| `app/services/scheduler.py` **✅ DB-001**        |        30 |         0 |                0 |             0 |              0 |         0 |        2 |   0 |    0 |           0 |             0 |
 | `app/services/telegram.py                   ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/data/seed.py` **✅ DB-001**                 |        14 |         0 |                0 |             0 |              0 |         0 |       14 |   0 |    0 |           0 |             0 |
-| ****TOTAL**                                ** | **387** | **0** | **0** | **0** | **0** | **0** | **55** | **0** | **0** | **1** | **0** |
+| ****TOTAL**                                ** | **400** | **0** | **0** | **0** | **0** | **0** | **57** | **0** | **0** | **1** | **0** |
 
 ### Column Legend
 

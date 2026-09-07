@@ -52,8 +52,12 @@ async def test_live_postgres_adapter_smoke():
         async with db.transaction():
             await db.execute(
                 "CREATE TEMP TABLE messages (id BIGSERIAL PRIMARY KEY, name TEXT)")
-            cur = await db.execute("INSERT INTO messages(name) VALUES(?)", ("ok",))
-            assert cur.lastrowid == 1
+            # ADR-0001: native PostgreSQL — new id читается через RETURNING,
+            # SQLite-стиль lastrowid в адаптере не поддерживается.
+            cur = await db.execute(
+                "INSERT INTO messages(name) VALUES(?) RETURNING id", ("ok",))
+            inserted = await cur.fetchone()
+            assert inserted["id"] == 1
             cur = await db.execute("SELECT id, name FROM messages WHERE id=?", (1,))
             row = await cur.fetchone()
             assert dict(row) == {"id": 1, "name": "ok"}

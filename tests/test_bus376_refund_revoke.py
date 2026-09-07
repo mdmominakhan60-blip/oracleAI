@@ -37,7 +37,6 @@ class TestRefundClassification:
         assert webhooks._is_full_refund_or_chargeback(data) is True
 
     def test_partial_refund_journal_only(self):
-        data = {"action": "refund", "totals": {"gross": "10.00"}}
         # partial: total < order price → not flagged as full by the webhook
         # (the webhook does not know order price, so it queues only when
         # action is refund/chargeback AND total > 0 — variant C says "full"
@@ -237,7 +236,7 @@ async def test_daily_sweep_idempotent_on_retry(db, monkeypatch):
 
     from app.repo import users
 
-    order = await _paid_flagged_order(db, 2004, "txn_revoke_4")
+    await _paid_flagged_order(db, 2004, "txn_revoke_4")
     await users.ensure(db, 2004, "Test", lang="en")
     await users.update(db, 2004, sub_until="2099-01-01T00:00:00+00:00",
                        sub_level="vip")
