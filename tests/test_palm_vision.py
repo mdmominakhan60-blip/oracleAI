@@ -38,8 +38,9 @@ def test_full_scope_catalogs_all_line_zones_and_requires_vision_adjudication():
 def test_onnx_ensemble_returns_explicit_model_agreement_and_no_raw_masks():
     fixture = (Path(__file__).parent / "fixtures" / "palm" / "palm_hand.jpg").read_bytes()
     result = palm_lines.analyze_ensemble(fixture)
-    assert result["model"] == "palm_line_student_int8.onnx"
-    assert result["status"] in {"detected", "no_lines"}
+    # Landed impl fuses fp16+int8 conservatively; the composite name is the contract.
+    assert result["model"] == "fp16_int8_ensemble"
+    assert result["status"] in {"detected", "no_lines", "needs_vision_review"}
     assert result["ensemble"]["raw_masks_stored"] is False
     assert set(result["lines"]) == {"heart_line", "head_line", "life_line"}
     assert all("ensemble_agreement" in item for item in result["lines"].values())

@@ -8,9 +8,10 @@ from aiogram.types import CallbackQuery
 
 from ..core.personas import persona_list
 from ..core import agent as agent_core
-from ..repo import dialog, readings, users
-from ..services import billing as billing_svc, analytics
-from ..services import access, limits, referrals
+from ..services import access, analytics
+from ..services import billing as billing_svc
+from ..services import limits, referrals, repo_gateway
+from ..services.repo_gateway import dialog, readings
 from .chat import _send_long
 from .ui import BotStage, begin_status
 from .formatting import tg_esc
@@ -22,23 +23,23 @@ router = Router()
 
 
 async def _menu(db, tg_id: int):
-    user = await users.get(db, tg_id)
+    user = await repo_gateway.users.get(db, tg_id)
     return main_menu(is_admin=await access.is_admin(db, tg_id),
                      lang="en" if user and user["lang"] == "en" else "ru")
 
 
 @router.callback_query(F.data == "profile")
 async def profile(cb: CallbackQuery, db):
-    user = await users.get(db, cb.from_user.id)
+    user = await repo_gateway.users.get(db, cb.from_user.id)
     allowance = await limits.allowance(db, user, check_followup=False)
-    active = users.sub_active(user)
+    active = repo_gateway.users.sub_active(user)
     streak = await dialog.diary_streak(db, cb.from_user.id)
     memories = await dialog.get_memories(db, cb.from_user.id, limit=5)
     ref = await referrals.stats(db, cb.from_user.id)
     entitlements = await billing_svc.list_entitlements(db, cb.from_user.id)
 
     sub_line = (f"{allowance.plan['title']} · осталось "
-                f"{users.sub_days_left(user)} дн." if active else "доступ завершён")
+                f"{repo_gateway.users.sub_days_left(user)} дн." if active else "доступ завершён")
     unit = "today" if allowance.period == "day" else "this week" if user["lang"] == "en" else "сегодня" if allowance.period == "day" else "на неделе"
     mem_block = ("\n".join(f"• {tg_esc(m)}" for m in memories) if memories
                  else "<i>I’m just getting to know you</i>" if user["lang"] == "en"
@@ -48,7 +49,7 @@ async def profile(cb: CallbackQuery, db):
     lines = ([
         f"👤 <b>{tg_esc(user['name'])}</b>",
         f"🔮 Your Oracle: {tg_esc(user['oracle_name'])}",
-        f"💫 Access: {allowance.plan['title']} · {users.sub_days_left(user)} days left" if active else "💫 Access: ended",
+        f"💫 Access: {allowance.plan['title']} · {repo_gateway.users.sub_days_left(user)} days left" if active else "💫 Access: ended",
         f"✦ Crystals: <b>{user['crystals']}</b>",
         f"💬 Questions {unit}: {allowance.left} of {allowance.limit}",
         f"📖 Journal streak: {streak} days {'🔥' if streak >= 3 else ''}",
@@ -81,9 +82,9 @@ async def profile(cb: CallbackQuery, db):
 
 @router.callback_query(F.data == "toggle_push")
 async def toggle_push(cb: CallbackQuery, db):
-    user = await users.get(db, cb.from_user.id)
+    user = await repo_gateway.users.get(db, cb.from_user.id)
     new_value = 0 if user["morning_push"] else 1
-    await users.update(db, cb.from_user.id, morning_push=new_value)
+    await repo_gateway.users.update(db, cb.from_user.id, morning_push=new_value)
     await analytics.track(db, "toggle_push", cb.from_user.id,
                           props={"on": bool(new_value)})
     await cb.answer("Утренний прогноз включён 🌅" if new_value
@@ -204,7 +205,7 @@ async def admin_stats_cb(cb: CallbackQuery, db):
 
 @router.callback_query(F.data == "settings")
 async def settings_home(cb: CallbackQuery, db):
-    user = await users.get(db, cb.from_user.id)
+    user = await repo_gateway.users.get(db, cb.from_user.id)
     lang = "en" if user and user["lang"] == "en" else "ru"
     await cb.message.answer(
         "⚙️ <b>Настройки</b>\n\nЯзык, память, уведомления и приватность — в одном месте."
@@ -216,7 +217,7 @@ async def settings_home(cb: CallbackQuery, db):
 
 @router.callback_query(F.data == "settings:language")
 async def settings_language(cb: CallbackQuery, db):
-    user = await users.get(db, cb.from_user.id)
+    user = await repo_gateway.users.get(db, cb.from_user.id)
     await cb.message.answer(
         "Выбери язык интерфейса."
         if not user or user["lang"] != "en" else
@@ -227,7 +228,7 @@ async def settings_language(cb: CallbackQuery, db):
 
 @router.callback_query(F.data == "settings:memory")
 async def settings_memory(cb: CallbackQuery, db):
-    user = await users.get(db, cb.from_user.id)
+    user = await repo_gateway.users.get(db, cb.from_user.id)
     en = user and user["lang"] == "en"
     enabled = bool(user and user["memory_enabled"])
     from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -250,9 +251,9 @@ async def settings_memory(cb: CallbackQuery, db):
 
 @router.callback_query(F.data == "settings:memory:toggle")
 async def settings_memory_toggle(cb: CallbackQuery, db):
-    user = await users.get(db, cb.from_user.id)
+    user = await repo_gateway.users.get(db, cb.from_user.id)
     value = 0 if bool(user["memory_enabled"]) else 1
-    await users.update(db, cb.from_user.id, memory_enabled=value)
+    await repo_gateway.users.update(db, cb.from_user.id, memory_enabled=value)
     await analytics.track(db, "memory_toggle", cb.from_user.id, props={"on": bool(value)}, surface="bot")
     await cb.answer("Memory updated" if user["lang"] == "en" else "Память обновлена")
     await settings_memory(cb, db)
@@ -260,7 +261,7 @@ async def settings_memory_toggle(cb: CallbackQuery, db):
 
 @router.callback_query(F.data == "history")
 async def history_home(cb: CallbackQuery, db):
-    user = await users.get(db, cb.from_user.id)
+    user = await repo_gateway.users.get(db, cb.from_user.id)
     lang = "en" if user and user["lang"] == "en" else "ru"
     reports = await readings.list_reports(db, cb.from_user.id)
     readings_count = await readings.count_readings(db, cb.from_user.id) if hasattr(readings, "count_readings") else 0
@@ -276,7 +277,7 @@ async def history_home(cb: CallbackQuery, db):
 @router.callback_query(F.data == "history:tarot")
 async def history_tarot(cb: CallbackQuery, db):
     """Последние расклады — shelf, которую рисовали, но не открывали."""
-    user = await users.get(db, cb.from_user.id)
+    user = await repo_gateway.users.get(db, cb.from_user.id)
     lang = "en" if user and user["lang"] == "en" else "ru"
     items = await readings.recent_readings(db, cb.from_user.id, limit=8)
     if not items:
@@ -295,7 +296,7 @@ async def history_tarot(cb: CallbackQuery, db):
 
 @router.callback_query(F.data == "history:chat")
 async def history_chat(cb: CallbackQuery, db):
-    user = await users.get(db, cb.from_user.id)
+    user = await repo_gateway.users.get(db, cb.from_user.id)
     lang = "en" if user and user["lang"] == "en" else "ru"
     threads = await dialog.list_threads(db, cb.from_user.id, limit=10)
     if not threads:
@@ -312,7 +313,7 @@ async def history_chat(cb: CallbackQuery, db):
 
 @router.callback_query(F.data == "privacy")
 async def privacy_home(cb: CallbackQuery, db):
-    user = await users.get(db, cb.from_user.id)
+    user = await repo_gateway.users.get(db, cb.from_user.id)
     en = user and user["lang"] == "en"
     await cb.message.answer(
         "🔐 Здесь можно экспортировать или удалить данные. Для удаления используй /delete_me."
@@ -324,7 +325,7 @@ async def privacy_home(cb: CallbackQuery, db):
 
 @router.callback_query(F.data == "help")
 async def help_callback(cb: CallbackQuery, db):
-    user = await users.get(db, cb.from_user.id)
+    user = await repo_gateway.users.get(db, cb.from_user.id)
     en = user and user["lang"] == "en"
     text = (
         "? <b>How Oracle works</b>\n\nAsk a question in your own words. I choose the right guide, use only the saved evidence available to your profile, and return a grounded reflection.\n\nYou can explore your chart, Tarot, Mira, Today, practices, and your research library directly here.\n\nFor data deletion use /delete_me."
@@ -352,7 +353,7 @@ REPORT_KIND_BY_CODE = {
 async def build_report_callback(cb: CallbackQuery, db):
     code = cb.data.split(":", 1)[1]
     kind = REPORT_KIND_BY_CODE.get(code)
-    user = await users.get(db, cb.from_user.id)
+    user = await repo_gateway.users.get(db, cb.from_user.id)
     if not user or not kind:
         await cb.answer("Разбор больше недоступен" if not user or user["lang"] != "en" else "This report is no longer available", show_alert=True)
         return

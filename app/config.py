@@ -32,6 +32,8 @@ def _int(name: str, default: int, *, minimum: int | None = None) -> int:
 #: нигде не используется.
 @dataclass
 class Settings:
+    # Test-only override for provider_chain (no setter on the property).
+    _provider_chain_override: tuple | None = None
     # ── Telegram ──
     bot_token: str = os.getenv("BOT_TOKEN", "")
     admin_id: int = _int("ADMIN_ID", 0)
@@ -157,6 +159,8 @@ class Settings:
         кредиты, и без резерва клиентка получала бы «сервис недоступен» вместо
         ответа. Последний уровень — офлайн-режим, он в `core/agents/runtime.py`.
         """
+        if self._provider_chain_override is not None:
+            return self._provider_chain_override
         available = []
         if self.custom_ready:
             available.append("custom")

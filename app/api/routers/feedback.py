@@ -20,9 +20,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from ...data.session import transaction
-from ...repo import analytics as analytics_repo
-from ...repo import feedback as feedback_repo
-from ...repo import monetization
+from ...services import analytics, monetization
+from ...services.repo_gateway import feedback as feedback_repo
 from ...services.eligibility import require_eligible_user
 from ..deps import confirmed_age_user, get_db, rate_limit
 
@@ -98,14 +97,14 @@ async def submit_feedback(item: FeedbackIn,
 
     # События воронки — после фиксации строки. question_count —
     # категориальный prop; score/текст не пишутся (словарь 8d33f33).
-    await analytics_repo.track_once(
+    await analytics.track_once(
         db, "feedback_survey_completed", user["tg_id"],
         props={"survey_code": item.survey_code,
                "bonus_granted": "true" if bonus_granted else "false",
                "question_count": len(answers)},
         surface="miniapp")
     if bonus_granted:
-        await analytics_repo.track_once(
+        await analytics.track_once(
             db, "survey_grant_issued", user["tg_id"],
             props={"survey_code": item.survey_code,
                    "bonus_kind": feedback_repo.BONUS_KIND,
