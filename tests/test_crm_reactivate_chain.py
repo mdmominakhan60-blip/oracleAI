@@ -116,7 +116,7 @@ async def test_chain_r1_personalized(db):
     # Заводим незавершённую практику.
     await db.execute(
         "INSERT INTO practices(tg_id, code, day_index, started_at) "
-        "VALUES(:tg_id, 'mantra_gayatri', 5, :now)",
+        "VALUES(:tg_id, 'love_release', 5, :now)",
         {"tg_id": 7201, "now": _iso(now - timedelta(days=20))})
     await db.commit()
 
@@ -125,7 +125,7 @@ async def test_chain_r1_personalized(db):
 
     assert len(bot.sent) == 1
     text = bot.sent[0][1]
-    assert "Гаятри-мантра — ясность и защита" in text
+    assert "Отпустить прошлое" in text
     assert "шаге 5" in text
     assert await comms.already_sent(db, 7201, "reactivate",
                                     f"r1:{user['last_seen'][:7]}")
@@ -174,7 +174,7 @@ async def test_chain_r2_sent_7d_after_r1(db):
     user = await _sleeping_user(db, 7301, last_seen=now - timedelta(days=16))
     await db.execute(
         "INSERT INTO practices(tg_id, code, day_index, started_at) "
-        "VALUES(:tg_id, 'mantra_gayatri', 3, :now)",
+        "VALUES(:tg_id, 'love_release', 3, :now)",
         {"tg_id": 7301, "now": _iso(now - timedelta(days=20))})
     await db.commit()
 
@@ -208,7 +208,7 @@ async def test_chain_r2_blocked_by_response(db):
     user = await _sleeping_user(db, 7302, last_seen=now - timedelta(days=16))
     await db.execute(
         "INSERT INTO practices(tg_id, code, day_index, started_at) "
-        "VALUES(:tg_id, 'mantra_gayatri', 2, :now)",
+        "VALUES(:tg_id, 'love_release', 2, :now)",
         {"tg_id": 7302, "now": _iso(now - timedelta(days=20))})
     await db.commit()
 
@@ -259,7 +259,7 @@ async def test_chain_r2_silent_before_7d(db):
     user = await _sleeping_user(db, 7311, last_seen=now - timedelta(days=16))
     await db.execute(
         "INSERT INTO practices(tg_id, code, day_index, started_at) "
-        "VALUES(:tg_id, 'mantra_gayatri', 1, :now)",
+        "VALUES(:tg_id, 'love_release', 1, :now)",
         {"tg_id": 7311, "now": _iso(now - timedelta(days=20))})
     await db.commit()
 
@@ -286,7 +286,7 @@ async def test_chain_cooldown_60d_after_reactivate(db):
     user = await _sleeping_user(db, 7401, last_seen=now - timedelta(days=16))
     await db.execute(
         "INSERT INTO practices(tg_id, code, day_index, started_at) "
-        "VALUES(:tg_id, 'mantra_gayatri', 1, :now)",
+        "VALUES(:tg_id, 'love_release', 1, :now)",
         {"tg_id": 7401, "now": _iso(now - timedelta(days=20))})
     await db.commit()
 
@@ -327,7 +327,7 @@ async def test_chain_r2_dedup(db):
     user = await _sleeping_user(db, 7421, last_seen=now - timedelta(days=16))
     await db.execute(
         "INSERT INTO practices(tg_id, code, day_index, started_at) "
-        "VALUES(:tg_id, 'mantra_gayatri', 2, :now)",
+        "VALUES(:tg_id, 'love_release', 2, :now)",
         {"tg_id": 7421, "now": _iso(now - timedelta(days=20))})
     await db.commit()
 
@@ -360,7 +360,7 @@ async def test_guardrail_marks_on_r1_personalized(db):
     user = await _sleeping_user(db, 7601, last_seen=now - timedelta(days=16))
     await db.execute(
         "INSERT INTO practices(tg_id, code, day_index, started_at) "
-        "VALUES(:tg_id, 'mantra_gayatri', 5, :now)",
+        "VALUES(:tg_id, 'love_release', 5, :now)",
         {"tg_id": 7601, "now": _iso(now - timedelta(days=20))})
     await db.commit()
 
@@ -385,7 +385,7 @@ async def test_guardrail_marks_on_r2(db):
     user = await _sleeping_user(db, 7603, last_seen=now - timedelta(days=16))
     await db.execute(
         "INSERT INTO practices(tg_id, code, day_index, started_at) "
-        "VALUES(:tg_id, 'mantra_gayatri', 5, :now)",
+        "VALUES(:tg_id, 'love_release', 5, :now)",
         {"tg_id": 7603, "now": _iso(now - timedelta(days=20))})
     await db.commit()
 
@@ -428,7 +428,7 @@ async def test_daily_sweep_sends_and_marks_day(db):
     user = await _sleeping_user(db, 7501, last_seen=now - timedelta(days=16))
     await db.execute(
         "INSERT INTO practices(tg_id, code, day_index, started_at) "
-        "VALUES(:tg_id, 'mantra_gayatri', 2, :now)",
+        "VALUES(:tg_id, 'love_release', 2, :now)",
         {"tg_id": 7501, "now": _iso(now - timedelta(days=20))})
     await db.commit()
 
@@ -479,7 +479,7 @@ async def test_chain_uses_lang(db):
                                 lang="en")
     await db.execute(
         "INSERT INTO practices(tg_id, code, day_index, started_at) "
-        "VALUES(:tg_id, 'mantra_gayatri', 3, :now)",
+        "VALUES(:tg_id, 'love_release', 3, :now)",
         {"tg_id": 7521, "now": _iso(now - timedelta(days=20))})
     await db.commit()
 
