@@ -248,8 +248,17 @@ const rich = s => esc(s).replace(/&lt;(\/?)(b|i)&gt;/g, '<$1$2>');
 // rich + markdown-жирный **...** → <b> (для ИИ-разборов).
 const richMd = s => rich(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 
-const oracleLang = () => (window.app && app.me && app.me.lang) ||
-  localStorage.getItem('oracle_lang') || 'ru';
+// Приоритет языка (BUS-397): сервер me.lang → localStorage → tg.language_code → 'ru'.
+// Сервер — источник истины: выбор в оверлее и профиле синхронизируется через /api/profile.
+const oracleLang = () => {
+  const me = (window.app && app.me && app.me.lang);
+  if (me) return me;
+  const local = (() => {
+    try { return localStorage.getItem('oracle_lang'); } catch (e) { return null; }
+  })();
+  if (local) return local;
+  try { return (tg() && tg().language_code === 'en') ? 'en' : 'ru'; } catch (e) { return 'ru'; }
+};
 
 function syncDocumentLocale() {
   const lang = oracleLang() === 'en' ? 'en' : 'ru';

@@ -26,6 +26,12 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
       try { tg().setHeaderColor && tg().setHeaderColor('#08070f'); } catch (e) {}
     }
     syncDocumentLocale();
+    // Язык — первый шаг: до /api/me и до первого рендера контента показываем
+    // оверлей, если на устройстве язык ещё не выбирали. Без localStorage-флага
+    // оверлей бы показывался при каждом запуске: me.lang всегда не-null
+    // (эвристика Telegram при создании пользователя), выбора пользователя
+    // сервер не знает.
+    if (!qaMode) await this.maybeLanguage();
     this.renderFrame();
     // BUS-341: initData уходит на сервер ровно один раз — на минт сессии.
     // Токен уже мог лежать в sessionStorage с прошлого reload: тогда минт не нужен
@@ -37,7 +43,14 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
       if (this.me) {
         const flags = this.me.flags ? this.me.flags : {};
         this.me.flags = flags;
-        syncDocumentLocale();
+        // Сервер — источник истины по языку: если язык меняли не в Mini App
+        // (например, бот спросил раньше) — применяем и перерисовываем кадр.
+        if (this.me.lang && this.me.lang !== (localStorage.getItem('oracle_lang') || null)) {
+          try { localStorage.setItem('oracle_lang', this.me.lang); } catch (e) {}
+          syncDocumentLocale();
+          this.renderFrame();
+          if (this.view !== 'home') this.go(this.view);
+        }
       }
       const pill = document.querySelector('.user-pill');
       if (pill && this.me.name) {
@@ -64,11 +77,18 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
     }
     this.initSwipe();
     this.initViewport();
-    if (!qaMode) this.maybeLanguage();
   };
-  // При первом запуске язык выбирается первым — до приветствия и онбординга.
-  app.maybeLanguage = function() {
-    try { if (localStorage.getItem('oracle_lang')) { this.maybeIntro(); return; } } catch (e) {}
+  // При первом запуске язык выбирается первым — до /api/me и до первого рендера
+  // контента. Повторный запуск: на устройстве язык уже сохранён (localStorage) —
+  // оверлей не показываем, выбор пользователь делает один раз.
+  // me.lang в этот момент ещё не загружен (this.me === null): /api/me уходит ниже,
+  // после оверлея, чтобы первый экран контента сразу отрисовался на выбранном языке.
+  app.maybeLanguage = async function() {
+    const savedLocal = (() => { try { return localStorage.getItem('oracle_lang'); } catch (e) { return null; } })();
+    if (savedLocal) {
+      syncDocumentLocale();
+      return;
+    }
     const ov = document.createElement('div');
     ov.id = 'intro';
     ov.className = 'intro';
@@ -84,20 +104,29 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
           </div>
         </div>
       </div>`;
-    const pick = (lang) => {
+    const pick = async (lang) => {
       try { localStorage.setItem('oracle_lang', lang); } catch (e) {}
-      document.documentElement.lang = lang;
       syncDocumentLocale();
       ov.querySelector('[data-lang-sub]').textContent =
         lang === 'en' ? 'Choose your language to continue' : 'Выбери язык, чтобы продолжить';
-      setTimeout(() => {
-        ov.remove();
-        this.maybeIntro();
-      }, 150);
+      // Синхронизируем выбор с сервером — POST /api/profile работает без onboarded.
+      // this.me здесь ещё нет (boot ждёт выбора до /api/me): ошибка POST не блокирует
+      // boot; /api/me всё равно уйдёт ниже и server-side lang применится при несовпадении.
+      try { await api('/api/profile', { method: 'POST', body: JSON.stringify({ lang }) }); } catch (e) {}
+      ov.remove();
+      this.maybeIntro();
     };
     ov.querySelector('[data-lang="ru"]').addEventListener('click', () => pick('ru'));
     ov.querySelector('[data-lang="en"]').addEventListener('click', () => pick('en'));
     document.body.appendChild(ov);
+    // Ждём выбора: boot не идёт дальше, пока язык не выбран, — контент не
+    // успеет мелькнуть на языке по умолчанию.
+    await new Promise((resolve) => {
+      let done = false;
+      const finish = () => { if (!done) { done = true; resolve(); } };
+      ov.querySelector('[data-lang="ru"]').addEventListener('click', finish, { once: true });
+      ov.querySelector('[data-lang="en"]').addEventListener('click', finish, { once: true });
+    });
   };
   app.renderAuthRequired = function(err) {
     const main = document.getElementById('app-main');
