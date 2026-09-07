@@ -6,6 +6,10 @@ set -Eeuo pipefail
 : "${BACKUP_REQUIRE_ENCRYPTION:=1}"
 : "${BACKUP_REQUIRE_OFFSITE:=0}"
 : "${BACKUP_STATUS_FILE:=/backups/backup-status.json}"
+# Быстрый повтор дампа после pg_dump-фейла (например, backup-контейнер стартовал
+# раньше postgres): без этой ветки RPO просрочился бы до 26 ч.
+: "${BACKUP_RETRY_INTERVAL:=300}"
+: "${BACKUP_RETRY_MAX:=5}"
 
 if [[ ! -r "$BACKUP_ENCRYPTION_KEY_FILE" ]]; then
   echo "backup key is missing or unreadable: $BACKUP_ENCRYPTION_KEY_FILE" >&2
@@ -47,7 +51,21 @@ while true; do
   tmp="/backups/.oracle-${ts}.dump.tmp"
   encrypted="/backups/oracle-${ts}.dump.enc"
 
-  if pg_dump --format=custom --no-owner --no-privileges --file="$tmp"; then
+  retries=0
+  until pg_dump --format=custom --no-owner --no-privileges --file="$tmp"; do
+    rm -f "$tmp"
+    retries=$((retries + 1))
+    if (( retries >= BACKUP_RETRY_MAX )); then
+      echo "pg_dump failed ${BACKUP_RETRY_MAX} times; falling back to daily schedule" >&2
+      break
+    fi
+    echo "pg_dump failed (attempt ${retries}/${BACKUP_RETRY_MAX}); retrying in ${BACKUP_RETRY_INTERVAL}s" >&2
+    iso_ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    write_status "$iso_ts" false "$BACKUP_REQUIRE_OFFSITE" false
+    sleep "$BACKUP_RETRY_INTERVAL"
+  done
+
+  if [[ -s "$tmp" ]]; then
     # A custom-format dump can be listed without restoring it. This catches
     # truncated/corrupt output before encryption and retention are applied.
     pg_restore --list "$tmp" >/dev/null
