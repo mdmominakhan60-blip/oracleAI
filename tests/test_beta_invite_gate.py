@@ -295,3 +295,133 @@ async def test_b4_repo_persists_mpl_redemption_only(db):
     assert await growth.redeemed_mpl_voucher(db, 2107) is False
     await billing_svc.redeem_promo(db, 2107, mpl[0])
     assert await growth.redeemed_mpl_voucher(db, 2107) is True
+
+
+async def test_repo_redeemed_invite(db):
+    """redeemed_invite: True после редема invite-кода, не зависит от mpl."""
+    await users.ensure(db, 2108, "Оля", "o2108")
+    codes = await growth.create_codes(db, 1, kind="invite", batch="BETA1-W2")
+    assert await growth.redeemed_invite(db, 2108) is False
+    await billing_svc.redeem_promo(db, 2108, codes[0])
+    assert await growth.redeemed_invite(db, 2108) is True
+
+
+# ─────────────── B5 (BUS-368): покрытие гейта для bare /start и onb:begin ──────
+
+class _Callback:
+    def __init__(self, tg_id: int, data: str = "onb:begin"):
+        self.from_user = _User(tg_id)
+        self.data = data
+        self.answered: list[str] = []
+
+    async def answer(self, text: str = "", **kwargs):
+        self.answered.append(text)
+        return self
+
+
+class _EditMessage:
+    def __init__(self):
+        self.texts: list[str] = []
+
+    async def edit_text(self, text: str = "", **kwargs):
+        self.texts.append(text)
+        return self
+
+
+async def _bare_start(db, tg_id: int, args: str = "") -> _Message:
+    message = _Message(tg_id, text="/start")
+    message.args = args
+    state = _state_for(tg_id)
+    await onboarding.start(message, state, db)
+    return message
+
+
+async def _onb_begin(db, tg_id: int) -> _Callback:
+    cb = _Callback(tg_id)
+    state = _state_for(tg_id)
+    cb.message = _EditMessage()
+    await onboarding.onb_begin(cb, state, db)
+    return cb
+
+
+async def test_bare_start_without_code_refused_when_flag_on(db, monkeypatch):
+    """Обычный /start (без deep-link) при включённом гейте — waitlist."""
+    await users.ensure(db, 2201, "Аня", "anya2201")
+    await content_repo.set_flag(db, "beta_invite_gate", is_on=True)
+    monkeypatch.setattr(content_repo, "is_on", _flag_on)
+    message = await _bare_start(db, 2201)
+    assert any("листе ожидания" in t or "waitlist" in t.lower() for t in message.replied), \
+        f"ожидался waitlist-отказ, получила: {message.replied}"
+
+
+async def test_bare_start_with_invite_code_passes_gate(db, monkeypatch):
+    """Обычный /start НЕ получает код — код идёт в deep-link.
+    Здесь проверяем, что повторный /start после предварительного редема
+    invite-кода (через deep-link) проходит гейт (см. persistent_invite test)."""
+    await users.ensure(db, 2202, "Борис", "b2202")
+    await content_repo.set_flag(db, "beta_invite_gate", is_on=True)
+    monkeypatch.setattr(content_repo, "is_on", _flag_on)
+    # Пустой /start без инвайта — waitlist
+    message = await _bare_start(db, 2202)
+    assert any("листе ожидания" in t or "waitlist" in t.lower()
+               for t in message.replied), f"ожидался waitlist: {message.replied}"
+
+
+async def test_bare_start_persistent_invite_after_restart(db, monkeypatch):
+    """Повторный /start без кода после редема invite через deep-link — гейт пускает
+    (BUS-368 fix: invite персистирует в promo_redemptions, переживает перезапуск)."""
+    await users.ensure(db, 2203, "Вика", "v2203")
+    codes = await growth.create_codes(db, 1, kind="invite", batch="BETA1-W2")
+    await content_repo.set_flag(db, "beta_invite_gate", is_on=True)
+    monkeypatch.setattr(content_repo, "is_on", _flag_on)
+    deep = await _start_with(db, 2203, codes[0])
+    assert not any("листе ожидания" in t for t in deep.replied), deep.replied
+    second = await _bare_start(db, 2203)
+    assert not any("листе ожидания" in t or "waitlist" in t.lower()
+                   for t in second.replied), \
+        f"волна-1-инвайтушник застрял на гейте: {second.replied}"
+    assert any("Добро пожаловать" in t or "Welcome" in t for t in second.replied)
+
+
+async def test_bare_start_persistent_mpl_after_restart(db, monkeypatch):
+    """Повторный /start после mpl-редема через /promo — пускает (B4 персистенция)."""
+    await users.ensure(db, 2204, "Глеб", "g2204")
+    codes = await growth.create_codes(db, 1, kind="crystals", crystals=50,
+                                      batch="mpl_pok_2026-10")
+    await content_repo.set_flag(db, "beta_invite_gate", is_on=True)
+    monkeypatch.setattr(content_repo, "is_on", _flag_on)
+    message = _Message(2204)
+    message.text = codes[0]
+    state = _state_for(2204)
+    await onboarding.promo_enter(message, state, db)
+    assert not any("листе ожидания" in t for t in message.replied)
+    second = await _bare_start(db, 2204)
+    assert not any("листе ожидания" in t or "waitlist" in t.lower()
+                   for t in second.replied), \
+        f"mpl-покупатель застрял на гейте: {second.replied}"
+
+
+async def test_onb_begin_gate_without_invite_refused(db, monkeypatch):
+    """Кнопка [Начать] (onb:begin) без инвайта — waitlist-отказ."""
+    await users.ensure(db, 2205, "Дима", "d2205")
+    await content_repo.set_flag(db, "beta_invite_gate", is_on=True)
+    monkeypatch.setattr(content_repo, "is_on", _flag_on)
+    cb = await _onb_begin(db, 2205)
+    assert any("листе ожидания" in t or "waitlist" in t.lower()
+               for t in cb.message.texts), \
+        f"onb:begin должен отсекать: {cb.message.texts}"
+
+
+async def test_onb_begin_gate_with_invite_passes(db, monkeypatch):
+    """Кнопка [Начать] с уже редемнутым invite-кодом — проходит."""
+    await users.ensure(db, 2206, "Ева", "e2206")
+    codes = await growth.create_codes(db, 1, kind="invite", batch="BETA1-W2")
+    await billing_svc.redeem_promo(db, 2206, codes[0])
+    await content_repo.set_flag(db, "beta_invite_gate", is_on=True)
+    monkeypatch.setattr(content_repo, "is_on", _flag_on)
+    cb = await _onb_begin(db, 2206)
+    assert not any("листе ожидания" in t or "waitlist" in t.lower()
+                   for t in cb.message.texts), \
+        f"инвайт должен открывать onb:begin: {cb.message.texts}"
+    assert any("Рада тебя видеть" in t or "I" in t for t in cb.message.texts), \
+        f"язык-экран не показан: {cb.message.texts}"

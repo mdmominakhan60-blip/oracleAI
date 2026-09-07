@@ -192,8 +192,10 @@ async def start(message: Message, state: FSMContext, db):
                        message.from_user.username, lang=message.from_user.language_code)
     user = await users.get(db, message.from_user.id)
     if await content_repo.is_on(db, "beta_invite_gate") and not user["onboarded"]:
-        await _beta_gate_refused(db, message, user)
-        return
+        if not await growth.redeemed_mpl_voucher(db, message.from_user.id) \
+                and not await growth.redeemed_invite(db, message.from_user.id):
+            await _beta_gate_refused(db, message, user)
+            return
     await analytics.track(db, analytics.E_START, message.from_user.id)
     await _begin(message, state, db)
 
@@ -267,8 +269,30 @@ async def _begin(message: Message, state: FSMContext, db):
 
 @router.callback_query(F.data == "onb:begin")
 async def onb_begin(cb: CallbackQuery, state: FSMContext, db):
-    """[Начать] с welcome-экрана — тот же старт онбординга, что раньше с /start."""
+    """[Начать] с welcome-экрана — тот же старт онбординга, что раньше с /start.
+
+    Гейт беты (BUS-269) покрывает этот вход тоже: без инвайта и факта mpl-покупки
+    не-onboarded пользователь не проходит дальше выбора языка.
+    """
     user = await users.get(db, cb.from_user.id)
+    if await content_repo.is_on(db, "beta_invite_gate") and not user["onboarded"]:
+        if not await growth.redeemed_mpl_voucher(db, cb.from_user.id) \
+                and not await growth.redeemed_invite(db, cb.from_user.id):
+            await cb.message.edit_text(_copy(
+                user,
+                "✨ Оракул сейчас открывается постепенно, по личным приглашениям — "
+                "так мы бережно знакомимся с каждой.\n\n"
+                "Оставь заявку в листе ожидания — и мы позовём тебя в ближайшей волне: "
+                "webapp/waitlist\n\n"
+                "Твоя карта уже ждёт тебя 🌙",
+                "✨ Oracle is opening gradually, by personal invitation — so we can get "
+                "to know everyone with care.\n\n"
+                "Join the waitlist and we’ll invite you in the next wave: "
+                "webapp/waitlist\n\n"
+                "Your chart is already waiting for you 🌙",
+            ))
+            await cb.answer()
+            return
     await state.set_state(Onb.language)
     await analytics.track(db, "onboarding_started", cb.from_user.id, surface="bot")
     await cb.message.edit_text(_copy(

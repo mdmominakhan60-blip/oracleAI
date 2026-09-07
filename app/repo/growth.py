@@ -153,6 +153,20 @@ async def redeemed_mpl_voucher(db, tg_id: int) -> bool:
     return await cur.fetchone() is not None
 
 
+async def redeemed_invite(db, tg_id: int) -> bool:
+    """Юзер уже активировал какой-либо invite-код (не только текущий)?
+
+    Сжигание кода при первом редеме оставляет запись в promo_redemptions;
+    эта проверка переживает повторный /start и позволяет волне-1-инвайтушникам
+    вернуться после перезапуска бота без повторного ввода кода.
+    """
+    cur = await db.execute(
+        "SELECT 1 FROM promo_redemptions r JOIN promo_codes c ON c.code=r.code "
+        "WHERE r.tg_id=:tg_id AND c.kind = 'invite' LIMIT 1",
+        {"tg_id": tg_id})
+    return await cur.fetchone() is not None
+
+
 async def batch_stats(db) -> list[dict]:
     cur = await db.execute(
         "SELECT COALESCE(batch,'(без партии)') batch, COUNT(*) total, "
