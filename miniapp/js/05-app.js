@@ -26,6 +26,9 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
       try { tg().setHeaderColor && tg().setHeaderColor('#08070f'); } catch (e) {}
     }
     syncDocumentLocale();
+    // Язык — первый шаг: показываем оверлей до первого рендера контента,
+    // чтобы первый экран никогда не мелькал на неправильном языке.
+    if (!qaMode) await this.maybeLanguage();
     this.renderFrame();
     // BUS-341: initData уходит на сервер ровно один раз — на минт сессии.
     // Токен уже мог лежать в sessionStorage с прошлого reload: тогда минт не нужен
@@ -63,11 +66,20 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
     }
     this.initSwipe();
     this.initViewport();
-    if (!qaMode) this.maybeLanguage();
   };
   // При первом запуске язык выбирается первым — до приветствия и онбординга.
-  app.maybeLanguage = function() {
-    try { if (localStorage.getItem('oracle_lang')) { this.maybeIntro(); return; } } catch (e) {}
+  // Повторный запуск: если язык уже сохранён (сервер me.lang, localStorage
+  // или tg.language_code) — оверлей не показываем, сразу идём дальше.
+  app.maybeLanguage = async function() {
+    const savedLocal = (() => { try { return localStorage.getItem('oracle_lang'); } catch (e) { return null; } })();
+    const meLang = this.me && this.me.lang;
+    const tgLang = (() => { try { return (tg() && tg().language_code === 'en') ? 'en' : null; } catch (e) { return null; } })();
+    const decided = savedLocal || meLang || tgLang || 'ru';
+    if (savedLocal) {
+      syncDocumentLocale();
+      this.maybeIntro();
+      return;
+    }
     const ov = document.createElement('div');
     ov.id = 'intro';
     ov.className = 'intro';
@@ -83,12 +95,17 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
           </div>
         </div>
       </div>`;
-    const pick = (lang) => {
+    const pick = async (lang) => {
       try { localStorage.setItem('oracle_lang', lang); } catch (e) {}
       document.documentElement.lang = lang;
       syncDocumentLocale();
       ov.querySelector('[data-lang-sub]').textContent =
         lang === 'en' ? 'Choose your language to continue' : 'Выбери язык, чтобы продолжить';
+      // Синхронизируем язык с сервером — POST /api/profile работает без onboarded.
+      if (lang !== (meLang || savedLocal || 'ru')) {
+        try { await api('/api/profile', { method: 'POST', body: JSON.stringify({ lang }) }); } catch (e) {}
+      }
+      if (this.me) this.me.lang = lang;
       setTimeout(() => {
         ov.remove();
         this.maybeIntro();

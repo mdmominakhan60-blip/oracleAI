@@ -248,8 +248,15 @@ const rich = s => esc(s).replace(/&lt;(\/?)(b|i)&gt;/g, '<$1$2>');
 // rich + markdown-жирный **...** → <b> (для ИИ-разборов).
 const richMd = s => rich(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 
-const oracleLang = () => (window.app && app.me && app.me.lang) ||
-  localStorage.getItem('oracle_lang') || 'ru';
+const oracleLang = () => {
+  const local = (() => {
+    try { return localStorage.getItem('oracle_lang'); } catch (e) { return null; }
+  })();
+  if (local) return local;
+  const me = (window.app && app.me && app.me.lang);
+  if (me) return me;
+  try { return (tg() && tg().language_code === 'en') ? 'en' : 'ru'; } catch (e) { return 'ru'; }
+};
 
 function syncDocumentLocale() {
   const lang = oracleLang() === 'en' ? 'en' : 'ru';
