@@ -94,14 +94,55 @@ cd /srv/oracleAI
 docker compose --profile backup -f infra/docker-compose.yml up -d backup
 git fetch --all --tags
 git checkout <approved-commit-or-tag>
-docker compose -f infra/docker-compose.yml build
+# 1) Обновить RELEASE_ID в .env ДО сборки — иначе bake зафиксирует старый sha в контейнерах
+sed -i "s/^RELEASE_ID=.*/RELEASE_ID=$(git rev-parse --short HEAD)/" .env
+# 2) Собрать ВСЕ build-сервисы compose (api, bot, worker, beat, migrate) — селективный перекат оставляет beat/бота на старом образе
+docker compose -f infra/docker-compose.yml build --pull api bot worker beat migrate
 docker compose -f infra/docker-compose.yml up -d
 docker compose -f infra/docker-compose.yml exec api python -m scripts.selfcheck
 # После подтверждения ключей провайдера повторить с внешним smoke-test:
 # docker compose -f infra/docker-compose.yml exec -e SELF_CHECK_LIVE=1 api python -m scripts.selfcheck
-docker compose -f infra/docker-compose.yml logs --tail=100 api bot
+docker compose -f infra/docker-compose.yml logs --tail=100 api bot worker beat
 curl --fail --silent --show-error https://YOUR_DOMAIN/api/health
+# 3) Верификация деплоя (anti-recidive BUS-194/350/373)
+bash infra/verify-deploy.sh $(git rev-parse --short HEAD) --symbol '<служебная_строка_из_дельты_коммита>'
 ```
+
+**Критические правила при обновлении:**
+
+1. **Перекат всех build-сервисов обязателен.** `docker compose build api bot worker beat migrate` — не «только api». Beat собирается из того же `infra/Dockerfile`, но тегируются отдельно (`infra-beat:latest`); при избирательном перекате он молча остаётся на старом образе и шлёт задачи Celery по старому расписанию (BUS-373).
+2. **Обновлять `RELEASE_ID` в `.env` до сборки.** Compose запекает `env_file` в контейнер на момент создания; если обновить `.env` после сборки — старый sha останется в запущенных контейнерах (дрейф bakery vs build).
+3. **Grep-проба символа коммита.** В аргументе `--symbol` передаётся строковый символ из дельты целевого коммита (не хеш!), и скрипт проверяет её присутствие в `/opt/oracle` каждого app-контейнера. Если дельта деплоя затрагивает `app/` — проба обязательна.
+4. **Верификация — часть деплоя, не опциональный follow-up.** `verify-deploy.sh` проверяет: все build-контейнеры пересозданы после коммита, `RELEASE_ID` совпадает с целевым sha, образы собраны после коммита (нет recreate без rebuild), контейнеры единого образа не расходятся по SHA, контейнеры общего Dockerfile свежи. См. раздел «Верификация деплоя» ниже.
+5. **Не удаляйте старые Docker images до успешной верификации** — встроенный rollback опирается на предыдущий checkout и локальные build layers.
+
+## Верификация деплоя
+
+Скрипт `infra/verify-deploy.sh` — обязательный шаг после любого переката. Он выводит список проверяемых контейнеров из `docker compose config --services` и оставляет только те, у которых есть `build:` в compose (прод: `api`, `bot`, `worker`, `beat`, `migrate`; staging: все app-сервисы). Профильные и одноразовые сервисы (`backup`, `migrate`) исключаются автоматически.
+
+```bash
+bash infra/verify-deploy.sh <target-sha> \
+  --symbol '<служебная_строка_из_дельты_коммита>'
+```
+
+Для staging укажите проект явно:
+
+```bash
+bash infra/verify-deploy.sh a6aa63d \
+  --project oracleai-staging \
+  --symbol '<служебная_строка_из_дельты_коммита>' \
+  --env-file infra/staging/.env.staging
+```
+
+Коды возврата: `0` — все пробы зелёные, `1` — есть FAIL (детали в выводе), `2` — ошибка использования.
+
+Структура прoверок:
+- **P1** — каждый проверяемый контейнер создан после даты коммита (контейнер реально пересоздан в этом деплое).
+- **P2** — `RELEASE_ID` внутри каждого контейнера совпадает с целевым sha (детект дрейфа env).
+- **P3** — content-проба: строковый символ из дельты коммита найден в `/opt/oracle` каждого контейнера (`--symbol`); `--absent SYM` — негативная проба (символ новее target отсутствует).
+- **P4** — контейнеры с одинаковым тегом образа имеют одинаковый resolved SHA.
+- **P5** — `CreatedAt` образа каждого контейнера >= даты коммита (детект «recreate без rebuild»).
+- **P6** — контейнеры, собираемые из одного Dockerfile, при единой сборке имеют одинаковый resolved SHA (информационно; при `docker compose build` по-сервисно расхождение ожидаемо — свежесть кода проверяют P5/P3).
 
 После изменения фронтенда проверьте версии cache-busting в `miniapp/index.html` и `miniapp/styles.css`; Telegram WebView может держать старые ассеты дольше обычного браузера.[3]
 
