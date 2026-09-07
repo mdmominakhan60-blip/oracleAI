@@ -63,6 +63,24 @@
 .pay-alert { display: flex; align-items: center; justify-content: space-between; gap: 9px; margin: 10px 0; padding: 10px; border-radius: 14px; font-size: 11px; line-height: 1.35; }
 .pay-alert--error { border: 1px solid rgba(245,169,199,.3); color: #f3c6da; background: rgba(245,169,199,.08); }
 .pay-alert .btn { min-height: 34px; flex: 0 0 auto; padding: 0 10px; font-size: 10px; }
+
+/* BUS-398: промокод и маркетплейс-ваучеры */
+.pay-promo__row { display: flex; gap: 8px; }
+.pay-promo__input { flex: 1; min-width: 0; padding: 11px 12px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+.pay-promo__apply { flex: 0 0 auto; min-height: 44px; padding: 0 16px; font-size: 11px; }
+.pay-promo__msg { margin: 9px 1px 0; font-size: 11px; line-height: 1.4; }
+.pay-promo__msg.is-ok { color: var(--color-success); }
+.pay-promo__msg.is-error { color: var(--color-error); }
+.pay-market__links { display: grid; gap: 8px; margin-top: 10px; }
+.pay-market__card { display: flex; align-items: center; gap: 11px; padding: 11px 12px; border: 1px solid rgba(225,214,255,.12); border-radius: 16px; color: inherit; background: rgba(255,255,255,.035); text-decoration: none; transition: border-color .18s var(--ease-ritual), background .18s var(--ease-ritual), transform .18s var(--ease-ritual); }
+.pay-market__card:active { transform: scale(.97); }
+.pay-market__icon { width: 34px; height: 34px; display: grid; place-items: center; flex: 0 0 34px; border-radius: 11px; color: var(--champagne-300); background: rgba(245,212,139,.11); font-size: 16px; }
+.pay-market__body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.pay-market__body b { color: var(--text-main); font-size: 11.5px; line-height: 1.1; }
+.pay-market__body small { color: var(--text-muted); font-size: 9px; line-height: 1.2; }
+.pay-market__go { flex: 0 0 auto; color: var(--champagne-300); font-size: 10px; font-weight: 800; }
+@media (max-width: 380px) { .pay-promo__row { flex-wrap: wrap; } .pay-promo__input { flex: 1 1 100%; } .pay-promo__apply { flex: 1 1 100%; } }
+@media (prefers-reduced-motion: reduce) { .pay-market__card { transition: none; } }
 .pay-empty { padding: 20px; border: 1px dashed rgba(225,214,255,.16); border-radius: 16px; color: var(--text-muted); font-size: 11px; text-align: center; }
 .pay-footer-note { align-items: center; margin-top: 19px; margin-bottom: 0; }
 .pay-footer-note p { flex: 1; }

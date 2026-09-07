@@ -61,4 +61,18 @@ document.addEventListener('input', function (event) {
 });
 
 
+// BUS-398: промокод — форма submit, Enter в поле тоже отправляет.
+document.addEventListener('submit', function (event) {
+  const el = event.target && event.target.closest
+    ? event.target.closest('[data-act-form="promo"]')
+    : null;
+  if (el) {
+    event.preventDefault();
+    if (typeof app.submitPromo === 'function') {
+      app.submitPromo(el.querySelector('[data-promo-input]'));
+    }
+  }
+});
+
+
 app.boot();
