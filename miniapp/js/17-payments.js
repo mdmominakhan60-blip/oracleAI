@@ -196,6 +196,24 @@
     } finally {
       state.loading = false;
       if (this.view === 'payment' && main) this.renderPayment(main);
+      // BUS-399: storefront несёт свежие crystals/sub_active — this.me обновляет
+      // только /api/me, поэтому после оплаты шапка иначе показала бы старый баланс.
+      if (state.data && this.me) {
+        this.me = Object.assign({}, this.me, {
+          crystals: state.data.crystals,
+          sub_active: state.data.sub_active,
+          sub_days_left: state.data.sub_days_left,
+          subscription_lifecycle: Object.assign({}, this.me.subscription_lifecycle, {
+            period_end: (state.data.current_entitlements && state.data.current_entitlements.period_end)
+              || (this.me.subscription_lifecycle && this.me.subscription_lifecycle.period_end) || null,
+          }),
+        });
+        if (state.data.current_plan && state.data.plans) {
+          const title = (state.data.plans.find(p => p.code === state.data.current_plan) || {}).title;
+          if (title) this.me.plan = Object.assign({}, this.me.plan, { title });
+        }
+        this.refreshHeaderStatus();
+      }
     }
   };
 
