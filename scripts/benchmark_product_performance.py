@@ -74,7 +74,7 @@ async def main() -> int:
     builder.llm.enabled = lambda: False
     db = await connect(seed=False)
     try:
-        user = await users.ensure(db, 15001, "Synthetic performance user")
+        user = await users.ensure(db, 999000002, "Synthetic performance user")
         for i in range(20):
             await memory.remember(db, user["tg_id"], f"Synthetic preference number {i}")
 

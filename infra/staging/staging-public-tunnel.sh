@@ -93,11 +93,24 @@ if [[ "$NEW_URL" != "$PREV_URL" ]]; then
         COMPOSE_EXTRA=(--profile telegram); SVC="staging-api staging-bot"
       fi ;;
   esac
-  docker compose -p oracleai-staging \
-    -f "$STAGING_DIR/docker-compose.staging.yml" \
-    --env-file "$ENV_FILE" \
-    "${COMPOSE_EXTRA[@]}" \
-    up -d --no-deps $SVC >/dev/null 2>&1 || true
+  # Пин релиза (BUS-468): без IMAGE_TAG compose резолвит stale latest —
+  # boot-дрейф (рекуррентные алерты OracleAIObservabilityTargetDown после
+  # ребута хоста, тики 04:20Z и 15:27Z 07.09). Тот же пин использует
+  # staging-stack-up.sh (BUS-419). Guard fail-closed: пустой/нечитаемый
+  # CURRENT_RELEASE → recreate пропускаем, иначе compose поднимет контейнеры
+  # на случайном stale-образе; exit недопустим (убил бы cloudflared — факт
+  # BUS-138: 530 после exit 0).
+  IMAGE_TAG="$(cat "$STAGING_DIR/CURRENT_RELEASE" 2>/dev/null || true)"
+  if [[ -z "$IMAGE_TAG" ]]; then
+    echo "$(date -u +%FT%TZ) tunnel: ОТКАЗ recreate — CURRENT_RELEASE пуст/отсутствует (не пиннуемся к latest). Подними стек: infra/staging/staging-stack-up.sh" >&2
+  else
+    export IMAGE_TAG RELEASE_ID="$IMAGE_TAG"
+    docker compose -p oracleai-staging \
+      -f "$STAGING_DIR/docker-compose.staging.yml" \
+      --env-file "$ENV_FILE" \
+      "${COMPOSE_EXTRA[@]}" \
+      up -d --no-deps $SVC >/dev/null 2>&1 || true
+  fi
   # Перепроверка health после recreate: retry-цикл (api recreate ~15-20с).
   # При провале НЕ выходим: exit убил бы cgroup вместе с cloudflared
   # (факт BUS-138: 530 после exit 0). Сбой виден в journal.

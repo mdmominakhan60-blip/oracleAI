@@ -47,6 +47,7 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
         if (name) name.textContent = this.me.name;
         pill.setAttribute('aria-label', (oracleLang() === 'en' ? 'Open profile: ' : 'Открыть профиль: ') + this.me.name);
       }
+      this.refreshHeaderStatus();
     } catch (e) {
       this.renderAuthRequired(e);
       return;
@@ -267,22 +268,55 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
     const initial = this.me && this.me.name ? esc(this.me.name[0].toUpperCase()) : 'О';
     root.innerHTML = `
       <header class="app-header">
-        <button class="user-pill" data-act="go" data-goto="profile" aria-label="Открыть профиль: ${esc(name)}">
-          <span class="avatar" aria-hidden="true">${initial}</span>
-          <span class="user-name">${esc(name)}</span>
-        </button>
-        <div class="brand-lockup" role="img" aria-label="OracleAI — личное пространство ритуалов">
-          <span class="brand-mark" aria-hidden="true">${sigilIcon('brand')}</span>
-          <span class="brand-title">ORACLE<small>AI</small></span>
+        <div class="app-header-row">
+          <button class="user-pill" data-act="go" data-goto="profile" aria-label="Открыть профиль: ${esc(name)}">
+            <span class="avatar" aria-hidden="true">${initial}</span>
+            <span class="user-name">${esc(name)}</span>
+          </button>
+          <div class="brand-lockup" role="img" aria-label="OracleAI — личное пространство ритуалов">
+            <span class="brand-mark" aria-hidden="true">${sigilIcon('brand')}</span>
+            <span class="brand-title">ORACLE<small>AI</small></span>
+          </div>
+          <button class="bell" data-act="bell" aria-label="${oracleLang() === 'en' ? 'Open notifications' : 'Открыть уведомления'}" title="${oracleLang() === 'en' ? 'Notifications' : 'Уведомления'}">
+            ${sigilIcon('bell')}<span class="bell-dot" aria-hidden="true"></span>
+          </button>
         </div>
-        <button class="bell" data-act="bell" aria-label="${oracleLang() === 'en' ? 'Open notifications' : 'Открыть уведомления'}" title="${oracleLang() === 'en' ? 'Notifications' : 'Уведомления'}">
-          ${sigilIcon('bell')}<span class="bell-dot" aria-hidden="true"></span>
-        </button>
+        <div class="header-status" data-header-status hidden></div>
       </header>
       <main id="app-main" tabindex="-1"></main>
       <nav class="app-nav" aria-label="${oracleLang() === 'en' ? 'Main navigation' : 'Основная навигация'}"><div class="main-nav" id="main-nav"></div></nav>`;
     this.renderNav();
+    this.refreshHeaderStatus();
     this.refreshBellDot();
+  };
+
+  // BUS-399: второй ряд шапки — кристаллы и подписка, видны с любого экрана.
+  // Рендерится только когда me загружен (иначе пустой hidden-контейнер);
+  // locale пересобирает содержимое (renderFrame зовёт нас после setLanguage).
+  app.refreshHeaderStatus = function() {
+    const box = document.querySelector('[data-header-status]');
+    if (!box) return;
+    const me = this.me;
+    if (!me) { box.hidden = true; return; }
+    const en = oracleLang() === 'en';
+    const crystals = Number(me.crystals || 0).toLocaleString(en ? 'en-US' : 'ru-RU');
+    const activeSub = !!(me.sub_active || (me.subscription_lifecycle && me.subscription_lifecycle.status === 'active'));
+    let subHtml = '';
+    if (activeSub) {
+      const planTitle = (me.plan && me.plan.title) || (en ? 'Subscription' : 'Подписка');
+      const until = me.subscription_lifecycle && me.subscription_lifecycle.period_end
+        ? `<small>· ${esc(en ? 'until ' : 'до ')}${esc(String(me.subscription_lifecycle.period_end).slice(0, 10))}</small>` : '';
+      subHtml = `<span class="header-sub header-sub--active" role="status" aria-label="${esc(planTitle)}: ${esc(en ? 'active' : 'активна')}"><b>${esc(planTitle)}</b>${until}</span>`;
+    } else {
+      subHtml = `<button class="header-sub header-sub--cta" data-act="go" data-goto="payment">${esc(en ? 'Plans' : 'Тарифы')} ›</button>`;
+    }
+    box.hidden = false;
+    box.innerHTML = `
+      <button class="header-crystals" data-act="go" data-goto="payment" aria-label="${esc(en ? 'Crystals: ' : 'Кристаллы: ')}${esc(crystals)}">
+        <span class="header-crystals__ico" aria-hidden="true">✦</span>
+        <span class="header-crystals__count">${esc(crystals)}</span>
+      </button>
+      ${subHtml}`;
   };
 
   // Точка-непрочитанное на колокольчике: видна один раз за день,

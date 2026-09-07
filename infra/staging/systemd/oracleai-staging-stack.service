@@ -1,0 +1,26 @@
+# Автозапуск staging-стека после ребута хоста (BUS-419).
+# oneshot: выполняет staging-stack-up.sh (канонический up -d с пиннутым
+# IMAGE_TAG из CURRENT_RELEASE) и остаётся inactive/dead — перезапускать
+# вручную: systemctl --user restart oracleai-staging-stack.
+# Before=туннель и watchdog: при boot стек поднимается ПЕРВЫМ, тогда
+# туннель-юнит видит уже живой /health и не алертит в никуда.
+# Установка — см. комментарии в infra/staging/staging-stack-up.sh.
+# Логи: journalctl --user -u oracleai-staging-stack -f
+
+[Unit]
+Description=OracleAI staging stack auto-up after host reboot (BUS-419)
+After=docker.service network-online.target
+Wants=network-online.target
+Before=oracleai-staging-public-tunnel.service oracleai-staging-watchdog.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/apps/oraclAI/oracleAI/infra/staging/staging-stack-up.sh
+# Оставшиеся api/bot у tunnel-unit могут стартовать параллельно — не мешаем.
+RemainAfterExit=no
+TimeoutStartSec=600
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

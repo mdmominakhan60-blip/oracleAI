@@ -164,6 +164,28 @@
 .churn-label { font-size: 12px; color: var(--ink); }
 .churn-split { font-size: 11px; color: var(--muted); }
 
+/* ── Карточки CRM-сценариев R7 (BUS-264) ────────────────────────────────── */
+.scen-grid {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+.scen-card {
+  display: grid; gap: 3px; padding: 12px; align-content: start;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: var(--radius); color: var(--ink); font: inherit;
+}
+.scen-card-gap { border-style: dashed; }
+.scen-title { font-weight: 700; font-size: 13px; }
+.scen-hint { font-size: 11px; color: var(--muted); }
+.scen-metric { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--muted); }
+.scen-metric-value { font-size: 16px; font-weight: 700; color: var(--ink); }
+.scen-rate { font-size: 16px; font-weight: 700; }
+.scen-rate.good { color: var(--green); }
+.scen-rate.muted { font-size: 12px; font-weight: 400; }
+.scen-stops { font-size: 11px; color: var(--muted); }
+.scen-gap { font-size: 11px; color: var(--gold); }
+.scen-target { font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+
 .seg-delta { font-weight: 700; }
 
 /* ── Очередь внимания (BUS-312) ─────────────────────────────────────────── */

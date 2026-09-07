@@ -8,6 +8,6 @@ Source: [Wikimedia Commons — File:Palm hand.JPG](https://commons.wikimedia.org
 Original file: `https://upload.wikimedia.org/wikipedia/commons/7/7e/Palm_hand.JPG`  
 Author: Cvmontuy  
 License: [Creative Commons Attribution-ShareAlike 3.0 Unported](https://creativecommons.org/licenses/by-sa/3.0/)  
-Changes: the test fixture is a byte-for-byte downloaded copy of the original file; no edits were made.
+Changes: the fixture is the downloaded original with a single automated normalization — `ImageOps.autocontrast(cutoff=1)` after EXIF-transpose and RGB conversion, re-encoded as JPEG quality 95 (2,547,765 bytes). The original capture (contrast 18.6, edge mean 7.3) fails the Sep-2025 production capture-quality gate (contrast ≥ 24, edge mean ≥ 12); the normalization brings the synthetic quality metrics to contrast 57.3 / edge mean 23.4 without altering the photographic content.
 
 The source page identifies the file as a 2,592 × 1,728 JPEG and grants reuse under CC BY-SA 3.0. The fixture is not used as evidence of any person's health, identity, or future.

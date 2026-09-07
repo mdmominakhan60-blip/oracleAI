@@ -30,6 +30,48 @@ export function setDq(id, { status, note }) {
   el.innerHTML = `${labels[status] || '?'}<span class="sr-only">${titles[status] || ''}</span>`;
 }
 
+// BUS-264 R7: названия и подсказки CRM-сценариев волны 3. Ключи = kinds
+// из deliveries; подсказка объясняет, что считается «вошло».
+const SCENARIO_META = {
+  welcome_chain: {
+    title: 'Welcome-цепочка',
+    hint: 'новые клиентки после знакомства, first-value ещё нет',
+    target: 'первая практика / вопрос',
+  },
+  onboard_nudge: {
+    title: 'Дожим онбординга',
+    hint: 'начали, но не закончили знакомство',
+    target: 'завершение онбординга',
+  },
+  reactivate: {
+    title: 'Реактивация',
+    hint: 'спящие 14+ дней',
+    target: 'возврат в Mini App',
+  },
+  winback2: {
+    title: 'Winback',
+    hint: 'подписка истекла, оффер отправлен',
+    target: 'промокод активирован',
+  },
+  post_limit: {
+    title: 'Лимит разборов',
+    hint: 'бесплатный лимит достигнут',
+    target: 'переход в тариф',
+  },
+  low_balance: {
+    title: 'Мало кристаллов',
+    hint: 'баланс на исходе',
+    target: 'пополнение',
+  },
+};
+
+// Подписи R9-гэпов (контракт BUS-264 §4): метрика честно отсутствует,
+// показываем причину вместо нуля.
+const SCENARIO_GAP_REASONS = {
+  'G-1': 'конверсия недоступна: атрибуция push→открытие (событие G-1)',
+  'G-2': 'payback недоступен: продления после winback-оффера (событие G-2)',
+};
+
 const ACTIVATION_LABELS = {
   first_ritual: 'Первая практика',
   first_question: 'Первый вопрос',
@@ -149,6 +191,78 @@ export class AnalyticsFeature {
     this.renderMoney(dash);
     this.renderSegments(dash.overview);
     this.renderDataQuality(dash);
+    this.loadScenarios().catch(() => {});
+  }
+
+  // BUS-264 R7: карточки CRM-сценариев из /api/admin/analytics/scenarios.
+  // Период — общий селект anx-period, пересчитанный в from/to ISO.
+  // R9-гэпы: no_data-карточка показывает причину вместо null-метрик.
+  // Анти-reid: rate=null при entered<5 — на месте ставки пишем «мало данных».
+  async loadScenarios() {
+    // Локальная дата, не toISOString(): UTC-строка до полуночи по МСК даёт
+    // «вчера» и сдвигает окно относительно остальной аналитики.
+    const iso = (d) => {
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${d.getFullYear()}-${m}-${day}`;
+    };
+    const to = new Date();
+    const from = new Date(to);
+    from.setDate(from.getDate() - (state.period - 1));
+    try {
+      const data = await get(`/api/admin/analytics/scenarios?from=${iso(from)}&to=${iso(to)}`);
+      this.renderScenarios(data.scenarios || []);
+    } catch (error) {
+      setDq('anx-scen-dq', { status: 'empty', note: 'API сценариев недоступен' });
+      $('anx-scenarios').innerHTML = '<div class="empty">Нет данных — API сценариев недоступен</div>';
+    }
+  }
+
+  renderScenarios(scenarios) {
+    if (!scenarios.length) {
+      setDq('anx-scen-dq', { status: 'empty', note: 'сценарии волны 3 не активны' });
+      $('anx-scenarios').innerHTML = '<div class="empty">Цепочки волны 3 за период не срабатывали</div>';
+      return;
+    }
+    setDq('anx-scen-dq', {
+      status: scenarios.every((card) => card.data_status === 'ok') ? 'full' : 'partial',
+      note: 'часть метрик закрыта R9-гэпами (G-1/G-2) — подписаны на карточках',
+    });
+    $('anx-scenarios').innerHTML = scenarios.map((card) => {
+      const meta = SCENARIO_META[card.key] || { title: card.key, hint: '', target: '' };
+      const noData = card.data_status === 'no_data';
+      const gap = noData && card.no_data_reason ? SCENARIO_GAP_REASONS[card.no_data_reason] : null;
+      // Анти-reid: null-ставка при entered<5 — честная пометка вместо 0%.
+      const rateShown = card.conversion_rate == null
+        ? '<span class="scen-rate muted">мало данных</span>'
+        : `<span class="scen-rate good">${pct(card.conversion_rate * 100)}</span>`;
+      const metric = (label, value) => `<span class="scen-metric"><span class="scen-metric-value">${num(value)}</span>${esc(label)}</span>`;
+      // stops — всегда объект (контракт §4): forbidden=запрет, segment_exit=выход
+      // из сегмента, other=failed/прочее.
+      const stops = card.stops
+        ? `<span class="scen-stops">стопы: запрет ${num(card.stops.forbidden)} · выход ${num(card.stops.segment_exit)} · прочее ${num(card.stops.other)}</span>`
+        : '';
+      const body = noData
+        ? `<span class="scen-gap">${esc(gap || 'данные недоступны')}</span>
+           ${card.entered != null ? metric('вошло', card.entered) : ''}
+           ${card.reached != null ? metric('дошло', card.reached) : ''}
+           ${card.converted != null ? metric('конверсия', card.converted) : ''}
+           ${card.conversion_rate != null ? rateShown : ''}
+           ${stops}`
+        : `${metric('вошло', card.entered)}
+           ${metric('дошло', card.reached)}
+           ${metric('конверсия', card.converted)}
+           ${rateShown}
+           ${stops}`;
+      // Карточка — не интерактив: без tabindex/aria-label, текст читается
+      // скринридером как есть (aria-label на div без роли ненадёжен).
+      return `<div class="scen-card${noData ? ' scen-card-gap' : ''}">
+        <span class="scen-title">${esc(meta.title)}</span>
+        <span class="scen-hint">${esc(meta.hint)}</span>
+        ${body}
+        <span class="scen-target">целевое действие: ${esc(meta.target)}</span>
+      </div>`;
+    }).join('');
   }
 
   // BUS-176 §4: каждый виджет несёт метку качества данных. Бэкенд пока не

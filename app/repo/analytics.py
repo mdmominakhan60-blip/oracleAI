@@ -14,6 +14,7 @@ import re
 from datetime import date, datetime, timedelta, timezone
 
 from ..data.session import transaction, utcnow
+from .ltv_constants import not_synthetic_tg_sql
 
 # Ключевые события воронки — фиксированные имена, чтобы дашборд не разъезжался
 # с кодом при опечатке.
@@ -463,13 +464,16 @@ async def overview(db) -> dict:
             db, "SELECT COUNT(*) FROM users WHERE sub_until>:now",
             {"now": utcnow()}),
         "dau": await _scalar(
-            db, "SELECT COUNT(DISTINCT tg_id) FROM events WHERE day>=:since",
+            db, "SELECT COUNT(DISTINCT tg_id) FROM events WHERE day>=:since "
+                f"AND {not_synthetic_tg_sql('events')}",
             {"since": _ago_day(1)}),
         "wau": await _scalar(
-            db, "SELECT COUNT(DISTINCT tg_id) FROM events WHERE day>=:since",
+            db, "SELECT COUNT(DISTINCT tg_id) FROM events WHERE day>=:since "
+                f"AND {not_synthetic_tg_sql('events')}",
             {"since": _ago_day(7)}),
         "mau": await _scalar(
-            db, "SELECT COUNT(DISTINCT tg_id) FROM events WHERE day>=:since",
+            db, "SELECT COUNT(DISTINCT tg_id) FROM events WHERE day>=:since "
+                f"AND {not_synthetic_tg_sql('events')}",
             {"since": _ago_day(30)}),
         "questions_today": await _scalar(
             db, "SELECT COUNT(*) FROM messages WHERE is_question=1 "
@@ -500,9 +504,11 @@ async def overview(db) -> dict:
 async def activation_funnel(db, days: int = 30) -> dict:
     """Privacy-safe Mini App activation/return funnel by first-open cohort."""
     since = _ago(days)
+    # Синтетика (smoke 999xxx, legacy 10001/10002) не считается трафиком (BUS-387).
     cohort_sql = (
         "SELECT DISTINCT tg_id FROM events "
-        "WHERE name=:cohort_name AND tg_id IS NOT NULL AND created_at>=:since"
+        "WHERE name=:cohort_name AND created_at>=:since "
+        f"AND {not_synthetic_tg_sql('events')}"
     )
     cohort = await _scalar(
         db, f"SELECT COUNT(*) FROM ({cohort_sql}) AS cohort",
@@ -538,25 +544,32 @@ async def funnel(db, days: int = 30) -> list[dict]:
     прошлого года завышали бы конверсию свежего трафика.
     """
     since = _ago(days)
+    # Синтетика отсечена на входе в users (BUS-387): зайдёт в users — не
+    # считается ни «пришла», ни любым последующим шагом.
     total = await _scalar(
-        db, "SELECT COUNT(*) FROM users WHERE created_at>=:since",
+        db, "SELECT COUNT(*) FROM users WHERE created_at>=:since "
+            f"AND {not_synthetic_tg_sql('users')}",
         {"since": since})
     onboarded = await _scalar(
-        db, "SELECT COUNT(*) FROM users WHERE created_at>=:since AND onboarded=1",
+        db, "SELECT COUNT(*) FROM users WHERE created_at>=:since AND onboarded=1 "
+            f"AND {not_synthetic_tg_sql('users')}",
         {"since": since})
     asked = await _scalar(
         db, "SELECT COUNT(DISTINCT m.tg_id) FROM messages m JOIN users u "
-            "ON u.tg_id=m.tg_id WHERE u.created_at>=:since AND m.is_question=1",
+            "ON u.tg_id=m.tg_id WHERE u.created_at>=:since AND m.is_question=1 "
+            f"AND {not_synthetic_tg_sql('u')}",
         {"since": since})
     retained = await _scalar(
         db, "SELECT COUNT(*) FROM (SELECT m.tg_id FROM messages m JOIN users u "
             "ON u.tg_id=m.tg_id WHERE u.created_at>=:since AND m.is_question=1 "
+            f"AND {not_synthetic_tg_sql('u')} "
             "GROUP BY m.tg_id HAVING COUNT(DISTINCT substr(m.created_at,1,10)) >= 2) "
             "AS retained_users",
         {"since": since})
     paid = await _scalar(
         db, "SELECT COUNT(DISTINCT p.tg_id) FROM payments p JOIN users u "
             "ON u.tg_id=p.tg_id WHERE u.created_at>=:since "
+            f"AND {not_synthetic_tg_sql('u')} "
             "AND p.status='succeeded'", {"since": since})
 
     steps = [("Пришли", total), ("Прошли знакомство", onboarded),
@@ -598,6 +611,7 @@ async def timeseries(db, days: int = 30) -> list[dict]:
         {"start": start})
     active = await by_day(
         "SELECT day d, COUNT(DISTINCT tg_id) FROM events WHERE day>=:start "
+        f"AND {not_synthetic_tg_sql('events')} "
         "GROUP BY day",
         {"start": start})
     promos = await by_day(
@@ -665,7 +679,9 @@ async def surface_split(db, days: int = 30) -> list[dict]:
     cur = await db.execute(
         "SELECT COALESCE(surface,'bot') surface, COUNT(*) n, "
         "COUNT(DISTINCT tg_id) users "
-        "FROM events WHERE created_at>=:since GROUP BY surface ORDER BY n DESC",
+        "FROM events WHERE created_at>=:since "
+        f"AND {not_synthetic_tg_sql('events')} "
+        "GROUP BY surface ORDER BY n DESC",
         {"since": _ago(days)})
     return [dict(r) for r in await cur.fetchall()]
 
@@ -1368,6 +1384,7 @@ async def owner_segments(db, *, by: str, date_from: str | None = None,
             "COUNT(DISTINCT CASE WHEN u.ltv_stars > 0 THEN e.tg_id END) AS payers "
             "FROM events e LEFT JOIN users u ON u.tg_id = e.tg_id "
             f"WHERE e.tg_id IS NOT NULL {window_sql}"
+            f"AND {not_synthetic_tg_sql('e')} "
             "GROUP BY COALESCE(e.surface, 'bot') ORDER BY events DESC",
             params)
         rows = [dict(r) for r in await cur.fetchall()]
@@ -1465,3 +1482,214 @@ async def owner_segments(db, *, by: str, date_from: str | None = None,
         "segments": rows,
         "data_quality": {"status": "full", "note": None},
     }
+
+
+#: Ключи сценариев волны 3 = kinds из deliveries (дедуп цепочек). Вспомогательные
+#: kinds (winback2_code, guardrail, feedback_survey) — не сценарии (контракт §3).
+SCENARIO_KEYS = ("welcome_chain", "onboard_nudge", "reactivate",
+                 "winback2", "post_limit", "low_balance")
+
+_FREE_PAID_CONVERT_EVENTS = "('payment_success','credit_pack_paid')"
+
+
+async def owner_scenarios(db, *, date_from: str, date_to: str,
+                          scenario: str | None = None) -> dict:
+    """Карточки CRM-сценариев R7 (BUS-264): вошло / дошло / конверсия / стопы.
+
+    Ключ карточки = kind из deliveries. «Дошло» — DISTINCT tg_id по kind со
+    status='sent' за окно (forbidden не дошёл — BUS-308). «Вошло» — когорта
+    входа в сегмент по триггеру цепочки. Конверсия — milestone-события после
+    входа; события цепочек не добавляем (постановка §2).
+
+    R9-гэпы (контракт §4, правила шейпа): карточка с неснятым гэпом в
+    конверсионной части отдаёт data_status='no_data' + no_data_reason;
+    зависимая часть — null, НЕ ноль. Счётчики, от гэпа не зависящие,
+    остаются числами: reactivate — только конверсия под G-1 (атрибуция
+    push→open разорвана); winback2 — payback-доля под G-2 (renewal; поле
+    payback до G-2 отсутствует, redemption-счётчик — не гэп, считается).
+
+    last_seen/sub_until мутируют (возврат/продление стирают прошлое), поэтому
+    исторические когорты reactivate/winback2 восстанавливаются по deliveries:
+    у reactivate ключ r1:{YYYY-MM} пишется при первом касании цикла (~вход в
+    сегмент), у winback2 key = sub_until на момент оффера.
+    """
+    keys = [scenario] if scenario else list(SCENARIO_KEYS)
+    to_exclusive = (date.fromisoformat(date_to) + timedelta(days=1)).isoformat()
+    base = {"from": date_from, "to_exclusive": to_exclusive}
+
+    async def _one(sql: str, params: dict) -> dict:
+        cur = await db.execute(sql, params)
+        row = await cur.fetchone()
+        return dict(row) if row else {}
+
+    async def delivery_counts(kind: str) -> dict:
+        try:
+            r = await _one(
+                "SELECT COUNT(DISTINCT CASE WHEN d.status='sent' THEN d.tg_id END) "
+                "AS reached, "
+                "COUNT(DISTINCT CASE WHEN d.status='forbidden' THEN d.tg_id END) "
+                "AS forbidden, "
+                "COUNT(DISTINCT CASE WHEN d.status='failed' THEN d.tg_id END) "
+                "AS failed "
+                "FROM deliveries d WHERE d.kind=:kind "
+                "AND d.created_at >= :from AND d.created_at < :to_exclusive",
+                {"kind": kind, **base})
+            return {"reached": int(r.get("reached") or 0),
+                    "forbidden": int(r.get("forbidden") or 0),
+                    "failed": int(r.get("failed") or 0)}
+        except Exception:  # noqa: BLE001
+            # Схема без колонки status (миграции до 0012) — нейтрально: любая
+            # запись считается доставленной (fallback already_sent, контракт §6).
+            r = await _one(
+                "SELECT COUNT(DISTINCT d.tg_id) AS reached "
+                "FROM deliveries d WHERE d.kind=:kind "
+                "AND d.created_at >= :from AND d.created_at < :to_exclusive",
+                {"kind": kind, **base})
+            return {"reached": int(r.get("reached") or 0),
+                    "forbidden": 0, "failed": 0}
+
+    async def one_card(kind: str) -> dict:
+        dl = await delivery_counts(kind)
+
+        if kind == "welcome_chain":
+            # Когорта: onboard_done в окне. Стоп §1 — первое first-событие
+            # (проверка на существование, без времени). Конверсия —
+            # first-value после своего последнего onboard_done.
+            r = await _one(
+                "SELECT COUNT(*) AS entered, "
+                "COUNT(CASE WHEN EXISTS (SELECT 1 FROM events f "
+                "  WHERE f.tg_id=u.tg_id AND f.name IN "
+                "  ('first_ritual','first_question')) THEN 1 END) AS exited, "
+                "COUNT(CASE WHEN EXISTS (SELECT 1 FROM events f "
+                "  WHERE f.tg_id=u.tg_id AND f.name IN "
+                "  ('first_ritual','first_question') "
+                "  AND f.created_at > (SELECT COALESCE(MAX(e2.created_at), "
+                "    '1970-01-01T00:00:00+00:00') FROM events e2 "
+                "    WHERE e2.tg_id=u.tg_id AND e2.name='onboard_done')) "
+                "  THEN 1 END) AS converted "
+                "FROM users u WHERE u.status <> 'deleted' "
+                "AND EXISTS (SELECT 1 FROM events e WHERE e.tg_id=u.tg_id "
+                "AND e.name='onboard_done' AND e.created_at >= :from "
+                "AND e.created_at < :to_exclusive)",
+                base)
+        elif kind == "onboard_nudge":
+            # Когорта: ПЕРВОЕ start-событие в окне. Стоп — онбординг завершён
+            # (onboard_done; контракт §4 — выход по событию, в проде флаг
+            # onboarded=1 и событие атомарны, onboarding.py:779). Конверсия —
+            # onboard_done после первого start.
+            r = await _one(
+                "SELECT COUNT(*) AS entered, "
+                "COUNT(CASE WHEN EXISTS (SELECT 1 FROM events f "
+                "  WHERE f.tg_id=u.tg_id AND f.name='onboard_done') "
+                "  THEN 1 END) AS exited, "
+                "COUNT(CASE WHEN EXISTS (SELECT 1 FROM events f "
+                "  WHERE f.tg_id=u.tg_id AND f.name='onboard_done' "
+                "  AND f.created_at > (SELECT COALESCE(MIN(s.created_at), "
+                "    '1970-01-01T00:00:00+00:00') FROM events s "
+                "    WHERE s.tg_id=u.tg_id AND s.name='start')) "
+                "  THEN 1 END) AS converted "
+                "FROM users u WHERE u.status <> 'deleted' "
+                "AND EXISTS (SELECT 1 FROM events e WHERE e.tg_id=u.tg_id "
+                "AND e.name='start' AND e.created_at >= :from "
+                "AND e.created_at < :to_exclusive) "
+                "AND NOT EXISTS (SELECT 1 FROM events s WHERE s.tg_id=u.tg_id "
+                "AND s.name='start' AND s.created_at < :from)",
+                base)
+        elif kind == "reactivate":
+            # Когорта: R1-доставки в окне — durable-маркер входа в сегмент
+            # (fallback-вариант r1:{месяц}:fallback тоже касание — его пишет
+            # scheduler.py:1095; повторным входом не считаем, у одного юзера
+            # один цикл за месяц). Выход: вернулась (last_seen свежее R1) или
+            # сон перевалил за 28д (ушла из окна отбора).
+            r = await _one(
+                "SELECT COUNT(DISTINCT d.tg_id) AS entered, "
+                "COUNT(DISTINCT CASE WHEN u.last_seen > d.created_at "
+                "  OR u.last_seen < :sleep_max THEN d.tg_id END) AS exited "
+                "FROM deliveries d JOIN users u ON u.tg_id=d.tg_id "
+                "WHERE d.kind='reactivate' AND d.key LIKE 'r1:%' "
+                "AND d.created_at >= :from AND d.created_at < :to_exclusive",
+                {"sleep_max": _ago(28), **base})
+        elif kind == "winback2":
+            # Когорта (контракт §3): sub_until в окне, уже истёк, тёплый
+            # winback видел (expiry_notified=2) — плюс durable-хвост из
+            # deliveries (key = sub_until на момент оффера: продлившие
+            # теряют след в users, но не в журнале). Выход: подписка снова
+            # активна (продлила).
+            r = await _one(
+                "SELECT COUNT(*) AS entered, "
+                "COUNT(CASE WHEN u.sub_until > :now THEN 1 END) AS exited "
+                "FROM (SELECT tg_id FROM users "
+                "  WHERE status <> 'deleted' AND sub_until IS NOT NULL "
+                "  AND sub_until >= :from AND sub_until < :to_exclusive "
+                "  AND sub_until < :now AND expiry_notified=2 "
+                "  UNION "
+                "  SELECT d.tg_id FROM deliveries d WHERE d.kind='winback2' "
+                "  AND d.key >= :from AND d.key < :to_exclusive) s "
+                "JOIN users u ON u.tg_id=s.tg_id",
+                {"now": utcnow(), **base})
+        else:  # post_limit / low_balance — событийные триггеры
+            ev_name = ("limit_reached" if kind == "post_limit"
+                       else "credit_balance_low")
+            # Когорта: триггерные события в окне. Конверсия — покупка после
+            # своего триггера. Выход — 7д-стоп: триггеру больше 7 дней,
+            # покупки так и не было (цепочка отпускает).
+            r = await _one(
+                "SELECT COUNT(*) AS entered, "
+                "COUNT(CASE WHEN e.created_at < :cutoff_7d "
+                "  AND NOT EXISTS (SELECT 1 FROM events p "
+                "    WHERE p.tg_id=e.tg_id AND p.name IN "
+                f"    {_FREE_PAID_CONVERT_EVENTS} "
+                "    AND p.created_at > e.created_at) THEN 1 END) AS exited, "
+                "COUNT(CASE WHEN EXISTS (SELECT 1 FROM events p "
+                "  WHERE p.tg_id=e.tg_id AND p.name IN "
+                f"  {_FREE_PAID_CONVERT_EVENTS} "
+                "  AND p.created_at > e.created_at) THEN 1 END) AS converted "
+                "FROM events e WHERE e.name=:ev AND e.tg_id IS NOT NULL "
+                "AND e.created_at >= :from AND e.created_at < :to_exclusive",
+                {"ev": ev_name, "cutoff_7d": _ago(7), **base})
+
+        entered = int(r.get("entered") or 0)
+        exited = int(r.get("exited") or 0)
+        converted_events = r.get("converted")
+        converted = (int(converted_events)
+                     if converted_events is not None else None)
+
+        # ── конверсия по kind ──
+        if kind == "reactivate":
+            converted = None          # G-1
+        elif kind == "winback2":
+            conv = await _one(
+                "SELECT COUNT(DISTINCT e.tg_id) AS n FROM events e "
+                "WHERE e.name='promo_redeemed' AND e.tg_id IS NOT NULL "
+                "AND e.props_json::jsonb->>'batch' LIKE 'winback_%' "
+                "AND e.created_at >= :from AND e.created_at < :to_exclusive",
+                base)
+            converted = int(conv.get("n") or 0)
+        elif kind in ("welcome_chain", "onboard_nudge",
+                      "post_limit", "low_balance"):
+            pass                       # уже посчитано в когортном запросе
+
+        gap = {"reactivate": "G-1", "winback2": "G-2"}.get(kind)
+        rate = (round(converted / entered, 2)
+                if (converted is not None and entered >= 5) else None)
+        card = {"key": kind,
+                "entered": entered,
+                "reached": dl["reached"],
+                "converted": converted,
+                "conversion_rate": rate,
+                "stops": {"forbidden": dl["forbidden"],
+                          "segment_exit": exited,
+                          "other": dl["failed"]}}
+        if gap:
+            if gap == "G-1":
+                card["converted"] = None
+                card["conversion_rate"] = None
+            card["data_status"] = "no_data"
+            card["no_data_reason"] = gap
+        else:
+            card["data_status"] = "ok"
+        return card
+
+    cards = [await one_card(k) for k in keys]
+    return {"period": {"from": date_from, "to": date_to},
+            "scenarios": cards}

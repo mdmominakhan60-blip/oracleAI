@@ -23,6 +23,7 @@ from .ltv_constants import (
     RULE_TO_PLAYBOOK,
     RISK_EXPIRING, RISK_LIMIT_HITS,
     RISK_RECENT_REFUND, RISK_SLEEPING,
+    SYNTHETIC_TG_ID_RANGE_HIGH, SYNTHETIC_TG_ID_RANGE_LOW,
     SYNTHETIC_TG_IDS, TIER_A, TIER_B, TIER_C, TIER_D, TIER_NONE,
     TIERS_ORDER,
 )
@@ -36,7 +37,9 @@ def _now() -> datetime:
 
 
 def _is_synthetic(tg_id: int) -> bool:
-    return tg_id in SYNTHETIC_TG_IDS
+    if tg_id in SYNTHETIC_TG_IDS:
+        return True
+    return SYNTHETIC_TG_ID_RANGE_LOW <= tg_id <= SYNTHETIC_TG_ID_RANGE_HIGH
 
 
 def _days_since(iso: str | None, ref: datetime | None = None) -> int | None:
@@ -357,7 +360,7 @@ async def attention_queue(db, limit: int = 50) -> dict:
 async def _is_synthetic_tg_ids_only(db) -> bool:
     """True если в users только синтетика (деградация нулевой базы)."""
     cur = await db.execute(
-        "SELECT COUNT(*) AS n FROM users WHERE tg_id NOT IN (10001, 10002)")
+        "SELECT COUNT(*) AS n FROM users WHERE tg_id NOT IN (10001, 10002) AND tg_id NOT BETWEEN 999000000 AND 999999999")
     return int((await cur.fetchone())["n"] or 0) == 0
 
 
@@ -375,7 +378,7 @@ async def _q1_refund(db, now: datetime) -> set[int]:
         "SELECT DISTINCT tg_id FROM events "
         "WHERE name IN ('refund_requested', 'refund_completed') "
         "AND tg_id IS NOT NULL AND created_at>=:since "
-        "AND tg_id NOT IN (10001, 10002)",
+        "AND tg_id NOT IN (10001, 10002) AND tg_id NOT BETWEEN 999000000 AND 999999999",
         {"since": since})
     return {r["tg_id"] for r in await cur.fetchall()}
 
@@ -403,7 +406,7 @@ async def _q4_limit_hits(db, now: datetime) -> set[int]:
     cur = await db.execute(
         "SELECT tg_id, COUNT(*) AS n FROM events "
         "WHERE name='limit_reached' AND tg_id IS NOT NULL "
-        "AND created_at>=:since AND tg_id NOT IN (10001, 10002) "
+        "AND created_at>=:since AND tg_id NOT IN (10001, 10002) AND tg_id NOT BETWEEN 999000000 AND 999999999 "
         "GROUP BY tg_id HAVING COUNT(*)>=3",
         {"since": since})
     return {r["tg_id"] for r in await cur.fetchall()}
@@ -417,7 +420,7 @@ async def _q5_delivery_failed(db, now: datetime) -> set[int]:
         "WHERE status IN ('failed', 'forbidden') "
         "AND kind != 'winback2_code' "
         "AND tg_id != 0 "
-        "AND tg_id NOT IN (10001, 10002) "
+        "AND tg_id NOT IN (10001, 10002) AND tg_id NOT BETWEEN 999000000 AND 999999999 "
         "AND created_at>=:since",
         {"since": since})
     return {r["tg_id"] for r in await cur.fetchall()}
@@ -443,7 +446,7 @@ async def _q7_return_gap(db, now: datetime) -> set[int]:
         "SELECT DISTINCT tg_id FROM events cur "
         "WHERE cur.name='miniapp_open' AND cur.tg_id IS NOT NULL "
         "AND cur.created_at>=:since_window "
-        "AND cur.tg_id NOT IN (10001, 10002) "
+        "AND cur.tg_id NOT IN (10001, 10002) AND tg_id NOT BETWEEN 999000000 AND 999999999 "
         "AND NOT EXISTS ("
         "  SELECT 1 FROM events mid "
         "  WHERE mid.tg_id=cur.tg_id AND mid.name='miniapp_open' "
@@ -464,9 +467,9 @@ async def _q7_return_gap(db, now: datetime) -> set[int]:
 async def _forbidden_clients(db) -> set[int]:
     """Клиентки, чей последний статус — forbidden (канал закрыт)."""
     cur = await db.execute("""
-        SELECT DISTINCT tg_id FROM deliveries d
+        SELECT DISTINCT d.tg_id FROM deliveries d
         WHERE d.kind != 'winback2_code' AND d.tg_id != 0
-        AND d.tg_id NOT IN (10001, 10002)
+        AND d.tg_id NOT IN (10001, 10002) AND d.tg_id NOT BETWEEN 999000000 AND 999999999
         AND d.status = 'forbidden'
         AND NOT EXISTS (
             SELECT 1 FROM deliveries d2
@@ -484,7 +487,7 @@ async def _forbidden_clients(db) -> set[int]:
 async def _tier_a_ids(db) -> set[int]:
     cur = await db.execute(
         "SELECT tg_id FROM users WHERE ltv_stars > 0 "
-        "AND tg_id NOT IN (10001, 10002)")
+        "AND tg_id NOT IN (10001, 10002) AND tg_id NOT BETWEEN 999000000 AND 999999999")
     rows = await cur.fetchall()
     candidates = {r["tg_id"] for r in rows}
     if not candidates:
@@ -501,14 +504,14 @@ async def _tier_a_ids(db) -> set[int]:
 async def _tier_a_b_ids(db) -> set[int]:
     cur = await db.execute(
         "SELECT tg_id FROM users WHERE ltv_stars > 0 "
-        "AND tg_id NOT IN (10001, 10002)")
+        "AND tg_id NOT IN (10001, 10002) AND tg_id NOT BETWEEN 999000000 AND 999999999")
     return {r["tg_id"] for r in await cur.fetchall()}
 
 
 async def _tier_d_ids(db) -> set[int]:
     cur = await db.execute(
         "SELECT tg_id, created_at FROM users WHERE onboarded=0 "
-        "AND tg_id NOT IN (10001, 10002)")
+        "AND tg_id NOT IN (10001, 10002) AND tg_id NOT BETWEEN 999000000 AND 999999999")
     now = _now()
     result = set()
     for r in await cur.fetchall():
@@ -531,7 +534,7 @@ async def _expired_5d_ids(db, now: datetime) -> set[int]:
     cur = await db.execute(
         "SELECT tg_id FROM users "
         "WHERE sub_until IS NOT NULL AND sub_until <= :cutoff "
-        "AND tg_id NOT IN (10001, 10002)",
+        "AND tg_id NOT IN (10001, 10002) AND tg_id NOT BETWEEN 999000000 AND 999999999",
         {"cutoff": cutoff})
     return {r["tg_id"] for r in await cur.fetchall()}
 
@@ -541,7 +544,7 @@ async def _wb2_sent_7d_ago_ids(db, now: datetime) -> set[int]:
     cur = await db.execute(
         "SELECT DISTINCT tg_id FROM deliveries "
         "WHERE kind='winback2' AND created_at<=:cutoff "
-        "AND tg_id NOT IN (10001, 10002)",
+        "AND tg_id NOT IN (10001, 10002) AND tg_id NOT BETWEEN 999000000 AND 999999999",
         {"cutoff": cutoff})
     return {r["tg_id"] for r in await cur.fetchall()}
 
