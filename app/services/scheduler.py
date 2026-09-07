@@ -30,6 +30,7 @@ from ..data.session import transaction, utcnow
 from ..core import agent as agent_core
 from ..core import astro
 from ..repo import comms, content, feedback as feedback_repo, growth, users
+from ..repo.billing import complete_refund_revoke, pending_refund_revokes
 from . import analytics, broadcast, horoscopes, payment_monitor, practices as practices_svc
 
 log = logging.getLogger("oracle.scheduler")
@@ -830,6 +831,72 @@ REACTIVATE_AUDIENCE_MAX_SLEEP = timedelta(days=28)
 REACTIVATE_LAST_RUN_KEY = "crm.reactivate_last_run"
 
 
+#: Ключ setting для суточного пробега отзыва refund/chargeback (BUS-376).
+_REFUND_REVOKE_LAST_RUN_KEY = "billing.refund_revoke_last_run"
+
+
+async def _revoke_audience(db) -> list[dict]:
+    """Paid orders queued for entitlement revoke by full refund/chargeback.
+
+    Returns the most recent queued order per user. The sweep processes
+    each user once per day.
+    """
+    rows = []
+    cur = await db.execute(
+        "SELECT o.tg_id, o.id AS order_id, o.sku, o.paid_at, o.meta_json, "
+        "u.name, u.lang, u.sub_until "
+        "FROM orders o "
+        "JOIN users u ON u.tg_id=o.tg_id "
+        "WHERE o.status='refund_pending' "
+        "AND o.tg_id IS NOT NULL "
+        "AND o.meta_json LIKE :flag "
+        "AND o.paid_at IS NOT NULL "
+        "ORDER BY o.paid_at DESC",
+        {"flag": '%"revoke_pending": true%'})
+    seen: set[int] = set()
+    for row in await cur.fetchall():
+        tg_id = int(row["tg_id"])
+        if tg_id in seen:
+            continue
+        seen.add(tg_id)
+        rows.append(dict(row))
+    return rows
+
+
+async def _revoke_entitlement(bot, db, user: dict, now_utc: datetime) -> None:
+    """Revoke subscription for a user queued by full refund/chargeback.
+
+    Fail-closed: only runs when the order was explicitly flagged
+    (meta_json.revoke_pending=True). Idempotent: calling again after
+    completion is a no-op because the order is already 'refunded'.
+    """
+    tg_id = int(user["tg_id"])
+    lang = _user_lang(user)
+    name = user["name"] or ("dear one" if lang == "en" else "друг")
+    order_id = user["order_id"]
+
+    completed = await complete_refund_revoke(db, order_id, tg_id=tg_id)
+    if not completed:
+        return
+    await analytics.track(db, analytics.E_REFUND_COMPLETED, tg_id,
+                          props={"order_id": order_id,
+                                 "plan": user.get("sku"),
+                                 "reason": "provider_refund",
+                                 "provider": "paddle"},
+                          surface="web")
+    template = await content.get_text(
+        db, "copy", "refund_revoke",
+        ("🌙 {name}, your subscription has been closed following a full "
+         "refund. I have kept everything you shared — return whenever you "
+         "are ready." if lang == "en" else
+         "🌙 {name}, подписка закрыта по полному возврату. Я сохранила "
+         "всё, что ты мне рассказывала — возвращайся, когда будешь готова."),
+        lang=lang)
+    text = template.replace("{name}", name)
+    await _send_once(bot, db, tg_id, "refund_revoke",
+                     user.get("sub_until") or str(order_id), text)
+
+
 async def _reactivate_audience(db, now_utc: datetime) -> list:
     """Спящие с push, вошедшие в спячку 14-28 день назад.
 
@@ -1550,6 +1617,16 @@ async def tick(bot, db) -> None:
         except Exception as e:  # noqa: BLE001
             log.warning("ошибка free→paid low_balance: %s", type(e).__name__)
         await asyncio.sleep(BATCH_PAUSE)
+
+    # Суточный пробег отзыва refund/chargeback (BUS-376): гасим подписку
+    # у пользователей с pending-отзывом от полного возврата Paddle.
+    if await _daily_sweep_due(db, _REFUND_REVOKE_LAST_RUN_KEY, now_utc):
+        for user in await _revoke_audience(db):
+            try:
+                await _revoke_entitlement(bot, db, user, now_utc)
+            except Exception as e:  # noqa: BLE001
+                log.warning("ошибка refund-revoke: %s", type(e).__name__)
+            await asyncio.sleep(BATCH_PAUSE)
 
     # Суточные CRM-цепочки (BUS-258): welcome-дожим вне почасовых сценариев
     try:

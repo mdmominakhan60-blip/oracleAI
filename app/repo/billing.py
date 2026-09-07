@@ -164,6 +164,95 @@ async def order_by_payload(db, payload: str):
     return await cur.fetchone()
 
 
+async def complete_refund_revoke(db, order_id: int, *, tg_id: int) -> bool:
+    """Finalize a previously queued refund-revoke (called by the daily sweep).
+
+    Marks the order as refunded, updates payments to refunded, and resets
+    the user to free tier (sub_until=NULL, sub_level='free').
+    Idempotent: safe to call multiple times for the same order.
+    Returns True if the row was found and updated.
+    """
+    import json
+    async with transaction(db):
+        cur = await db.execute(
+            "SELECT * FROM orders WHERE id=:id AND status='refund_pending'",
+            {"id": order_id})
+        order = await cur.fetchone()
+        if not order:
+            return False
+        meta = {}
+        try:
+            meta = json.loads(order["meta_json"] or "{}")
+        except (TypeError, ValueError):
+            pass
+        if not meta.get("revoke_pending"):
+            return False
+        await db.execute(
+            "UPDATE orders SET status='refunded' WHERE id=:id",
+            {"id": order_id})
+        await db.execute(
+            "UPDATE payments SET status='refunded' WHERE order_id=:order_id "
+            "AND status='succeeded'",
+            {"order_id": order_id})
+        await db.execute(
+            "UPDATE users SET sub_until=NULL, sub_level='free' "
+            "WHERE tg_id=:tg_id",
+            {"tg_id": tg_id})
+    return True
+
+
+async def pending_refund_revokes(db) -> list[dict]:
+    """Paid orders queued for entitlement revoke by the daily sweep.
+
+    Returns orders whose adjustment webhook set the revoke_pending flag
+    in meta_json. The sweep processes them one order at a time.
+    """
+    rows = []
+    cur = await db.execute(
+        "SELECT o.* FROM orders o "
+        "WHERE o.status='refund_pending' "
+        "AND o.meta_json IS NOT NULL "
+        "AND o.meta_json LIKE :flag",
+        {"flag": '%"revoke_pending": true%'})
+    for row in await cur.fetchall():
+        try:
+            meta = json.loads(row["meta_json"])
+        except (TypeError, ValueError):
+            continue
+        if meta.get("revoke_pending"):
+            rows.append(dict(row))
+    return rows
+
+
+async def queue_refund_revoke(db, order_id: int, *, source: str = "paddle") -> bool:
+    """Queue a paid order for entitlement revoke during the next daily sweep.
+
+    Sets orders.status='refund_pending' and meta_json.revoke_pending=1.
+    Atomic: only transitions from 'paid'; idempotent on duplicate calls.
+    Returns True if the row was found and updated.
+    """
+    async with transaction(db):
+        cur = await db.execute(
+            "SELECT * FROM orders WHERE id=:id AND status='paid'",
+            {"id": order_id})
+        order = await cur.fetchone()
+        if not order:
+            return False
+        try:
+            meta = json.loads(order["meta_json"] or "{}")
+        except (TypeError, ValueError):
+            meta = {}
+        if meta.get("revoke_pending"):
+            return True
+        meta["revoke_pending"] = True
+        meta["refund_source"] = source
+        cur = await db.execute(
+            "UPDATE orders SET status='refund_pending', meta_json=:meta_json "
+            "WHERE id=:id",
+            {"meta_json": json.dumps(meta, ensure_ascii=False), "id": order_id})
+        return bool(cur.rowcount)
+
+
 async def mark_order_paid(db, payload: str, *, charge_id: str | None = None,
                           amount_stars: int | None = None,
                           provider: str = "telegram_stars",

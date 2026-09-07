@@ -139,6 +139,48 @@ def _custom_data(body: dict) -> dict:
     return custom if isinstance(custom, dict) else {}
 
 
+#: Paddle adjustment event types that can affect entitlement.
+#: transaction.completed opens access; refund/chargeback close it.
+#: Everything else (subscription.paused, payment.dispute.created without action,
+#: invoice.paid без transaction_id) — journal only.
+_ADJUSTMENT_REVOKE_KINDS = {
+    "adjustment.created",
+    "adjustment.updated",
+}
+
+
+def _adjustment_refund_total(data: dict) -> tuple[float, str | None]:
+    """Extract refund amount and action from a Paddle adjustment event payload.
+
+    Returns (total_refunded_usd, action). Positive total + refund/chargeback
+    action → full revocation candidate. Partial or zero total → journal only.
+    If we cannot confidently parse the totals, we return (0.0, None) to
+    trigger the fail-closed path.
+    """
+    action = str(data.get("action") or "").strip().lower()
+    totals = data.get("totals") or data.get("payout_totals") or {}
+    if not isinstance(totals, dict):
+        totals = {}
+    total_str = str(totals.get("gross") or totals.get("net")
+                     or totals.get("subtotal") or totals.get("amount") or "0")
+    try:
+        total = float(total_str)
+    except (TypeError, ValueError):
+        return 0.0, None
+    return total, action
+
+
+def _is_full_refund_or_chargeback(data: dict) -> bool:
+    """True only when the event is an explicit full refund/chargeback.
+
+    Fail-closed: ambiguous payloads → False (we do NOT revoke).
+    """
+    total, action = _adjustment_refund_total(data)
+    if total <= 0 or not action:
+        return False
+    return action in {"refund", "chargeback", "chargeback_won"}
+
+
 @router.post("/paddle")
 async def paddle(request: Request, db=Depends(get_db),
                  paddle_signature: str | None = Header(default=None,
@@ -172,6 +214,46 @@ async def paddle(request: Request, db=Depends(get_db),
     # Do not claim the event before the entitlement transaction. If billing
     # fails, Paddle must be able to retry rather than seeing a false duplicate.
     if kind not in GRANTING_EVENTS:
+        # Adjustment events (refund/chargeback) for already-paid orders:
+        # classify full vs partial and queue revocation for the daily sweep.
+        if kind in _ADJUSTMENT_REVOKE_KINDS:
+            data = body.get("data") or {}
+            if not isinstance(data, dict):
+                data = {}
+            if _is_full_refund_or_chargeback(data):
+                original_txn = str(data.get("original_transaction_id") or "")
+                if not original_txn:
+                    await _failure(db, "paddle", "adjustment_no_original_txn")
+                    return {"ok": True, "ignored": "adjustment_no_original_txn"}
+                cur = await db.execute(
+                    "SELECT o.*, p.id AS payment_id FROM orders o "
+                    "JOIN payments p ON p.order_id=o.id AND p.provider='paddle' "
+                    "AND p.status='succeeded' "
+                    "WHERE o.status='paid' "
+                    "AND (o.meta_json LIKE :txn_pattern "
+                    "OR o.payload = :payload) "
+                    "LIMIT 1",
+                    {"txn_pattern": f"%\"paddle_transaction_id\": \"{original_txn}\"%",
+                     "payload": str(data.get("custom_data") or "")[:120]})
+                paid_order = await cur.fetchone()
+                if paid_order:
+                    queued = await billing_repo.queue_refund_revoke(
+                        db, paid_order["id"], source="paddle")
+                    await analytics.track(
+                        db, analytics.E_REFUND_COMPLETED, paid_order["tg_id"],
+                        props={"order_id": paid_order["id"],
+                               "plan": paid_order["sku"],
+                               "reason": "provider_refund",
+                               "provider": "paddle"},
+                        surface="web")
+                    log.info("refund-revoke queued order=%s tg_id=%s queued=%s",
+                             paid_order["id"], paid_order["tg_id"], queued)
+                else:
+                    log.warning("adjustment event: paid order not found txn=%s",
+                                original_txn)
+            else:
+                log.info("partial/zero adjustment journaled, no revocation: kind=%s",
+                         kind)
         duplicate = await _already_seen(
             db, event_id, "paddle", kind, raw.decode("utf-8", "ignore"))
         return {"ok": True, "duplicate": True} if duplicate else {"ok": True, "ignored": kind}
