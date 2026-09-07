@@ -14,6 +14,7 @@ import re
 from datetime import date, datetime, timedelta, timezone
 
 from ..data.session import transaction, utcnow
+from .ltv_constants import not_synthetic_tg_sql
 
 # Ключевые события воронки — фиксированные имена, чтобы дашборд не разъезжался
 # с кодом при опечатке.
@@ -463,13 +464,16 @@ async def overview(db) -> dict:
             db, "SELECT COUNT(*) FROM users WHERE sub_until>:now",
             {"now": utcnow()}),
         "dau": await _scalar(
-            db, "SELECT COUNT(DISTINCT tg_id) FROM events WHERE day>=:since",
+            db, "SELECT COUNT(DISTINCT tg_id) FROM events WHERE day>=:since "
+                f"AND {not_synthetic_tg_sql('events')}",
             {"since": _ago_day(1)}),
         "wau": await _scalar(
-            db, "SELECT COUNT(DISTINCT tg_id) FROM events WHERE day>=:since",
+            db, "SELECT COUNT(DISTINCT tg_id) FROM events WHERE day>=:since "
+                f"AND {not_synthetic_tg_sql('events')}",
             {"since": _ago_day(7)}),
         "mau": await _scalar(
-            db, "SELECT COUNT(DISTINCT tg_id) FROM events WHERE day>=:since",
+            db, "SELECT COUNT(DISTINCT tg_id) FROM events WHERE day>=:since "
+                f"AND {not_synthetic_tg_sql('events')}",
             {"since": _ago_day(30)}),
         "questions_today": await _scalar(
             db, "SELECT COUNT(*) FROM messages WHERE is_question=1 "
@@ -500,9 +504,11 @@ async def overview(db) -> dict:
 async def activation_funnel(db, days: int = 30) -> dict:
     """Privacy-safe Mini App activation/return funnel by first-open cohort."""
     since = _ago(days)
+    # Синтетика (smoke 999xxx, legacy 10001/10002) не считается трафиком (BUS-387).
     cohort_sql = (
         "SELECT DISTINCT tg_id FROM events "
-        "WHERE name=:cohort_name AND tg_id IS NOT NULL AND created_at>=:since"
+        "WHERE name=:cohort_name AND created_at>=:since "
+        f"AND {not_synthetic_tg_sql('events')}"
     )
     cohort = await _scalar(
         db, f"SELECT COUNT(*) FROM ({cohort_sql}) AS cohort",
@@ -538,25 +544,32 @@ async def funnel(db, days: int = 30) -> list[dict]:
     прошлого года завышали бы конверсию свежего трафика.
     """
     since = _ago(days)
+    # Синтетика отсечена на входе в users (BUS-387): зайдёт в users — не
+    # считается ни «пришла», ни любым последующим шагом.
     total = await _scalar(
-        db, "SELECT COUNT(*) FROM users WHERE created_at>=:since",
+        db, "SELECT COUNT(*) FROM users WHERE created_at>=:since "
+            f"AND {not_synthetic_tg_sql('users')}",
         {"since": since})
     onboarded = await _scalar(
-        db, "SELECT COUNT(*) FROM users WHERE created_at>=:since AND onboarded=1",
+        db, "SELECT COUNT(*) FROM users WHERE created_at>=:since AND onboarded=1 "
+            f"AND {not_synthetic_tg_sql('users')}",
         {"since": since})
     asked = await _scalar(
         db, "SELECT COUNT(DISTINCT m.tg_id) FROM messages m JOIN users u "
-            "ON u.tg_id=m.tg_id WHERE u.created_at>=:since AND m.is_question=1",
+            "ON u.tg_id=m.tg_id WHERE u.created_at>=:since AND m.is_question=1 "
+            f"AND {not_synthetic_tg_sql('u')}",
         {"since": since})
     retained = await _scalar(
         db, "SELECT COUNT(*) FROM (SELECT m.tg_id FROM messages m JOIN users u "
             "ON u.tg_id=m.tg_id WHERE u.created_at>=:since AND m.is_question=1 "
+            f"AND {not_synthetic_tg_sql('u')} "
             "GROUP BY m.tg_id HAVING COUNT(DISTINCT substr(m.created_at,1,10)) >= 2) "
             "AS retained_users",
         {"since": since})
     paid = await _scalar(
         db, "SELECT COUNT(DISTINCT p.tg_id) FROM payments p JOIN users u "
             "ON u.tg_id=p.tg_id WHERE u.created_at>=:since "
+            f"AND {not_synthetic_tg_sql('u')} "
             "AND p.status='succeeded'", {"since": since})
 
     steps = [("Пришли", total), ("Прошли знакомство", onboarded),
@@ -598,6 +611,7 @@ async def timeseries(db, days: int = 30) -> list[dict]:
         {"start": start})
     active = await by_day(
         "SELECT day d, COUNT(DISTINCT tg_id) FROM events WHERE day>=:start "
+        f"AND {not_synthetic_tg_sql('events')} "
         "GROUP BY day",
         {"start": start})
     promos = await by_day(
@@ -665,7 +679,9 @@ async def surface_split(db, days: int = 30) -> list[dict]:
     cur = await db.execute(
         "SELECT COALESCE(surface,'bot') surface, COUNT(*) n, "
         "COUNT(DISTINCT tg_id) users "
-        "FROM events WHERE created_at>=:since GROUP BY surface ORDER BY n DESC",
+        "FROM events WHERE created_at>=:since "
+        f"AND {not_synthetic_tg_sql('events')} "
+        "GROUP BY surface ORDER BY n DESC",
         {"since": _ago(days)})
     return [dict(r) for r in await cur.fetchall()]
 
@@ -1368,6 +1384,7 @@ async def owner_segments(db, *, by: str, date_from: str | None = None,
             "COUNT(DISTINCT CASE WHEN u.ltv_stars > 0 THEN e.tg_id END) AS payers "
             "FROM events e LEFT JOIN users u ON u.tg_id = e.tg_id "
             f"WHERE e.tg_id IS NOT NULL {window_sql}"
+            f"AND {not_synthetic_tg_sql('e')} "
             "GROUP BY COALESCE(e.surface, 'bot') ORDER BY events DESC",
             params)
         rows = [dict(r) for r in await cur.fetchall()]

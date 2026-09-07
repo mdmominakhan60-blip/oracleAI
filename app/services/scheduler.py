@@ -30,6 +30,7 @@ from ..data.session import transaction, utcnow
 from ..core import agent as agent_core
 from ..core import astro
 from ..repo import comms, content, feedback as feedback_repo, growth, users
+from ..repo.ltv_constants import not_synthetic_tg_sql
 from ..repo.billing import complete_refund_revoke, pending_refund_revokes
 from . import analytics, broadcast, horoscopes, payment_monitor, practices as practices_svc
 
@@ -584,6 +585,7 @@ async def _welcome_top_first_step(db, lang: str) -> str:
     cur = await db.execute(
         "SELECT name, COUNT(*) c FROM events "
         "WHERE name IN ('first_ritual','first_question') AND created_at>=:since "
+        f"AND {not_synthetic_tg_sql('events')} "
         "GROUP BY name ORDER BY c DESC LIMIT 1",
         {"since": since})
     row = await cur.fetchone()
@@ -598,6 +600,8 @@ async def _welcome_audience(db, now_utc: datetime) -> list:
     """Onboarded без first-ценности, чьим onboard_done 24+ часа.
 
     morning_push=0 и статус != active отсекаются самим отбором (стопы §1).
+    Анти-тестовый фильтр синтетики (BUS-387) встроен в курсор: smoke/tg_id
+    в диапазоне 999xxx и legacy 10001/10002 никогда не получают касаний.
     Курсор по tg_id без внешнего лимита: аудитория суточная и малая
     (вошли за сутки минус совершившие первый шаг).
     """
@@ -606,8 +610,9 @@ async def _welcome_audience(db, now_utc: datetime) -> list:
     last_id = 0
     while True:
         cur = await db.execute(
-            "SELECT * FROM users WHERE onboarded=1 AND status='active' "
+            f"SELECT * FROM users WHERE onboarded=1 AND status='active' "
             "AND morning_push=1 AND tg_id>:last_id "
+            f"AND {not_synthetic_tg_sql('users')} "
             "AND NOT EXISTS (SELECT 1 FROM events e "
             "  WHERE e.tg_id=users.tg_id AND e.name IN ('first_ritual','first_question')) "
             "AND EXISTS (SELECT 1 FROM events e "

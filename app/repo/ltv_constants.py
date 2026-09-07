@@ -99,6 +99,24 @@ RISK_RECENT_REFUND = "recent_refund"
 
 RISK_FLAGS_ORDER = [RISK_SLEEPING, RISK_EXPIRING, RISK_LIMIT_HITS, RISK_RECENT_REFUND]
 
-# ──────────────────────────── синтетика (BUS-183) ─────────────────────────────
+# ──────────────────────────── синтетика (BUS-183, BUS-387) ─────────────────────
 
 SYNTHETIC_TG_IDS = {10001, 10002}
+
+# Диапазон smoke/tg_id-синтетики (BUS-315): scripts/* используют 999000xxx,
+# чтобы ни одна воронка/сегмент не считала их продуктовым трафиком.
+SYNTHETIC_TG_ID_RANGE_LOW = 999_000_000
+SYNTHETIC_TG_ID_RANGE_HIGH = 999_999_999
+
+
+def not_synthetic_tg_sql(alias: str = "e") -> str:
+    """SQL-фрагмент для WHERE: синтетика 999xxx и legacy 10001/10002 отсечена.
+
+    tg_id IS NULL оставляем — web-события анонимны и легитимны.
+    """
+    legacy = ", ".join(str(i) for i in sorted(SYNTHETIC_TG_IDS))
+    return (
+        f"({alias}.tg_id IS NULL OR {alias}.tg_id < {SYNTHETIC_TG_ID_RANGE_LOW} "
+        f"OR {alias}.tg_id > {SYNTHETIC_TG_ID_RANGE_HIGH}) "
+        f"AND {alias}.tg_id NOT IN ({legacy})"
+    )

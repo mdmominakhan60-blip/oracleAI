@@ -23,7 +23,7 @@ from app.services.jobs import enqueue_chat
 async def main() -> None:
     db = await connect(seed=False)
     try:
-        user = await users.ensure(db, 990001, "Celery Test", "celery_test")
+        user = await users.ensure(db, 999000001, "Celery Test", "celery_test")
         job = await enqueue_chat(db, user, "Celery offline smoke", agent="oracle")
         print("enqueued", job)
         for _ in range(60):

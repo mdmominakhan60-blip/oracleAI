@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 from ..config import settings
 from ..data.session import transaction, utcnow
+from .ltv_constants import not_synthetic_tg_sql
 
 DEFAULT_TZ = "Europe/Moscow"
 
@@ -333,8 +334,16 @@ def _segment_params() -> dict:
 
 
 def _segment_sql(segment: str) -> tuple[str, dict]:
-    """Разворачивает имя сегмента в SQL-условие с именованными параметрами."""
+    """Разворачивает имя сегмента в SQL-условие с именованными параметрами.
+
+    Анти-тестовый фильтр (BUS-387) встроен на этом уровне: все потребители
+    (segment_ids/segment_count/search/count и внешние из services/analytics)
+    получают сегменты без синтетики 999xxx/10001/10002.
+    """
     where = SEGMENTS.get(segment or "all", SEGMENTS["all"])
+    # users не алиасится — ссылка по имени таблицы, фрагмент валиден для
+    # любого запроса FROM users (включая JOIN в services.analytics).
+    where = f"(({where}) AND {not_synthetic_tg_sql('users')})"
     values = _segment_params()
     # Отбираем только те параметры, которые реально используются в WHERE-условии
     params = {name: value for name, value in values.items() if f":{name}" in where}
