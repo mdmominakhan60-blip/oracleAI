@@ -63,13 +63,12 @@ def test_heavy_practices_have_referral():
             f"{code}: нет направления к специалисту"
 
 
-def test_no_mantra_category_left():
-    """Мантры демонтированы (BUS-391 W1/Э1): ни кодов, ни категории."""
+def test_catalog_wave1_removal():
+    """BUS-391 W1/Э1: демонтированная категория отсутствует; остаются money/love/energy."""
+    assert set(catalog.CATEGORIES) == {"money", "love", "energy"}
+    assert len(catalog.PRACTICES) == 8
     for item in catalog.PRACTICES.values():
-        assert item["category"] != "mantra"
-        assert item["title"].lower().find("мант") == -1
-    assert "mantra" not in catalog.CATEGORIES
-    assert not [c for c in catalog.PRACTICES if "мант" in c.lower() or "mantra" in c.lower()]
+        assert item["category"] in catalog.CATEGORIES
 
 
 # ──────────────────────────── прогресс клиентки ───────────────────────────────
