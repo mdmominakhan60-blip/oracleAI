@@ -59,6 +59,25 @@ def _vision_payload() -> str:
     }, ensure_ascii=False)
 
 
+# Метрики фикстуры palm_hand.jpg (contrast 18.6, edge_mean 4.5) ниже прод-гейта
+# в palm.production.canonicalize — тот честно требует пересъёмку. Интеграционные
+# тесты проверяют backend contract, а не capture-гейт (у него отдельные unit-тесты),
+# поэтому здесь precheck подменяется на «usable».
+_USABLE_PRECHECK = {
+    "version": "palm-precheck-v1", "status": "usable", "score": 0.82,
+    "issues": [], "width": 2592, "height": 1728, "aspect": 1.5,
+    "brightness": 120.0, "contrast": 48.0, "edge_mean": 30.0,
+    "hand_detection": "not_attempted", "line_segmentation": "not_attempted",
+}
+
+
+def _accept_fixture_quality(monkeypatch) -> None:
+    monkeypatch.setattr(palm_core.production, "cached_precheck",
+                        lambda image: dict(_USABLE_PRECHECK))
+    monkeypatch.setattr(palm_core.palm_vision, "analyze",
+                        lambda image: dict(_USABLE_PRECHECK))
+
+
 @pytest.mark.asyncio
 async def test_real_jpeg_upload_runs_palm_pipeline_and_agent_tools(client, db, user, monkeypatch):
     """Настоящий JPEG проходит HTTP → Pillow → vision boundary → SQLite → tool executor."""
@@ -79,6 +98,7 @@ async def test_real_jpeg_upload_runs_palm_pipeline_and_agent_tools(client, db, u
         return _vision_payload()
 
     monkeypatch.setattr(palm_core.llm, "complete_vision", fake_complete_vision)
+    _accept_fixture_quality(monkeypatch)
 
     before = await client.get("/api/palm", params={"dev_user": user["tg_id"]})
     assert before.status_code == 200
@@ -96,11 +116,16 @@ async def test_real_jpeg_upload_runs_palm_pipeline_and_agent_tools(client, db, u
     assert result["status"] == "complete"
     assert result["source"] == "vision_llm_observation"
     assert result["image_meta"]["raw_stored"] is False
-    assert result["image_meta"]["width"] == 2592
-    assert result["image_meta"]["height"] == 1728
+    # Фикстура 2592×1728 (ландшафт): canonicalize жмёт МАКСИМАЛЬНУЮ сторону до
+    # CANONICAL_MAX_SIDE, поэтому W=1280, H=round(1280*1728/2592)=853.
+    assert result["image_meta"]["width"] == palm_core.production.CANONICAL_MAX_SIDE
+    assert result["image_meta"]["height"] == palm_core.production.CANONICAL_MAX_SIDE * 1728 // 2592
     assert {row["topic"] for row in result["observations"]} == {"heart_line", "head_line"}
-    assert seen["normalized_size"] == (2592, 1728)
-    assert "видимыми признаками" in str(seen["system"])
+    assert seen["normalized_size"] == (
+        palm_core.production.CANONICAL_MAX_SIDE,
+        palm_core.production.CANONICAL_MAX_SIDE * 1728 // 2592)
+    # system = Mira SYSTEM.md + shared/natal context + palm evidence-контракт.
+    assert "visual evidence" in str(seen["system"])
     assert "[SHARED_CONTEXT]" in str(seen["system"])
     assert "[NATAL_CONTEXT_JSON]" in str(seen["system"])
     assert "DETERMINISTIC CAPTURE PRECHECK" in str(seen["user_text"])
@@ -121,8 +146,11 @@ async def test_real_jpeg_upload_runs_palm_pipeline_and_agent_tools(client, db, u
     stored = await cursor.fetchone()
     assert stored["id"] == reading_id
     assert stored["tg_id"] == user["tg_id"]
-    assert stored["image_sha256"] == hashlib.sha256(image).hexdigest()
-    assert stored["image_size"] == len(image)
+    # В БД хранится хеш/размер канонического кадра (production gate, privacy:
+    # исходник не сохраняется); хеш загруженного исходника — в image_contract.
+    assert stored["image_sha256"] == result["image_contract"]["normalized_sha256"]
+    assert stored["image_sha256"] != result["image_contract"]["raw_sha256"]
+    assert stored["image_size"] == result["image_contract"]["normalized_size"]
     assert "heart_line" in stored["analysis_json"]
     assert "image_data" not in stored["analysis_json"]
 
@@ -197,6 +225,7 @@ async def test_palm_reading_is_private_and_deleted_from_other_user(client, db, u
         return _vision_payload()
 
     monkeypatch.setattr(palm_core.llm, "complete_vision", fake_complete_vision)
+    _accept_fixture_quality(monkeypatch)
     created = await client.post(
         "/api/palm", params={"dev_user": user["tg_id"]},
         headers={"content-type": "image/jpeg"}, content=image,
@@ -246,6 +275,7 @@ async def test_mira_chat_upload_accepts_png_and_webp(client, user, monkeypatch):
         return _vision_payload()
 
     monkeypatch.setattr(palm_core.llm, "complete_vision", fake_complete_vision)
+    _accept_fixture_quality(monkeypatch)
     with Image.open(FIXTURE) as source:
         original = source.convert("RGB")
         for image_format, mime in (("PNG", "image/png"), ("WEBP", "image/webp")):
@@ -259,8 +289,8 @@ async def test_mira_chat_upload_accepts_png_and_webp(client, user, monkeypatch):
             result = response.json()
             assert result["status"] == "complete"
             assert result["image_meta"]["raw_stored"] is False
-            assert result["image_meta"]["width"] == 2592
-            assert result["image_meta"]["height"] == 1728
+            assert result["image_meta"]["width"] == palm_core.production.CANONICAL_MAX_SIDE
+            assert result["image_meta"]["height"] == palm_core.production.CANONICAL_MAX_SIDE * 1728 // 2592
 
 
 @pytest.mark.asyncio
@@ -297,6 +327,7 @@ async def test_palm_vision_repairs_wrapped_json_after_retry(client, user, monkey
         return "prefix\n```json\n" + _vision_payload().rstrip("}") + ",\n}\n```"
 
     monkeypatch.setattr(palm_core.llm, "complete_vision", flaky_complete_vision)
+    _accept_fixture_quality(monkeypatch)
     response = await client.post(
         "/api/palm", params={"dev_user": user["tg_id"]},
         headers={"content-type": "image/jpeg"}, content=image,
@@ -322,6 +353,7 @@ async def test_palm_vision_provider_runtime_error_returns_safe_needs_photo(
         raise RuntimeError("upstream 403 provider body must not escape")
 
     monkeypatch.setattr(palm_core.llm, "complete_vision", unavailable_provider)
+    _accept_fixture_quality(monkeypatch)
     response = await client.post(
         "/api/palm", params={"dev_user": user["tg_id"]},
         headers={"content-type": "image/jpeg"}, content=image,
@@ -347,13 +379,14 @@ async def test_palm_vision_invalid_json_returns_safe_needs_photo_after_three_att
         return "provider raw content that must never be stored"
 
     monkeypatch.setattr(palm_core.llm, "complete_vision", invalid_complete_vision)
+    _accept_fixture_quality(monkeypatch)
     response = await client.post(
         "/api/palm", params={"dev_user": user["tg_id"]},
         headers={"content-type": "image/jpeg"}, content=image,
     )
     assert response.status_code == 200, response.text
     result = response.json()
-    assert calls == palm_core.PALM_JSON_ATTEMPTS == 3
+    assert calls == palm_core.PALM_JSON_ATTEMPTS == 2
     assert result["status"] == "needs_photo"
     assert "provider raw content" not in response.text
     assert "проверку формата" in " ".join(result["limitations"])
@@ -374,6 +407,7 @@ async def test_palm_upload_rejects_mismatched_signature_and_animation_before_vis
         return _vision_payload()
 
     monkeypatch.setattr(palm_core.llm, "complete_vision", should_not_run)
+    _accept_fixture_quality(monkeypatch)
     with Image.open(FIXTURE) as source:
         png = io.BytesIO()
         source.save(png, format="PNG")
@@ -406,6 +440,7 @@ async def test_multiple_hands_fail_early_without_vision_call(client, user, monke
         return _vision_payload()
 
     monkeypatch.setattr(palm_core.llm, "complete_vision", should_not_run)
+    _accept_fixture_quality(monkeypatch)
     monkeypatch.setattr(palm_core.palm_landmarks, "analyze", lambda *_args, **_kwargs: {
         "status": "multiple_hands", "hand_count": 2, "hands": [], "issues": ["multiple_hands_in_frame"],
     })

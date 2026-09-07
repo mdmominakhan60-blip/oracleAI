@@ -27,6 +27,9 @@ jobs:
       POSTGRES_ADMIN_DATABASE_URL: postgresql://oracle:oracle@127.0.0.1:5432/postgres
       ALLOW_DB_RESET: "1"
       PGVECTOR_ENABLED: "1"
+      # Живой redis для replay-тестов BUS-200/342/344 (success-ветка: replay→401,
+      # счётчик молчит); fail-open/fail-closed ветки мокаются в самих тестах.
+      REDIS_URL: redis://127.0.0.1:6379/0
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -38,6 +41,15 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U oracle -d oracle"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5

@@ -117,10 +117,12 @@ def test_palm_prompts_follow_user_language():
     system_en, user_en = palm_prompts("en")
     assert (system_ru, user_ru) == (PALM_SYSTEM, PALM_USER)
     assert (system_en, user_en) == (PALM_SYSTEM_EN, PALM_USER_EN)
-    # EN-контракт содержит ту же JSON-схему и правила безопасности
-    assert "palm-evidence-v1" in user_en and "evidence_state" in user_en
+    # EN-контракт содержит те же поля схемы и правила безопасности
+    # (версия контракта living в service.py EVIDENCE_CONTRACT_VERSION, не в промпте)
+    assert "evidence_state" in user_en and "confidence" in user_en
     assert "never" in system_en.lower() or "Never" in system_en
-    assert "needs_photo" in user_en
+    # needs_photo живёт в SYSTEM-промпте (правила статус-переходов), не в user-кадре
+    assert "needs_photo" in system_en
     # fallback: неизвестный язык → RU
     assert palm_prompts("de") == (PALM_SYSTEM, PALM_USER)
 

@@ -8,7 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from ..core import palm as palm_core
-from ..repo import users
+from ..services.repo_gateway import users
 from .features import PALM_TOPIC_LABELS, PalmUpload
 from .keyboards import back_menu
 from .ui import BotStage, begin_status

@@ -25,6 +25,9 @@ from ..repo import palm  # noqa: F401
 from ..repo import readings  # noqa: F401
 from ..repo import users  # noqa: F401
 
+# Re-export full repo modules so routers can access module-level constants
+# (SURVEY_CODE, BONUS_*, SurveyAlreadyCompleted) without touching app/repo
+# directly. The import path is services.repo_gateway.feedback, not repo.feedback.
 __all__ = ["admin", "analytics", "billing", "comms", "content", "crm",
            "dialog", "feedback", "growth", "jobs", "monetization", "notifications",
            "palm", "readings", "users"]

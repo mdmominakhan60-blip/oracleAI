@@ -15,7 +15,7 @@ metadata:
 
 ## Purpose
 
-Use this skill when the user asks whether a palm feature changed compared with an earlier reading. The repository stores dated reading metadata and analysis evidence, not the original palm pixels. Therefore you may compare saved evidence packets, but you must not call it a direct pixel-by-pixel photo comparison.
+Use this skill when the user asks whether a palm feature changed compared with an earlier reading. The repository stores dated reading metadata and analysis evidence, not the original palm pixels — the service does not keep raw photos (не хранит исходные кадры). Therefore you may compare saved evidence packets, but you must not call it a direct pixel-by-pixel photo comparison.
 
 ## Required sequence
 
