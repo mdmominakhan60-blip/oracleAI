@@ -86,6 +86,7 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
     const savedLocal = (() => { try { return localStorage.getItem('oracle_lang'); } catch (e) { return null; } })();
     if (savedLocal) {
       syncDocumentLocale();
+      this.maybeIntro();
       return;
     }
     const ov = document.createElement('div');
@@ -103,7 +104,13 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
           </div>
         </div>
       </div>`;
+    let picked = false;
     const pick = async (lang) => {
+      if (picked) return;
+      picked = true;
+      // Дизейблим обе кнопки до конца POST: двойной тап не должен
+      // отправлять /api/profile дважды.
+      ov.querySelectorAll('[data-lang]').forEach((b) => { b.disabled = true; });
       try { localStorage.setItem('oracle_lang', lang); } catch (e) {}
       syncDocumentLocale();
       ov.querySelector('[data-lang-sub]').textContent =
