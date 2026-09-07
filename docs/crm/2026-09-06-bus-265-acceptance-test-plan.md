@@ -62,7 +62,7 @@
 | 6.3 | пустой список практик | безопасный fallback |
 | 6.4 | после R2 | жёсткий стоп ≥60д |
 
-## 7. Guardrail (BUS-262)
+## 7. Guardrail (BUS-262 done — код в master f9bda1f + 01955d8, guardrail-ok/mark scheduler.py:1279-1301)
 
 | # | Сценарий | Ожидание |
 |---|----------|----------|
@@ -82,10 +82,24 @@
 
 Базовая линия 869/886 (17 known, 12 palm) от 2026-09-05. Смоук дедуп+winback 32 passed (прогон 3).
 
-## Статус чек-листа
+## Статус чек-листа (финальная приёмка 2026-09-07, master 67469e4)
 
 - п.1 (планировщик/дедуп) ✅ — 6f21d7d, 21+11 passed
-- п.3 (WB2-механика) ✅ — 11 passed на 27a3b67 (worktree), финальный прогон на master после done
-- п.8 базовая линия ✅ — 869/886
-- п.2/4/5/6/7 — старт после done BUS-256…263 (осталось: 3.3 welcome, 3.4 onboard, 3.9 R7-карточки)
-- Открытый вопрос Backend: guardrail-приоритет цепочек при конфликте слотов (week_key закрыт из кода — tz юзера)
+- п.2 (WB2) ✅ — test_winback2.py 11/11 + e2e redemption: trial 7д, crystals=0, E_PROMO {batch,kind}, source=promo:winback_2026-09 (п.2.2/2.3/2.6 закрыты скриптом; п.2.1/2.4/2.5 — тестами 27a3b67)
+- п.3 (welcome) ✅ — test_crm_welcome_chain.py 17/17 (72ac4da)
+- п.4 (onboard) ✅ — test_crm_onboard_chain.py 15/15 (bb793e3)
+- п.5 (free→paid) ✅ — test_crm_free_paid.py в suite 99/99: событийные вне guardrail, разводятся по дням (kind+event_date, scheduler.py:1207-1274), покупка→стоп, 7д поканальный
+- п.6 (reactivate) ✅ — test_crm_reactivate_chain.py 22/22 (4c34fea): R1 {practice_title} без своих кавычек, fallback под ключ :fallback, 60д-стоп
+- п.7 (guardrail/SEGMENTS) ✅ — test_bus262_segments_guardrail.py 12/12 + test_winback2 11/11 (f9bda1f): 1/7д на welcome+reactivate (guardrail-ok/mark scheduler.py:1279-1301), событийные вне лимита; сверка отборов: segment_count(sleeping_14d_push)==1 == _reactivate_audience [8801] (скрипт, 3 посевных юзера); cancelled_5_7d/winback_90d — тестами границ 5/6/7/8д
+- п.8 (i18n/privacy) ✅ — 11 wave-3 ключей + winback2: ru seed + DEFAULT_EN_CONTENT, 0 HTML-тегов, плейсхолдеры {name}/{code}/{practice_title}/{day_index}/{top_first_step}, PII нет; {name}=user["name"] (oracle_name) с fallback "друг"/"dear one"; кнопки: web_app-кнопки O1/W1 + onboard_btn_continue
+- п.9 (регресс) ✅ — suite lifecycle 99/99 + smoke scheduler 45/45 (test_scheduler, test_feedback_scheduler, test_audience_crm)
+
+**Итог QA: PASS.** Все 8 блокеров done, критические пути lifecycle-цепочек работают на master 67469e4.
+
+### Наблюдения (не блокируют релиз)
+
+1. **Порядкозависимый тест** (исправлено): процесс-глобал `scheduler._winback_batch_ready` переживал TRUNCATE базы в conftest — после winback-теста следующий WB2-тест в том же месяце ловил «партия исчерпана». Фикс: сброс глобала в autouse-фикстуре conftest. Дефект тестовой изоляции, не продукта (в проде кэш и БД живут согласованно).
+2. **Guardrail week_key от UTC** (scheduler.py:1288 `now_utc.strftime("%G-W%V")`): лимит 1/7д самоконсистентен (ok и mark на одной базе), но границы недели не совпадают с локальной неделей юзера (UTC+14/UTC-11). Для лимита частоты приемлемо; отмечено Backend как осведомлённость.
+3. **E_PROMO-ассерт для WB2** — прямой тест на events в WB2-флоу отсутствует (покрыто e2e-скриптом приёмки); рекомендация Backend: добавить ассерт в test_winback2.py (задача на Backend при удобстве).
+4. **7.3 приоритет цепочек при конфликте слотов** — детерминирован порядком dispatch в `_daily_sweeps` (welcome → onboard → reactivate) и добором winback в _tick_user; формальный ответ Backend не зафиксирован — риск низкий, т.к. guardrail-слот один на неделю и цепочки взаимоисключающи по аудиториям.
+

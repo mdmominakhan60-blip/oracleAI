@@ -138,3 +138,8 @@ async def _reset_api_rate_limits():
     users._last_seen_cache.clear()
     memory._recall_cache.clear()
     await analytics.drain()
+    # Месячный кеш WB2-партии переживает TRUNCATE базы фикстурой db: после
+    # winback-теста следующий тест в том же месяце пропускает
+    # ensure_winback_batch и ловит пустую партию (порядкозависимый фейл).
+    from app.services import scheduler
+    scheduler._winback_batch_ready = None
