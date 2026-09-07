@@ -17,7 +17,7 @@ from aiogram.types import CallbackQuery, Message
 from ..core import astro, geo
 from ..core.personas import persona_list
 from ..services import access, analytics, billing as billing_svc, referrals
-from ..repo import content as content_repo, growth, readings, users
+from ..repo import comms, content as content_repo, growth, readings, users
 from .formatting import tg_esc
 from .onboarding_parsers import date_error_copy, parse_birth_date, parse_birth_time, time_error_copy
 from .keyboards import (ask_starters_kb, back_menu, city_pick_kb,
@@ -183,6 +183,7 @@ async def start_deeplink(message: Message, command: CommandObject,
 
     await analytics.track(db, analytics.E_START, message.from_user.id,
                           props={"arg": arg[:40]})
+    await comms.clean_forbidden(db, message.from_user.id)
     await _begin(message, state, db)
 
 
@@ -197,6 +198,7 @@ async def start(message: Message, state: FSMContext, db):
             await _beta_gate_refused(db, message, user)
             return
     await analytics.track(db, analytics.E_START, message.from_user.id)
+    await comms.clean_forbidden(db, message.from_user.id)
     await _begin(message, state, db)
 
 

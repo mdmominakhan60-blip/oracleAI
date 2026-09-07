@@ -135,36 +135,86 @@ async def test_send_once_retries_after_temporary_failure(db):
     assert await comms.already_sent(db, 3003, "winback2", "k1")
 
 
-async def test_forbidden_marks_row_and_never_retries(db):
-    """Forbidden (бот заблокирован) → forbidden-строка навсегда, повтор молчит."""
+async def test_forbidden_first_day_is_soft_retry(db, monkeypatch):
+    """BUS-369: первый Forbidden — мягкий retry (failed), порог = 3 дня подряд.
+
+    Тест замораживает «сегодня» через monkeypatch: счётчик неудач ведётся
+    по датам, и три _send_once в одном тесте не должны наливаться в один день.
+    """
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            fixed = datetime(2026, 9, 7, tzinfo=timezone.utc)
+            return fixed.astimezone(tz) if tz else fixed
+
+    monkeypatch.setattr(scheduler.comms, "datetime", FixedDatetime)
+
     bot = RecordingBot(forbidden=True)
     ok = await scheduler._send_once(bot, db, 3005, "winback2", "f1", "текст")
     assert not ok, "forbidden не должен считаться успешной отправкой"
-    assert await comms.already_sent(db, 3005, "winback2", "f1"), \
-        "forbidden — терминальный статус: already_sent обязан защитить от повтора"
+    # Мягкий retry: первый Forbidden не терминален.
     cur = await db.execute(
         "SELECT status, error FROM deliveries WHERE tg_id=3005 AND kind='winback2' AND key='f1'")
     row = await cur.fetchone()
-    assert row["status"] == "forbidden", \
-        f"ожидали forbidden, получили {row['status']!r}"
+    assert row["status"] == "failed", \
+        f"первый Forbidden — мягкий retry, ожидали failed, получили {row['status']!r}"
     assert row["error"] == "TelegramForbiddenError", \
         f"в error ждём только класс исключения, получили {row['error']!r}"
 
+    # Повторный вызов с тем же kind+key: claim НЕ пере-занимает sending/forbidden,
+    # но failed пере-занимается — ретрай уйдёт, и это ок до порога.
+    ok2 = await scheduler._send_once(bot, db, 3005, "winback2", "f1", "текст")
+    assert not ok2
+    cur = await db.execute(
+        "SELECT status FROM deliveries WHERE tg_id=3005 AND kind='winback2' AND key='f1'")
+    assert (await cur.fetchone())["status"] == "failed"
+
+
+async def test_forbidden_third_day_is_terminal(db, monkeypatch):
+    """BUS-369: 3-й день подряд с Forbidden → forbidden-строка навсегда."""
+    for day in (7, 8, 9):  # 3 дня подряд: 2026-09-07..09
+
+        class FixedDatetime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                fixed = datetime(2026, 9, day, tzinfo=timezone.utc)
+                return fixed.astimezone(tz) if tz else fixed
+
+        monkeypatch.setattr(scheduler.comms, "datetime", FixedDatetime)
+        ok = await scheduler._send_once(RecordingBot(forbidden=True), db,
+                                        3005, "winback2", f"d{day}", "текст")
+        assert not ok
+
+    cur = await db.execute(
+        "SELECT status, error FROM deliveries WHERE tg_id=3005 AND kind='winback2' AND key='d9'")
+    row = await cur.fetchone()
+    assert row["status"] == "forbidden", \
+        f"3-й день подряд — терминальный forbidden, получили {row['status']!r}"
+    assert row["error"] == "TelegramForbiddenError"
+
     # Повторный вызов с тем же kind+key — никаких попыток отправки, строка не меняется.
     bot2 = RecordingBot()
-    assert not await scheduler._send_once(bot2, db, 3005, "winback2", "f1", "текст")
+    assert not await scheduler._send_once(bot2, db, 3005, "winback2", "d9", "текст")
     assert bot2.sent == [], "forbidden-строка ретраится — повтор уйдёт клиентке"
-    cur = await db.execute(
-        "SELECT status, error FROM deliveries WHERE tg_id=3005 AND kind='winback2' AND key='f1'")
-    row = await cur.fetchone()
-    assert row["status"] == "forbidden" and row["error"] == "TelegramForbiddenError"
 
 
-async def test_forbidden_row_not_reset_by_other_success(db):
-    """Успех по другому kind/key (и другой ошибке) не сбрасывает чужой forbidden-статус."""
-    await scheduler._send_once(RecordingBot(forbidden=True), db,
-                               3006, "winback2", "fx", "текст")
-    assert await comms.already_sent(db, 3006, "winback2", "fx")
+async def test_forbidden_row_not_reset_by_other_success(db, monkeypatch):
+    """Успех по другому kind/key не сбрасывает счётчик чужого forbidden-пути.
+
+    BUS-369: после 3 дней подряд статус терминален; успех соседних доставок
+    не перезаписывает forbidden-строку и не снимает already_sent.
+    """
+    for day in (7, 8, 9):
+        class FixedDatetime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                fixed = datetime(2026, 9, day, tzinfo=timezone.utc)
+                return fixed.astimezone(tz) if tz else fixed
+
+        monkeypatch.setattr(scheduler.comms, "datetime", FixedDatetime)
+        await scheduler._send_once(RecordingBot(forbidden=True), db,
+                                   3006, "winback2", f"d{day}", "текст")
+    assert await comms.already_sent(db, 3006, "winback2", "d9")
 
     # Успешная отправка другого kind и другого key того же юзера.
     assert await scheduler._send_once(RecordingBot(), db, 3006, "reactivate", "fx", "ок")
@@ -172,7 +222,7 @@ async def test_forbidden_row_not_reset_by_other_success(db):
     assert await scheduler._send_once(RecordingBot(), db, 3006, "winback2", "fy", "ок")
 
     cur = await db.execute(
-        "SELECT status, error FROM deliveries WHERE tg_id=3006 AND kind='winback2' AND key='fx'")
+        "SELECT status, error FROM deliveries WHERE tg_id=3006 AND kind='winback2' AND key='d9'")
     row = await cur.fetchone()
     assert row["status"] == "forbidden" and row["error"] == "TelegramForbiddenError", \
         "успех соседних доставок перезаписал forbidden-строку"

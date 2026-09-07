@@ -55,8 +55,8 @@ async def _deliver(bot, tg_id: int, text: str, markup=None) -> tuple[str, str | 
     """Отправляет сообщение. Возвращает (status, error_class_or_None).
 
     status: sent | forbidden | failed
-    - sent: сообщение доставлено
-    - forbidden: бот заблокирован или чат удалён (навсегда)
+    - sent: доставлено
+    - forbidden: бот заблокирован или чат удалён (порог считает _send_once)
     - failed: временный сбой, попробуем позже
     """
     from aiogram.exceptions import (TelegramBadRequest, TelegramForbiddenError,
@@ -69,7 +69,7 @@ async def _deliver(bot, tg_id: int, text: str, markup=None) -> tuple[str, str | 
         await asyncio.sleep(e.retry_after + 1)
         return "failed", None
     except (TelegramForbiddenError, TelegramBadRequest) as e:
-        log.info("рассылка пропущена навсегда: %s", type(e).__name__)
+        log.info("telegram forbidden/bad request: %s", type(e).__name__)
         return "forbidden", type(e).__name__
     except Exception as e:  # noqa: BLE001
         log.warning("рассылка не удалась, повторю позже: %s", type(e).__name__)
@@ -78,7 +78,11 @@ async def _deliver(bot, tg_id: int, text: str, markup=None) -> tuple[str, str | 
 
 async def _send_once(bot, db, tg_id: int, kind: str, key: str, text: str,
                      markup=None) -> bool:
-    """Отправка с защитой от дубля. False — уже отправляли или не вышло."""
+    """Отправка с защитой от дубля и порогом forbidden (BUS-369).
+
+    Порог: 3 неудачи подряд по разным дням → hard_forbidden (навсегда).
+    Две первые — мягкий retry (failed), счётчик увеличивается.
+    """
     if not await comms.claim(db, tg_id, kind, key):
         return False
     result, error_class = await _deliver(bot, tg_id, text, markup)
@@ -86,8 +90,16 @@ async def _send_once(bot, db, tg_id: int, kind: str, key: str, text: str,
         await comms.mark_sent(db, tg_id, kind, key)
         return True
     if result == "forbidden":
-        await comms.mark_sent(db, tg_id, kind, key, status='forbidden',
-                              error=error_class)
+        # Порог по последовательным ДНЯМ сбоя (BUS-369, согласовано PM):
+        # сегодня уже учтён, поэтому 3-й день подряд ставит hard_forbidden.
+        await comms.bump_forbidden(db, tg_id)
+        if await comms.forbidden_threshold(db, tg_id):
+            log.info("forbidden: порог достигнут (kind=%s)", kind)
+            await comms.mark_sent(db, tg_id, kind, key, status='forbidden',
+                                  error=error_class)
+            return False
+        log.info("forbidden: мягкий retry (kind=%s)", kind)
+        await comms.mark_failed(db, tg_id, kind, key, error=error_class)
         return False
     await comms.mark_failed(db, tg_id, kind, key)
     return False

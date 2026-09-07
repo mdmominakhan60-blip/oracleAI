@@ -9,6 +9,7 @@ from fastapi import Depends, Header, HTTPException, Query, Request
 
 from ..config import settings
 from ..services.repo_gateway import admin as admin_repo
+from ..services.repo_gateway import comms as comms_repo
 from ..services.repo_gateway import users as users_repo
 from ..services import rate_limit as rate_limit_service
 from .auth_common import verify_session_token
@@ -174,8 +175,9 @@ async def active_user(user=Depends(confirmed_age_user)):
 
 
 async def touched_user(user=Depends(current_user), db=Depends(get_db)):
-    """Клиентка + отметка «была онлайн» (для аналитики удержания)."""
+    """Клиентка + отметка «была онлайн» + очистка forbidden при возврате (BUS-369)."""
     await users_repo.touch(db, user["tg_id"])
+    await comms_repo.clean_forbidden(db, user["tg_id"])
     return user
 
 

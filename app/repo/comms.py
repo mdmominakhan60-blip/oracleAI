@@ -12,6 +12,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from ..data.session import transaction, utcnow
+from . import content as content_repo
 
 # 16 hex chars → 2^64 space, коллизия пренебрежима.
 _CLAIM_TOKEN_BYTES = 8
@@ -99,13 +100,117 @@ async def claim(db, tg_id: int, kind: str, key: str) -> bool:
             return bool(cur.rowcount)
 
 
-async def mark_failed(db, tg_id: int, kind: str, key: str) -> None:
+async def mark_failed(db, tg_id: int, kind: str, key: str,
+                      error: str | None = None) -> None:
     """Снимаем sending → failed. Временный сбой — попробуем позже."""
     async with transaction(db):
         await db.execute(
-            "UPDATE deliveries SET status='failed' "
+            "UPDATE deliveries SET status='failed', error=:error "
             "WHERE tg_id=:tg_id AND kind=:kind AND key=:key AND status='sending'",
-            {"tg_id": tg_id, "kind": kind, "key": key})
+            {"tg_id": tg_id, "kind": kind, "key": key, "error": error})
+
+
+# ───────────────────── forbidden: порог 3 дня + авто-очистка ───────────────────
+
+#: Количество дней подряд с Forbidden до hard-дляbidden (BUS-369 mvp6_w2).
+FORBIDDEN_THRESHOLD = 3
+#: Окно, за которое считаем неудачи: 7 дней — случайные сбои не накапливаются.
+FORBIDDEN_WINDOW_DAYS = 7
+#: Chain-виды, которые НЕ удаляем при auto_clean (не доотправляем устаревшие
+#: шаги цепочек — требование PM BUS-369 механика A).
+FORBIDDEN_CHAIN_KINDS = frozenset({
+    "welcome_chain", "onboard_nudge", "reactivate",
+    "feedback_survey", "feedback_optout",
+    "winback2", "winback2_code",
+})
+
+
+def _forbidden_key(tg_id: int) -> str:
+    """settings key для счётчика forbidden-неудач юзера."""
+    return f"push.forbidden_count:{tg_id}"
+
+
+async def bump_forbidden(db, tg_id: int) -> None:
+    """Добавляет сегодня в список дат forbidden-неудач. Окно — 7 дней."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    key = _forbidden_key(tg_id)
+    try:
+        cur = await db.execute(
+            "SELECT value_json FROM settings WHERE key=:key",
+            {"key": key})
+        row = await cur.fetchone()
+        if row:
+            data = json.loads(row["value_json"])
+            events: list[str] = data.get("events", [])
+        else:
+            events = []
+        if today not in events:
+            events.append(today)
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=FORBIDDEN_WINDOW_DAYS)).strftime("%Y-%m-%d")
+        events = [d for d in events if d >= cutoff]
+        await content_repo.set_setting(db, key, {"events": events})
+    except Exception:  # noqa: BLE001
+        pass  # settings не критичны для доставки
+
+
+async def forbidden_threshold(db, tg_id: int) -> bool:
+    """True — порог FORBIDDEN_THRESHOLD дней подряд сбоя достигнут."""
+    days = await _forbidden_days(db, tg_id)
+    return len(days) >= FORBIDDEN_THRESHOLD
+
+
+async def _forbidden_days(db, tg_id: int) -> list[str]:
+    """Дни подряд (последовательные) с Forbidden в окне 7 дней."""
+    key = _forbidden_key(tg_id)
+    try:
+        cur = await db.execute(
+            "SELECT value_json FROM settings WHERE key=:key",
+            {"key": key})
+        row = await cur.fetchone()
+        if not row:
+            return []
+        events: list[str] = json.loads(row["value_json"]).get("events", [])
+    except Exception:  # noqa: BLE001
+        return []
+    if not events:
+        return []
+    # Нам нужны последовательные дни — сортируем и ищем подряд.
+    sorted_days = sorted(events)
+    streak = [sorted_days[0]]
+    for d in sorted_days[1:]:
+        prev = datetime.fromisoformat(streak[-1])
+        curr = datetime.fromisoformat(d)
+        if (curr - prev).days == 1:
+            streak.append(d)
+        else:
+            streak = [d]
+    return streak
+
+
+async def clean_forbidden(db, tg_id: int) -> int:
+    """Удаляет forbidden-записи юзера (кроме chain-видов). Возвращает удалено строк.
+
+    Вызывается при первом успешном контакте (/start, /api/me с auth):
+    повторно активный пользователь снова получает пуш-доставку. Chain-виды
+    не трогаем — их шаги отработаны, доотправлять не нужно (PM BUS-369).
+    """
+    async with transaction(db):
+        # Список исключений — из FORBIDDEN_CHAIN_KINDS; значения только из
+        # константы кода (не из пользовательского ввода), поэтому подстановка
+        # через запятую безопасна.
+        kinds_sql = ", ".join(f"'{k}'" for k in sorted(FORBIDDEN_CHAIN_KINDS))
+        cur = await db.execute(
+            "DELETE FROM deliveries "
+            "WHERE tg_id=:tg_id AND status='forbidden' "
+            f"AND kind NOT IN ({kinds_sql})",
+            {"tg_id": tg_id})
+        removed = cur.rowcount or 0
+        # Сбрасываем счётчик forbidden: порог начинается с чистого листа.
+        key = _forbidden_key(tg_id)
+        await db.execute(
+            "DELETE FROM settings WHERE key=:key",
+            {"key": key})
+        return removed
 
 
 # unclaim() удалён: с failed-статусом дедуп-строка живёт, retry пере-занимает
