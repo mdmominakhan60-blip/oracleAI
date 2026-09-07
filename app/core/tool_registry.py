@@ -1405,13 +1405,12 @@ SKILLS: dict[str, dict] = {
         "run": _run_suggest_practice,
         "schema": {
             "name": "suggest_practice",
-            "description": ("Каталог практик и мантр (мантры, денежные, любовные, "
-                            "энергия) и то, что клиентка уже проходит. Зови, когда "
-                            "она спрашивает «что мне делать», просит ритуал, "
-                            "практику или мантру."),
+            "description": ("Каталог практик (денежные, любовные, энергия) и то, "
+                            "что клиентка уже проходит. Зови, когда она спрашивает "
+                            "«что мне делать», просит ритуал или практику."),
             "input_schema": {"type": "object", "properties": {
                 "category": {"type": "string",
-                             "description": "mantra|money|love|energy"},
+                             "description": "money|love|energy"},
             }},
         },
     },

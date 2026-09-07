@@ -1,4 +1,4 @@
-"""Практики и мантры: каталог, программа по дням, стрик, завершение.
+"""Практики: каталог, программа по дням, стрик, завершение.
 
 Раздел держится на непрерывности: «21 день подряд» должно означать ровно это.
 Поэтому проверяем не только счётчики, но и то, что повторная отметка за сутки
@@ -22,7 +22,8 @@ def _ago(days: int) -> str:
 # ─────────────────────────────── каталог ──────────────────────────────────────
 
 def test_catalog_is_not_empty():
-    assert len(catalog.PRACTICES) >= 10, "раздел практик почти пустой"
+    # 8 = размер каталога после демонтажа (BUS-391 W1/Э1).
+    assert len(catalog.PRACTICES) >= 8, "раздел практик почти пустой"
 
 
 @pytest.mark.parametrize("code", sorted(catalog.PRACTICES))
@@ -57,16 +58,17 @@ def test_every_practice_has_fit():
 
 def test_heavy_practices_have_referral():
     """Тяжёлые запросы мягко ведут к специалисту, а не к практике."""
-    for code in ("mantra_shiva", "love_release"):
+    for code in ("love_release",):
         assert catalog.PRACTICES[code].get("referral"), \
             f"{code}: нет направления к специалисту"
 
 
-def test_mantras_have_text():
-    """У мантры обязан быть текст — иначе её нечего повторять."""
-    for code, item in catalog.PRACTICES.items():
-        if item["category"] == "mantra":
-            assert item.get("text"), f"{code}: мантра без текста"
+def test_catalog_wave1_removal():
+    """BUS-391 W1/Э1: демонтированная категория отсутствует; остаются money/love/energy."""
+    assert set(catalog.CATEGORIES) == {"money", "love", "energy"}
+    assert len(catalog.PRACTICES) == 8
+    for item in catalog.PRACTICES.values():
+        assert item["category"] in catalog.CATEGORIES
 
 
 # ──────────────────────────── прогресс клиентки ───────────────────────────────
@@ -140,12 +142,12 @@ async def test_program_finishes_at_last_day(db, user):
 
 
 async def test_stop_closes_program(db, user):
-    await practices_svc.start(db, user, "mantra_gayatri")
-    assert await practices_svc.stop(db, user, "mantra_gayatri")
-    assert not await readings.active_practice(db, user["tg_id"], "mantra_gayatri")
+    await practices_svc.start(db, user, "love_magnet")
+    assert await practices_svc.stop(db, user, "love_magnet")
+    assert not await readings.active_practice(db, user["tg_id"], "love_magnet")
 
     items = await practices_svc.list_for_user(db, user)
-    item = next(p for p in items if p["code"] == "mantra_gayatri")
+    item = next(p for p in items if p["code"] == "love_magnet")
     assert item["finished"]
 
 
@@ -200,7 +202,7 @@ async def test_progress_card_after_finish(db, user):
 async def test_reminder_targets_skip_marked_today(db, user):
     from app.repo import readings as readings_repo
 
-    await practices_svc.start(db, user, "mantra_shiva")
+    await practices_svc.start(db, user, "energy_morning")
     today = users.user_today(user)
     targets = await readings_repo.practice_reminder_targets(db, today)
     assert targets, "начатая практика не попала в напоминания"
