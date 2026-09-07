@@ -196,6 +196,27 @@ async def analytics_segments(by: str = Query(default="source"),
     return _no_store(payload)
 
 
+@router.get("/analytics/scenarios")
+async def analytics_scenarios(from_: str | None = Query(default=None, alias="from"),
+                              to: str | None = None,
+                              scenario: str | None = None,
+                              ctx=Depends(require("dashboard")),
+                              db=Depends(get_db)):
+    """Карточки CRM-сценариев R7 (BUS-264): вошло/дошло/конверсия/стопы.
+
+    R9-gap-поведение: неснятый гэп конверсионной части — no_data с подписью
+    причины и null-метриками, не ноль. Только агрегаты (privacy §2.3).
+    """
+    d_from, d_to = _owner_period(from_, to)
+    if scenario is not None and scenario not in analytics_repo.SCENARIO_KEYS:
+        raise HTTPException(
+            422, "scenario — один из " + "|".join(analytics_repo.SCENARIO_KEYS))
+    payload = await analytics_repo.owner_scenarios(
+        db, date_from=d_from.isoformat(), date_to=d_to.isoformat(),
+        scenario=scenario)
+    return _no_store(payload)
+
+
 @router.get("/payment-health")
 async def payment_health(ctx=Depends(require("dashboard")), db=Depends(get_db)):
     """Aggregated payment/webhook health; no IDs, payloads or user PII."""
