@@ -30,7 +30,7 @@ from ..data.session import transaction, utcnow
 from ..core import agent as agent_core
 from ..core import astro
 from ..repo import comms, content, feedback as feedback_repo, growth, users
-from ..repo.billing import complete_refund_revoke, pending_refund_revokes
+from ..repo.billing import complete_refund_revoke
 from . import analytics, broadcast, horoscopes, payment_monitor, practices as practices_svc
 
 log = logging.getLogger("oracle.scheduler")
