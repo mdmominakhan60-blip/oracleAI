@@ -12,6 +12,25 @@
     { code: 'BTC', label: 'BTC', icon: '₿', copy: { ru: 'Для оплаты в Bitcoin', en: 'Pay with Bitcoin' } },
   ];
 
+  // BUS-398: покупка через цифровые маркетплейсы. Финальные ссылки и карточки
+  // офферов приходят после GO BUS-317/318 — пока каркас с базовыми URL площадок.
+  const MARKETPLACES = [
+    { code: 'playerok', label: 'PlayerOK', url: 'https://playerok.com', copy: { ru: 'Ваучер OracleAI на площадке', en: 'OracleAI voucher on the marketplace' } },
+    { code: 'ggsel', label: 'GGsel', url: 'https://ggsel.com', copy: { ru: 'Ваучер OracleAI на площадке', en: 'OracleAI voucher on the marketplace' } },
+  ];
+
+  // Backend отдаёт отказ /promo готовым RU-текстом (billing_svc.promo_refusal_text)
+  // без машинного кода причины: различимы только 404 (unknown_code) и 409 (прочие).
+  // Для EN-локали распознаём отказ по ключевой подстроке, а не всей строке —
+  // переживает мелкие правки копирайта на бэкенде.
+  const PROMO_REFUSAL_EN = [
+    ['не найден', 'This code was not found — please double-check the spelling 🌙'],
+    ['истёк', 'This code has expired 🌙'],
+    ['не действует', 'This code is no longer valid 🌙'],
+    ['уже использован', 'This code has already been used 🌙'],
+    ['уже активировала', 'You have already redeemed this code ✨'],
+  ];
+
   const PAYMENT_I18N = {
     ru: {
       space: 'ТВОЁ ПРОСТРАНСТВО', choose: 'Выбери свой ритм', heroCopy: 'Оплата без лишних шагов. Доступ откроется только после подтверждения провайдера.',
@@ -26,6 +45,13 @@
       emptyPlans: 'Тарифы временно недоступны.', emptyProducts: 'Пакеты скоро появятся.', pay: 'Оплатить', payProduct: 'Оплатить {title}',
       footer: 'OracleAI не хранит данные карты или ключи кошелька. По вопросам оплаты можно открыть историю заказов и обратиться в поддержку.',
       orders: 'История заказов', noOrders: 'Заказов пока нет.', retry: 'Повторить', closeAria: 'Закрыть',
+      // BUS-398: промокоды и маркетплейсы
+      promoTitle: 'ПРОМОКОД', promoHead: 'Есть золотой билет?', promoPlaceholder: 'Код вида ORA-XXXXXXXX', promoApply: 'Активировать',
+      promoHint: 'Промокод из письма, подарка или маркетплейса активирует доступ или Кристаллы.',
+      promoMarket: 'КУПИТЬ НА МАРКЕТПЛЕЙСЕ', marketHead: 'Купить через маркетплейсы',
+      marketCopy: 'Ваучер с площадки — это оплаченный доступ: активируй его кодом здесь.',
+      promoBusy: 'Активирую код…', promoSuccess: 'Код принят ✨', promoAria: 'Поле ввода промокода',
+      promoRetry: 'Повторить активацию', marketVisit: 'Открыть',
       loadFailed: 'Не удалось открыть оплату. Попробуй ещё раз.', starsUnavailable: 'Stars сейчас недоступны. Попробуй чуть позже.',
       cryptoUnavailable: 'Крипто-оплата сейчас недоступна. Попробуй чуть позже.', invoiceOpened: 'Счёт открыт в Telegram',
       paid: 'Оплата прошла — доступ уже открывается ✦', paymentPassed: 'Оплата подтверждена — доступ уже открывается ✦', paymentFailed: 'Telegram не подтвердил оплату. Попробуй ещё раз.', payProduct: 'Оплатить продукт',
@@ -45,6 +71,12 @@
       emptyPlans: 'Plans are temporarily unavailable.', emptyProducts: 'Packs are coming soon.', pay: 'Pay', payProduct: 'Pay for {title}',
       footer: 'OracleAI does not store card data or wallet keys. Open your order history or contact support with payment questions.',
       orders: 'Order history', noOrders: 'No orders yet.', retry: 'Retry', closeAria: 'Close',
+      promoTitle: 'PROMO CODE', promoHead: 'Got a golden ticket?', promoPlaceholder: 'Code like ORA-XXXXXXXX', promoApply: 'Redeem',
+      promoHint: 'A code from a gift, email or marketplace unlocks access or Crystals.',
+      promoMarket: 'BUY ON A MARKETPLACE', marketHead: 'Buy through marketplaces',
+      marketCopy: 'A marketplace voucher is prepaid access: redeem its code here.',
+      promoBusy: 'Redeeming code…', promoSuccess: 'Code accepted ✨', promoAria: 'Promo code input',
+      promoRetry: 'Retry redemption', marketVisit: 'Open',
       loadFailed: 'Payment could not be opened. Please try again.', starsUnavailable: 'Stars are temporarily unavailable. Please try again later.',
       cryptoUnavailable: 'Crypto payments are temporarily unavailable. Please try again later.', invoiceOpened: 'Invoice opened in Telegram',
       paid: 'Payment received — access is opening ✦', paymentPassed: 'Payment confirmed — access is opening ✦', paymentFailed: 'Telegram did not confirm the payment. Please try again.', payProduct: 'Pay for product',
@@ -112,6 +144,7 @@
   const stars = value => `✦ ${Number(value || 0).toLocaleString(payLang() === 'en' ? 'en-US' : 'ru-RU')}`;
   const paymentState = () => app.payment || (app.payment = {
     data: null, loading: false, error: '', method: 'stars', asset: 'TON', billingPeriod: 'monthly', busy: '', orders: [],
+    promo: { value: '', busy: false, message: '', tone: '' },
   });
 
   function activeAsset() {
@@ -152,6 +185,46 @@
     </article>`;
   }
 
+  // BUS-398: EN-локаль при 409/404 — отказ приходит RU-текстом от бэкенда,
+  // сопоставляем ключевую подстроку; нераспознанное показываем как есть (RU).
+  function promoRefusalText(err) {
+    const raw = String(err && err.message || '');
+    if (payLang() !== 'en') return raw;
+    const hit = PROMO_REFUSAL_EN.find(([needle]) => raw.includes(needle));
+    return hit ? hit[1] : raw;
+  }
+
+  function promoSection() {
+    const p = paymentState().promo;
+    const message = p.message ? `<p class="pay-promo__msg is-${esc(p.tone)}" role="status">${esc(p.message)}</p>` : '';
+    return `<section class="pay-section pay-promo">
+      <div class="pay-section-head"><div><span class="pay-kicker">${esc(payT('promoTitle'))}</span><h2>${esc(payT('promoHead'))}</h2></div></div>
+      <form class="pay-promo__row" data-act-form="promo">
+        <input id="promo-input" class="ipt pay-promo__input" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40"
+          placeholder="${esc(payT('promoPlaceholder'))}" value="${esc(p.value)}" aria-label="${esc(payT('promoAria'))}" data-promo-input>
+        <button type="submit" class="btn btn-primary pay-promo__apply" ${p.busy ? 'disabled' : ''}>${esc(payT('promoApply'))}</button>
+      </form>
+      ${p.busy ? `<div class="pay-busy" role="status"><span class="loader-ring"></span><span>${esc(payT('promoBusy'))}</span></div>` : ''}
+      ${message}
+      <p class="pay-note">${esc(payT('promoHint'))}</p>
+    </section>`;
+  }
+
+  function marketplaceSection() {
+    const lang = payLang();
+    return `<section class="pay-section pay-market">
+      <div class="pay-section-head"><div><span class="pay-kicker">${esc(payT('promoMarket'))}</span><h2>${esc(payT('marketHead'))}</h2></div></div>
+      <p class="pay-note">${esc(payT('marketCopy'))}</p>
+      <div class="pay-market__links">
+        ${MARKETPLACES.map(place => `<a class="pay-market__card" href="${esc(place.url)}" target="_blank" rel="noopener noreferrer" data-market-link>
+          <span class="pay-market__icon">🛍</span>
+          <span class="pay-market__body"><b>${esc(place.label)}</b><small>${esc(place.copy[lang])}</small></span>
+          <span class="pay-market__go">${esc(payT('marketVisit'))} ›</span>
+        </a>`).join('')}
+      </div>
+    </section>`;
+  }
+
   app.renderPayment = function (main) {
     const state = paymentState();
     const data = state.data || {};
@@ -177,6 +250,8 @@
         ${methodCard('crypto', '₿', payT('crypto'), payT('cryptoCopy'), method === 'crypto')}
       </div>
       ${method === 'crypto' ? `<section class="pay-asset-picker"><div class="pay-section-head"><div><span class="pay-kicker">${esc(payT('wallet'))}</span><h2>${esc(payT('payWith'))}</h2></div><span class="pay-safe">${esc(payT('protectedInvoice'))}</span></div><div class="pay-assets">${ASSETS.map(item => `<button class="pay-asset${item.code === asset.code ? ' is-active' : ''}" data-act="payment-asset" data-asset="${item.code}" aria-pressed="${item.code === asset.code ? 'true' : 'false'}"><b>${item.icon}</b><span>${item.label}</span></button>`).join('')}</div><p class="pay-note">${esc(asset.copy[payLang()])}<br>${esc(payT('cryptoNote'))}</p></section>` : `<section class="pay-trust"><span>✓</span><p><b>${esc(payT('starsTrustTitle'))}</b><br>${esc(payT('starsTrustCopy'))}</p></section>`}
+      ${promoSection()}
+      ${marketplaceSection()}
       ${busy}${error}
       <section class="pay-section"><div class="pay-section-head"><div><span class="pay-kicker">${esc(payT('subscription'))}</span><h2>${esc(payT('depth'))}</h2></div><span class="pay-section-count">${esc(planCount(plans.length))}</span></div><div class="pay-period-toggle" role="tablist" aria-label="${payLang() === 'en' ? 'Billing period' : 'Период оплаты'}"><button class="btn btn-ghost ${state.billingPeriod === 'monthly' ? 'is-active' : ''}" data-act="payment-period" data-period="monthly">${payLang() === 'en' ? 'Monthly' : 'Месяц'}</button><button class="btn btn-ghost ${state.billingPeriod === 'annual' ? 'is-active' : ''}" data-act="payment-period" data-period="annual">${payLang() === 'en' ? 'Annual · save 2 months' : 'Год · экономия 2 месяцев'}</button></div><div class="pay-plans">${plans.length ? plans.map((plan, index) => planCard(plan, index === 1 || (plans.length === 1))).join('') : `<div class="pay-empty">${esc(payT('emptyPlans'))}</div>`}</div></section>
       <section class="pay-section"><div class="pay-section-head"><div><span class="pay-kicker">${esc(payT('oneOff'))}</span><h2>${esc(payT('reserve'))}</h2></div></div><div class="pay-products">${(method === 'crypto' ? crystalProducts : [...crystalProducts, ...otherProducts]).slice(0, 5).map(product => productCard(product, method, asset)).join('') || `<div class="pay-empty">${esc(payT('emptyProducts'))}</div>`}</div></section>
@@ -281,6 +356,64 @@
   };
 
   app.retryPayments = function () { paymentState().data = null; this.loadPayments(); };
+
+  // BUS-398: единая точка редема с ботом — тот же POST /api/shop/promo.
+  // Форма не дублирует диспетчер data-act: submit ловим в 13-events.js.
+  app.submitPromo = async function (input) {
+    const p = paymentState().promo;
+    const code = String(input && input.value || '').trim();
+    if (p.busy) return;
+    if (!code) {
+      p.message = payLang() === 'en' ? 'Enter your code first.' : 'Сначала введи код.';
+      p.tone = 'error';
+      tactile('error');
+      this.renderPayment(document.getElementById('app-main'));
+      const fresh = document.querySelector('[data-promo-input]');
+      if (fresh) fresh.focus();
+      return;
+    }
+    p.busy = true; p.message = ''; p.value = code;
+    this.renderPayment(document.getElementById('app-main'));
+    try {
+      const result = await api('/api/shop/promo', { method: 'POST', body: JSON.stringify({ code }) });
+      p.busy = false;
+      p.value = '';
+      p.tone = 'ok';
+      p.message = promoGrantText(result);
+      tactile('complete');
+      this.toast(payT('promoSuccess'));
+      // грант мог изменить кристаллы/подписку — обновляем витрину и шапку
+      paymentState().data = null;
+      if (typeof this.loadPayments === 'function') this.loadPayments();
+      if (typeof this.loadStatus === 'function') this.loadStatus();
+    } catch (e) {
+      p.busy = false;
+      p.tone = 'error';
+      p.message = promoRefusalText(e);
+      tactile('error');
+    }
+    if (this.view === 'payment') this.renderPayment(document.getElementById('app-main'));
+    else if (typeof app.syncHeader === 'function') app.syncHeader();
+  };
+
+  // Что именно активировано — конкретика вместо «код принят» (как в боте).
+  function promoGrantText(result) {
+    const en = payLang() === 'en';
+    const grant = result && result.granted || {};
+    const kind = grant.kind || (result && result.kind);
+    if (kind === 'invite') return en ? '🎟 Invite code accepted — welcome! ✨' : '🎟 Инвайт принят — добро пожаловать! ✨';
+    if (kind === 'plan') {
+      const days = Number(grant.days || 0);
+      const title = grant.title || grant.plan && grant.plan.title || (en ? 'subscription' : 'подписка');
+      return en ? `🎟 Golden ticket accepted! ${days} days of «${title}» unlocked. ✨`
+        : `🎟 Золотой билет принят! Тебе открыто ${days} дней доступа «${title}». ✨`;
+    }
+    if (kind === 'crystals') return en ? `🎟 Done! +✦${grant.amount || 0} Crystals ✨` : `🎟 Принято! +✦${grant.amount || 0} Кристаллов ✨`;
+    if (kind in { spread: 1, report: 1, question: 1 }) {
+      return en ? `🎟 Done! Unlocked: ${grant.title || 'purchase'} ✨` : `🎟 Принято! Открыто: ${grant.title || 'подарок'} ✨`;
+    }
+    return en ? '🎟 Code accepted ✨' : '🎟 Код принят ✨';
+  }
 
   app.showPaymentOrders = async function () {
     this.showModal(`<h3>${esc(payT('orders'))}</h3><button class="m-close" data-act="modal-close" aria-label="${esc(payT('closeAria'))}">✕</button><div id="payment-history-body" class="pay-orders"><div class="loader-ring"></div></div>`);
