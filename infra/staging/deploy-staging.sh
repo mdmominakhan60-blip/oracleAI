@@ -54,6 +54,23 @@ done
 [[ -n "$https_ok" ]] || { echo "HTTPS /health так и не ответил за 60с" >&2; docker logs oracleai-staging-staging-caddy-1 --tail 30; exit 1; }
 echo "HTTPS /health OK: $(curl -sk "https://localhost:3443/health")"
 
+echo "=== [4.5/5] Обновление staging-bot (только если бот уже работает)"
+# Недодеплой-класс (BUS-373 beat / тик 2026-09-07 бот): up -d без --profile telegram
+# никогда не трогает бот — он остаётся на старом образе. Если бот сейчас running,
+# токен в .env.staging валиден (иначе он бы не работал) — безопасно пересоздать.
+# Если профиль не активирован — пропускаем (guard BUS-138: не создаём crash-loop).
+if docker ps --filter name=oracleai-staging-staging-bot-1 --filter status=running -q | grep -q .; then
+  $COMPOSE --profile telegram up -d staging-bot
+  for i in $(seq 1 30); do
+    bot_health="$(docker inspect --format '{{.State.Health.Status}}' oracleai-staging-staging-bot-1 2>/dev/null || echo missing)"
+    [[ "$bot_health" == "healthy" ]] && { echo "staging-bot healthy"; break; }
+    [[ "$i" == 30 ]] && { echo "staging-bot не стал healthy за 60с" >&2; docker logs oracleai-staging-staging-bot-1 --tail 50; exit 1; }
+    sleep 2
+  done
+else
+  echo "staging-bot не запущен (профиль telegram не активирован) — пропускаю"
+fi
+
 echo "=== [5/5] Фиксация релиза"
 echo "$IMAGE_TAG" > "$STAGING_DIR/CURRENT_RELEASE"
 # История релизов для rollback-скрипта: дата_UTC, событие, тег, ревизия схемы alembic.
