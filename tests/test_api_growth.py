@@ -39,7 +39,7 @@ async def test_practices_catalog_has_categories(client, user):
     assert res.status_code == 200
     data = res.json()
     assert data["categories"], "нет разделов практик"
-    # 8 = размер каталога после демонтажа мантр (BUS-391 W1/Э1).
+    # 8 = размер каталога после демонтажа (BUS-391 W1/Э1).
     assert len(data["items"]) >= 8, "каталог практик почти пуст"
     assert all(p["steps"] and p["today_step"] for p in data["items"])
 
