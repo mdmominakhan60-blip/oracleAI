@@ -254,6 +254,29 @@ const server = http.createServer(async (req, res) => {
     ];
     return json(res, 200, {period:{from:'2026-08-01',to:'2026-08-31'}, cohort_anchor:'miniapp_open', granularity, cohorts, data_quality:{status:'full',note:null}});
   }
+  // BUS-264: карточки CRM-сценариев R7 — шейп из docs/crm/2026-09-07-bus-264-
+  // scenario-cards-api-contract.md и owner_scenarios (app/repo/analytics.py):
+  // welcome_chain ok / reactivate G-1 (converted+rate null) / winback2 G-2
+  // (redemption-конверсия числом, data_status=no_data) / анти-reid entered<5.
+  if (p === '/api/admin/analytics/scenarios') {
+    return json(res, 200, {
+      period: { from: '2026-08-09', to: '2026-09-07' },
+      scenarios: [
+        { key: 'welcome_chain', entered: 42, reached: 38, converted: 11, conversion_rate: 0.26,
+          stops: { forbidden: 2, segment_exit: 30, other: 1 }, data_status: 'ok' },
+        { key: 'onboard_nudge', entered: 18, reached: 15, converted: 6, conversion_rate: 0.33,
+          stops: { forbidden: 0, segment_exit: 12, other: 0 }, data_status: 'ok' },
+        { key: 'reactivate', entered: 7, reached: 5, converted: null, conversion_rate: null,
+          stops: { forbidden: 1, segment_exit: 4, other: 0 }, data_status: 'no_data', no_data_reason: 'G-1' },
+        { key: 'winback2', entered: 9, reached: 7, converted: 2, conversion_rate: 0.22,
+          stops: { forbidden: 0, segment_exit: 6, other: 1 }, data_status: 'no_data', no_data_reason: 'G-2' },
+        { key: 'post_limit', entered: 3, reached: 3, converted: null, conversion_rate: null,
+          stops: { forbidden: 0, segment_exit: 2, other: 0 }, data_status: 'ok' },
+        { key: 'low_balance', entered: 0, reached: 0, converted: 0, conversion_rate: null,
+          stops: { forbidden: 0, segment_exit: 0, other: 0 }, data_status: 'ok' },
+      ],
+    });
+  }
   if (p === '/api/admin/dashboard/demo') {
     return json(res, 200, { overview, funnel, activation, retention, sources, monetization_v2 });
   }

@@ -198,6 +198,17 @@ export const adminShellTemplate = String.raw`
         <div id="anx-money-funnel" class="table-wrap"></div>
       </div>
 
+      <!-- CRM-сценарии R7 (BUS-264): вошло/дошло/конверсия/стопы -->
+      <div class="card">
+        <div class="card-head"><h3>CRM-сценарии</h3>
+          <span class="anx-dq-wrap">
+            <span class="muted small">журнал цепочек волны 3: вошло → дошло → конверсия; стопы — по статусам доставки</span>
+            <span id="anx-scen-dq" class="anx-dq"></span>
+          </span>
+        </div>
+        <div id="anx-scenarios" class="scen-grid" role="group" aria-label="Карточки CRM-сценариев"></div>
+      </div>
+
       <div class="card">
         <div class="card-head"><h3>Клиентки</h3>
           <span class="muted small">клик по строке — профиль с событиями и платежами</span></div>
