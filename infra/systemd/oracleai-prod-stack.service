@@ -1,0 +1,23 @@
+# Автозапуск прод-стека после ребута хоста (BUS-440).
+# oneshot: выполняет infra/prod-stack-up.sh (идемпотентный up -d) и остаётся
+# inactive/dead — перезапускать вручную: systemctl --user restart oracleai-prod-stack.
+# Before=staging-юниты: прод поднимается ПЕРВЫМ (это приоритет P0).
+# Установка — см. комментарии в infra/prod-stack-up.sh.
+# Логи: journalctl --user -u oracleai-prod-stack -f
+
+[Unit]
+Description=OracleAI prod stack auto-up after host reboot (BUS-440)
+After=docker.service network-online.target
+Wants=network-online.target
+Before=oracleai-staging-stack.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/apps/oraclAI/oracleAI/infra/prod-stack-up.sh
+RemainAfterExit=no
+TimeoutStartSec=900
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
