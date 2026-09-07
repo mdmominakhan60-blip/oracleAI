@@ -15,7 +15,10 @@ Redis нужен только на минте: токен проверяется
 fail-open (REPLAY_FAIL_CLOSED=1 включает fail-closed) — у авторизации не
 появляется второго источника тотального отказа, а окно replay и так
 ограничено 24ч. Решение согласовано с Engineering Lead; security-review:
-BUS-200.
+BUS-200. BUS-344: fail-closed отвечает 503 «auth store unavailable», а не
+401 «replay» — при живой initData сообщение «уже использована» вводит в
+заблуждение при диагностике (клиент miniapp обрабатывает любой не-2xx
+одинаково: тихий fallback на x-init-data).
 """
 from __future__ import annotations
 
@@ -77,10 +80,19 @@ def _init_data_hash(raw: str) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+class ReplayStoreUnavailable(Exception):
+    """BUS-344: недоступность replay-store при fail-closed.
+
+    Отличается от replay (возврат False): живая initData не должна получать
+    401 «уже использована» — это деградация сервиса, endpoint отвечает 503.
+    """
+
+
 async def _mark_init_data_used(raw: str) -> bool:
     """Атомарная бронь nonce. True — initData видна впервые, False — replay.
 
-    Сбой Redis: fail-open по умолчанию, REPLAY_FAIL_CLOSED=1 — fail-closed.
+    Сбой Redis: fail-open по умолчанию, REPLAY_FAIL_CLOSED=1 — кидает
+    ReplayStoreUnavailable (endpoint отдаёт 503, см. класс).
     Хеш в логе усечён: он не секрет (вход — сама строка), но и не нужен целиком.
     """
     digest = _init_data_hash(raw)
@@ -96,7 +108,7 @@ async def _mark_init_data_used(raw: str) -> bool:
         if settings.replay_fail_closed:
             log.error("auth_replay_store_down fail-closed: %s", e)
             REPLAY_STORE.labels(result="closed").inc()
-            return False
+            raise ReplayStoreUnavailable(str(e)) from e
         log.warning("auth_replay_store_down fail-open: %s", e)
         REPLAY_STORE.labels(result="open").inc()
         return True
@@ -120,7 +132,14 @@ async def mint_session(req: InitDataRequest, db=Depends(get_db)):
         raise HTTPException(429, "слишком часто — переведи дыхание 🌙",
                             headers={"Retry-After": str(decision.retry_after)})
 
-    if not await _mark_init_data_used(req.init_data):
+    try:
+        first_seen = await _mark_init_data_used(req.init_data)
+    except ReplayStoreUnavailable:
+        # BUS-344: store недоступен при fail-closed — деградация сервиса,
+        # а не replay: 503 «store unavailable» вместо 401 «replay»
+        # (клиент любой не-2xx обрабатывает одинаково).
+        raise HTTPException(503, "auth store unavailable")
+    if not first_seen:
         raise HTTPException(401, "initData уже использована (replay)")
 
     await users_repo.ensure(db, tg_id, data["first_name"], data["username"],

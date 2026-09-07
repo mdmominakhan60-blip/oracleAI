@@ -191,6 +191,108 @@ class TestReplayProtection:
         assert ok == 10
 
 
+# ─────────────────── fail-open / fail-closed (BUS-344) ─────────────────────
+
+class TestFailOpenFailClosed:
+    """Сбой живого Redis-клиента: set() кидает ConnectionError — так это
+    выглядит в проде (store сконфигурирован, но недоступен). BUS-343 покрыл
+    только _redis=None (RuntimeError «не сконфигурирован») — путь тот же
+    except-блока, но контракт 503/200 требует отдельной фиксации.
+
+    ConnectionError — родитель для redis.exceptions.ConnectionError и
+    TimeoutError, выбранный как dependency-free (не импортирует redis).
+    """
+
+    @pytest.fixture
+    async def client(self, db):
+        from httpx import ASGITransport, AsyncClient
+        from app.api.deps import get_db
+        from app.api import main as api_main
+        api_main.app.dependency_overrides[get_db] = lambda: db
+        transport = ASGITransport(app=api_main.app)
+        async with AsyncClient(transport=transport, base_url="http://test",
+                               headers={"X-Dev-Key": TEST_DEV_KEY}) as http:
+            yield http
+        api_main.app.dependency_overrides.clear()
+
+    @staticmethod
+    def _broken_redis():
+        class _BrokenRedis:
+            async def set(self, *a, **kw):
+                raise ConnectionError("replay store down (mock)")
+
+        return _BrokenRedis()
+
+    async def test_fail_open_mint_succeeds_on_connection_error(
+            self, client, db, monkeypatch):
+        from app.api.routers import auth_router
+        monkeypatch.setattr(auth_router, "_redis", self._broken_redis())
+        monkeypatch.setattr(auth_router.settings, "replay_fail_closed", False)
+
+        init_data = _build_init_data(900220001)
+        r = await client.post("/api/auth/session", json={"init_data": init_data})
+        assert r.status_code == 200
+        assert verify_session_token(r.json()["session_token"]) == 900220001
+
+        # Fail-open пропускает минт, но честно сигналит метрикой.
+        assert (_replay_store_sample("open") or 0) >= 1
+
+    async def test_fail_closed_returns_503_store_unavailable(
+            self, client, db, monkeypatch):
+        from app.api.routers import auth_router
+        monkeypatch.setattr(auth_router, "_redis", self._broken_redis())
+        monkeypatch.setattr(auth_router.settings, "replay_fail_closed", True)
+
+        init_data = _build_init_data(900220002)
+        r = await client.post("/api/auth/session", json={"init_data": init_data})
+        assert r.status_code == 503
+        assert "store" in r.json()["detail"].lower()
+        # Fail-closed не путается с replay-отказом: это не 401.
+        assert (_replay_store_sample("closed") or 0) >= 1
+
+    async def test_fail_closed_does_not_consume_init_data(
+            self, client, db, monkeypatch):
+        """Fail-closed минт отклонён ДО users.ensure и бронирования nonce:
+        после восстановления store та же initData минтится как впервые."""
+        from app.api.routers import auth_router
+        monkeypatch.setattr(auth_router, "_redis", self._broken_redis())
+        monkeypatch.setattr(auth_router.settings, "replay_fail_closed", True)
+
+        init_data = _build_init_data(900220003)
+        r_down = await client.post("/api/auth/session",
+                                   json={"init_data": init_data})
+        assert r_down.status_code == 503
+
+        # Redis живой (модульный клиент) — строка должна минтиться как впервые.
+        from redis.asyncio import Redis
+        from app.config import settings
+        monkeypatch.setattr(
+            auth_router, "_redis",
+            Redis.from_url(settings.redis_url, decode_responses=True))
+        r_recovered = await client.post("/api/auth/session",
+                                        json={"init_data": init_data})
+        assert r_recovered.status_code == 200
+
+    async def test_replay_still_401_when_redis_healthy(
+            self, client, db, monkeypatch):
+        """Guard новой семантики: replay (ключ уже есть) остаётся 401, а не 503 —
+        503 только для недоступности store, replay-защита не ослаблена."""
+        from redis.asyncio import Redis
+        from app.api.routers import auth_router
+        from app.config import settings
+        monkeypatch.setattr(
+            auth_router, "_redis",
+            Redis.from_url(settings.redis_url, decode_responses=True))
+        monkeypatch.setattr(auth_router.settings, "replay_fail_closed", True)
+
+        init_data = _build_init_data(900220004)
+        r1 = await client.post("/api/auth/session", json={"init_data": init_data})
+        assert r1.status_code == 200
+        r2 = await client.post("/api/auth/session", json={"init_data": init_data})
+        assert r2.status_code == 401
+        assert "replay" in r2.json()["detail"].lower()
+
+
 # ─────────────────── метрика replay-store (BUS-343) ────────────────────────
 
 class TestReplayStoreMetric:
@@ -265,7 +367,8 @@ class TestReplayStoreMetric:
 
         r = await client.post("/api/auth/session",
                               json={"init_data": _build_init_data(900210004)})
-        assert r.status_code == 401
+        # BUS-344: fail-closed — деградация сервиса (503), а не replay (401).
+        assert r.status_code == 503
 
         after = _replay_store_sample("closed")
         assert after is not None

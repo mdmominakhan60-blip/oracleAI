@@ -108,11 +108,14 @@ groups:
           description: "Redis-ошибка в POST /api/auth/session (auth_router.py, auth_replay_store_down fail-open). Replay-защита на минте не работает до восстановления Redis. Первое действие: docker logs infra-api-1 --since 10m | grep auth_replay_store_down; проверить контейнер redis (docker ps | grep redis, docker logs infra-redis-1)."
 
       # 2) Fail-closed (REPLAY_FAIL_CLOSED=1): Redis недоступен → минт полностью
-      # лежит (401 на каждую попытку). Отказ авторизации для новых сессий —
-      # критичнее fail-open. Ветка result="closed" инкрементится только при
-      # включённом REPLAY_FAIL_CLOSED=1 (условие внутри if в коде), поэтому
-      # счётчик сам является индикатором режима: честные replay-отказы (тоже
-      # 401) инкремента не дают и ложного срабатывания не устроит.
+      # лежит (503 auth store unavailable на каждую попытку). Отказ авторизации
+      # для новых сессий — критичнее fail-open. Ветка result="closed"
+      # инкрементится только при включённом REPLAY_FAIL_CLOSED=1 (условие внутри
+      # if в коде), поэтому счётчик сам является индикатором режима: честные
+      # replay-отказы (401) инкремента не дают и ложного срабатывания не
+      # устроит. 503 вместо 401 — BUS-344: «replay» при живой initData вводит
+      # в заблуждение при диагностике; клиент miniapp любой не-2xx обрабатывает
+      # одинаково.
       - alert: OracleAIReplayStoreFailClosed
         expr: increase(oracleai_replay_store_total{result="closed"}[10m]) > 0
         for: 0m
@@ -120,5 +123,5 @@ groups:
           severity: critical
           stack: oracleai
         annotations:
-          summary: "Replay-store fail-closed: минт сессии отклоняется (401) при недоступном Redis"
-          description: "REPLAY_FAIL_CLOSED=1 и Redis недоступен — новые сессии не выдаются (POST /api/auth/session → 401). Первое действие: восстановить redis (docker start infra-redis-1) либо согласовать снятие флага. Лог: docker logs infra-api-1 --since 10m | grep 'fail-closed'."
+          summary: "Replay-store fail-closed: минт сессии отклоняется (503) при недоступном Redis"
+          description: "REPLAY_FAIL_CLOSED=1 и Redis недоступен — новые сессии не выдаются (POST /api/auth/session → 503 auth store unavailable). Первое действие: восстановить redis (docker start infra-redis-1) либо согласовать снятие флага. Лог: docker logs infra-api-1 --since 10m | grep 'fail-closed'."
