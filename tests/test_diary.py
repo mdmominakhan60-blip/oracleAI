@@ -52,7 +52,7 @@ async def test_diary_summary_facts(client, db, user):
 
     await _add(db, tg, "Деньги поджимают, работа выматывает", 1)
     await _add(db, tg, "Ссора с мужем, расставание не идёт из головы", 2)
-    await _add(db, tg, "Мантра вечером, наконец выспалась", 3)
+    await _add(db, tg, "Медитация вечером, наконец выспалась", 3)
 
     res = await client.get("/api/diary/summary",
                            params=as_user(user, {"month": month}))

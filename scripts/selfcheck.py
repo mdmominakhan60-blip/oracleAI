@@ -477,7 +477,7 @@ check("Ядро: колода, астрология, Матрица, совме�
 check("Импорты всех модулей", imports_all)
 check("Файлы Mini App и админки", frontend_assets)
 check("Безопасность: кризисный протокол", safety_filter)
-check("Практики и мантры: каталог и программы", practices_catalog)
+check("Практики: каталог и программы", practices_catalog)
 check("Память: упаковка векторов и близость", memory_vectors)
 check("Карточки для сторис", share_cards)
 check("PDF-разбор для маркетплейса", pdf_pipeline)

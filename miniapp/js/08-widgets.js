@@ -141,7 +141,7 @@ const widgetShell = (p, { title, body, tail = '' }) => {
     const items = p.items || [];
     return widgetShell(p, {
       title: t => 'Ритуалы поддержки' + (t.loading ? '' : ' · ' + items.length),
-      body: `<div class="ritual-intro"><span class="ritual-intro__sigil">✦</span><div><b>Маленькие действия вместо абстрактных мантр</b><small>Выбери одну программу и возвращайся к её шагу в удобном темпе.</small></div></div>` + items.map(it => {
+      body: `<div class="ritual-intro"><span class="ritual-intro__sigil">✦</span><div><b>Маленькие действия вместо абстрактных обещаний</b><small>Выбери одну программу и возвращайся к её шагу в удобном темпе.</small></div></div>` + items.map(it => {
       const st = it.status;
       const active = st === 'active';
       const done = st === 'completed';

@@ -39,7 +39,8 @@ async def test_practices_catalog_has_categories(client, user):
     assert res.status_code == 200
     data = res.json()
     assert data["categories"], "нет разделов практик"
-    assert len(data["items"]) >= 10, "каталог практик почти пуст"
+    # 8 = размер каталога после демонтажа мантр (BUS-391 W1/Э1).
+    assert len(data["items"]) >= 8, "каталог практик почти пуст"
     assert all(p["steps"] and p["today_step"] for p in data["items"])
 
 
@@ -76,10 +77,10 @@ async def test_unknown_practice_is_404(client, user):
 
 
 async def test_practice_card_endpoint(client, user):
-    res = await client.get("/api/practices/mantra_lakshmi", params=as_user(user))
+    res = await client.get("/api/practices/money_mirror", params=as_user(user))
     assert res.status_code == 200
     item = res.json()
-    assert item["text"], "у мантры нет текста"
+    assert item["steps"], "нет шагов практики"
     assert item["signs"], "нет знаков продвижения"
 
 
