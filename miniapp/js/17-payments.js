@@ -385,7 +385,10 @@
       // грант мог изменить кристаллы/подписку — обновляем витрину и шапку
       paymentState().data = null;
       if (typeof this.loadPayments === 'function') this.loadPayments();
-      if (typeof this.loadStatus === 'function') this.loadStatus();
+      try {
+        this.me = await api('/api/me');
+      } catch (e) { /* шапка обновится при следующем полном рендере */ }
+      if (typeof this.refreshHeaderStatus === 'function') this.refreshHeaderStatus();
     } catch (e) {
       p.busy = false;
       p.tone = 'error';
@@ -393,7 +396,6 @@
       tactile('error');
     }
     if (this.view === 'payment') this.renderPayment(document.getElementById('app-main'));
-    else if (typeof app.syncHeader === 'function') app.syncHeader();
   };
 
   // Что именно активировано — конкретика вместо «код принят» (как в боте).
