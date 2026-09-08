@@ -241,8 +241,13 @@ Workflow `.github/workflows/deploy.yml` запускается после push �
 
 ```bash
 sudo install -d -o deploy -g deploy -m 755 /opt/oracleAI
-cd /opt/oracleAI
-git clone https://github.com/mdmominakhan60-blip/oracleAI.git .
+# Репо приватное: клонирование/fetch только по SSH через read-only deploy key
+# (GitHub → Settings → Deploy keys, read-only). Ключ на VPS:
+sudo -u deploy ssh-keygen -t ed25519 -f ~deploy/.ssh/github_repo_ed25519 -N '' -C oracleai-vps-repo-ro
+# публичный ключ добавить в GitHub deploy keys, затем:
+sudo -u deploy bash -c 'printf "Host github.com\n  IdentityFile ~/.ssh/github_repo_ed25519\n  IdentitiesOnly yes\n" > ~/.ssh/config && chmod 600 ~/.ssh/config'
+sudo ssh-keyscan -t ed25519,ecdsa,rsa github.com | sudo tee ~deploy/.ssh/known_hosts >/dev/null
+sudo -u deploy git clone git@github.com:mdmominakhan60-blip/oracleAI.git /opt/oracleAI
 cp .env.production.example .env
 chmod 600 .env
 # заполнить .env реальными credentials и доменом
@@ -263,6 +268,8 @@ docker compose -f infra/docker-compose.yml up -d --build
 | `VPS_KNOWN_HOSTS` | Проверенный host key из `ssh-keyscan -H` |
 | Repository variable `VPS_APP_DIR` | Обычно `/opt/oracleAI` |
 | Repository variable `VPS_SSH_PORT` | Обычно `22` |
+
+Workflow клонирует/обновляет checkout на VPS по SSH (`git@github.com:...`) через read-only deploy key, установленный на VPS и добавленный в GitHub → Deploy keys; https-клон приватного репо без auth из workflow невозможен.
 
 Workflow не передаёт production `.env` через GitHub Actions и не хранит credentials в GitHub repository. `.env` создаётся и поддерживается только на VPS. Для SSH-ключа используйте отдельного пользователя без общего root login; дайте ему только необходимые права Docker, каталог проекта и backup path. GitHub рекомендует хранить sensitive values в secrets и не передавать их в командной строке без необходимости.[6]
 
