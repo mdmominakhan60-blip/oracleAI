@@ -6,6 +6,8 @@ const CHAT_I18N = {
     firstConversation: 'Первый разговор создастся, когда ты отправишь сообщение.', continueDialog: 'Здесь можно продолжить диалог.', chooseGuide: 'Выбор проводника', presence: 'рядом', addPalm: 'Добавить фото ладони', palmPhoto: 'Фото ладони', tools: 'Инструменты',
     messageFor: 'Сообщение для', stop: 'Остановить запрос', send: 'Отправить сообщение', ideas: 'Идеи для своего вопроса', toolAria: 'Инструменты текущего проводника', toolsEyebrow: 'ИНСТРУМЕНТЫ ДИАЛОГА', toolsTitle: 'С чем поработаем?', toolsIntro: 'Выбери один точный шаг — результат появится прямо в этом разговоре.', closeTools: 'Закрыть инструменты', withGuide: 'С', inDialog: 'в этом диалоге',
     deleteAllChatsTitle: 'Удалить все чаты', deleteAllChatsConfirmBtn: 'Удалить все', newChatTitle: 'Новый чат', newChatConfirm: 'Начать новый чат с чистого листа? Текущий диалог будет удалён из списка.', newChatConfirmBtn: 'Начать заново',
+    // BUS-636 Э5: честные стадии работы (бэкенд не шлёт event-поток — фазы по времени)
+    stage0: 'Думаю над вопросом…', stage1: 'Собираю все нити ответа…', stage2: 'Почти готово…', stageSec: 'с',
   },
   en: {
     back: 'Back to guides', toGuides: 'Back to guides', space: 'Workspace', myChats: 'MY CHATS', chats: 'chats', newChat: 'New chat', startChat: 'Start a new chat',
@@ -13,6 +15,8 @@ const CHAT_I18N = {
     firstConversation: 'Your first conversation will appear when you send a message.', continueDialog: 'Continue the conversation here.', chooseGuide: 'Choose a guide', presence: 'here', addPalm: 'Add a palm photo', palmPhoto: 'Palm photo', tools: 'Tools',
     messageFor: 'Message for', stop: 'Stop request', send: 'Send message', ideas: 'Ideas for your question', toolAria: 'Tools for this guide', toolsEyebrow: 'DIALOGUE TOOLS', toolsTitle: 'What would you like to explore?', toolsIntro: 'Choose one focused step — the result will appear in this conversation.', closeTools: 'Close tools', withGuide: 'With', inDialog: 'in this conversation',
     deleteAllChatsTitle: 'Delete all chats', deleteAllChatsConfirmBtn: 'Delete all', newChatTitle: 'New chat', newChatConfirm: 'Start a new chat with a clean slate? The current conversation will be removed from the list.', newChatConfirmBtn: 'Start fresh',
+    // BUS-636 Э5: honest work stages (no SSE from backend — timed phases)
+    stage0: 'Thinking about your question…', stage1: 'Gathering all the threads…', stage2: 'Almost ready…', stageSec: 's',
   },
 };
 const CHAT_AGENT_EN = {
@@ -494,6 +498,10 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
           ${introHtml}
           ${body}
           ${pendHtml}
+          ${busy ? `<div class="chat-stage" role="status" aria-live="polite" aria-label="${esc(chatLang() === 'en' ? 'Working on your request' : 'Работаю над запросом')}">
+            <span class="chat-stage__text">${esc(chatT('stage0'))}</span>
+            <span class="chat-stage__timer" aria-hidden="true">0${esc(chatT('stageSec'))}</span>
+          </div>` : ''}
           ${busy ? `<div class="msg assistant"><div class="typing"><span></span><span></span><span></span></div></div>` : ''}
         </div>
         <div class="composer">
@@ -805,6 +813,58 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
     if (request && request.controller) request.controller.abort();
   };
 
+  // BUS-636 Э5: стадия работы по таймеру (бэкенд не шлёт SSE-события).
+  // Фазы подобраны так, чтобы на коротких запросах стадия выглядела
+  // «обдумывает», а на длинных (с инструментами) переключалась до «почти готово».
+  const STAGE_PHASES = [
+    { textKey: 'stage0', at: 0 },
+    { textKey: 'stage1', at: 12 },
+    { textKey: 'stage2', at: 28 },
+  ];
+
+  app.startChatStage = function() {
+    this.stopChatStage();
+    this._lastStageIdx = -1;
+    // якорь в state, а не на DOM: renderChat сразу после старта пересоздаёт
+    // .chat-stage, и время, привязанное к элементу, теряется
+    this.chat._stageStartedAt = Date.now();
+    this.chat._stageTimer = setInterval(() => this._tickChatStage(), 1000);
+  };
+
+  app.stopChatStage = function() {
+    if (this.chat._stageTimer) { clearInterval(this.chat._stageTimer); this.chat._stageTimer = null; }
+    this._lastStageIdx = -1;
+  };
+
+  app._tickChatStage = function() {
+    const el = document.querySelector('.chat-stage');
+    if (!el || !this.chat._stageStartedAt) return;
+    const sec = Math.floor((Date.now() - this.chat._stageStartedAt) / 1000);
+    const textEl = el.querySelector('.chat-stage__text');
+    const timerEl = el.querySelector('.chat-stage__timer');
+    if (timerEl) timerEl.textContent = sec + (chatT('stageSec') || 'с');
+    // переключаем фазу по времени
+    let idx = 0;
+    for (let i = STAGE_PHASES.length - 1; i >= 0; i--) { if (sec >= STAGE_PHASES[i].at) { idx = i; break; } }
+    if (idx !== this._lastStageIdx && textEl) {
+      this._lastStageIdx = idx;
+      textEl.textContent = chatT(STAGE_PHASES[idx].textKey);
+    }
+  };
+
+  // BUS-636 Э5: авто-высота textarea инпута (1..4 строки).
+  // rows сбрасываем до 1 перед замером — иначе textarea не сжимается обратно;
+  // в знаменатель входит вертикальный padding строки (9+9 из #chat-input).
+  app._autoGrowChatInput = function(el) {
+    if (!el) return;
+    el.rows = 1;
+    const cs = getComputedStyle(el);
+    const lineH = parseFloat(cs.lineHeight) || 22;
+    const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    const max = Math.min(4, Math.max(1, Math.round((el.scrollHeight - pad) / lineH)));
+    el.rows = max;
+  };
+
   app.doSend = async function(text, opts = {}) {
     const a = this.chat.spec;
     const val = (text || (document.getElementById('chat-input') || {}).value || '').trim();
@@ -821,6 +881,7 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
     const requestKey = newRequestKey();
     const controller = new AbortController();
     this.chat.request = { key: requestKey, controller, text: val };
+    this.startChatStage();
     this.renderChat(document.getElementById('app-main'));
     try {
       const r = await this.chatPost(val, { idempotencyKey: requestKey, signal: controller.signal });
@@ -841,10 +902,15 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
         this.chat.messages.push({ role: 'assistant', widget: this.chatRecoveryHtml('reply') });
         this.chat.draft = val;
       }
+    } finally {
+      this.stopChatStage();
+      this.chat.busy = false;
+      this.chat.request = null;
+      this.renderChat(document.getElementById('app-main'));
+      // деликатная подсветка только что пришедшего ответа
+      const lastMsg = document.querySelector('.chat-messages .msg:last-child');
+      if (lastMsg) lastMsg.classList.add('fresh');
     }
-    this.chat.busy = false;
-    this.chat.request = null;
-    this.renderChat(document.getElementById('app-main'));
     // деликатная подсветка только что пришедшего ответа
     const lastMsg = document.querySelector('.chat-messages .msg:last-child');
     if (lastMsg) lastMsg.classList.add('fresh');

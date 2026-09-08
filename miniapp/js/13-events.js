@@ -48,6 +48,8 @@ document.addEventListener('input', function (event) {
   }
   if (event.target && event.target.id === 'chat-input') {
     app.chat.draft = event.target.value;
+    // BUS-636 Э5: авто-высота инпута
+    if (typeof app._autoGrowChatInput === 'function') app._autoGrowChatInput(event.target);
   }
   if (event.target && event.target.classList && event.target.classList.contains('ipt') &&
       ['ch-city', 'sp-city'].includes(event.target.id)) {

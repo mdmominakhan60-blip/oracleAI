@@ -153,10 +153,12 @@ async function api(path, opts = {}) {
     return body;
   } catch (err) {
     // ретрай: сетевой сбой — всегда; 5xx — только для GET (мутации не ретраим,
-    // чтобы не задвоить эффект на сервере)
+    // чтобы не задвоить эффект на сервере). Отмена пользователем (AbortError)
+    // не ретраится — иначе «стоп» в чате запускает запрос заново.
     const method = (opts.method || 'GET').toUpperCase();
+    const aborted = err && err.name === 'AbortError';
     const network = !err || !err.status;
-    const retriable = network || (method === 'GET' && err.status >= 500);
+    const retriable = !aborted && (network || (method === 'GET' && err.status >= 500));
     if (retriable) {
       await new Promise(r => setTimeout(r, 600));
       try {
@@ -245,8 +247,57 @@ function friendlyError(err, fallback) {
 // сначала всё экранируем, затем восстанавливаем ТОЛЬКО закрытые пары <b>/<i>
 // из их экранированной формы. <script>, onerror=, атрибуты остаются текстом.
 const rich = s => esc(s).replace(/&lt;(\/?)(b|i)&gt;/g, '<$1$2>');
-// rich + markdown-жирный **...** → <b> (для ИИ-разборов).
-const richMd = s => rich(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+
+/* ── richMd v2 (BUS-636 Э5): безопасный markdown для ответов агента ──
+ * Sanitizer «by construction»: вход экранируется целиком, разметка строится
+ * только из экранированного текста — внешний HTML (`<script>`, `onerror=`)
+ * в DOM попасть не может, потому что нигде не unescape-ится.
+ * Поддержка: ## заголовки, - / 1. списки, ```code```, `code`, **жирный**, *курсив*.
+ * Ссылки сознательно не рендерим (навигация из чата вне рамок задачи). */
+const mdInline = s => s
+  .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+  .replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>')
+  // курсив — консервативно: *выделение* без цифр/пробела по краям, чтобы
+  // «2 * 3 * 4» и «сайт.com» не превращались в курсив
+  .replace(/(^|[^\w*])\*([^*\s][^*\n]*?)\*(?!\*)/g, '$1<i>$2</i>');
+
+const richMd = (s) => {
+  const lines = rich(s).split('\n');
+  const out = [];
+  let list = null;   // 'ul' | 'ol' | null
+  let items = null;  // буфер элементов текущего списка
+  let code = false;  // внутри ```-блока
+  const closeList = () => {
+    if (list) { out.push(`<${list}>${items.join('')}</${list}>`); list = null; items = null; }
+  };
+  for (const raw of lines) {
+    if (/^\s*```/.test(raw)) {
+      if (code) { out[out.length - 1] += '\n</code></pre>'; code = false; }
+      else { closeList(); out.push('<pre><code>'); code = true; }
+      continue;
+    }
+    if (code) { out[out.length - 1] += raw + '\n'; continue; }
+    const line = raw.trim();
+    if (!line) { closeList(); continue; }
+    let m;
+    if ((m = line.match(/^#{1,4}\s+(.+)$/))) { closeList(); out.push(`<strong class="md-h">${mdInline(m[1])}</strong>`); continue; }
+    if ((m = line.match(/^[-*•]\s+(.+)$/))) {
+      if (list !== 'ul') { closeList(); list = 'ul'; items = []; }
+      items.push(`<li>${mdInline(m[1])}</li>`);
+      continue;
+    }
+    if ((m = line.match(/^\d+[.)]\s+(.+)$/))) {
+      if (list !== 'ol') { closeList(); list = 'ol'; items = []; }
+      items.push(`<li>${mdInline(m[1])}</li>`);
+      continue;
+    }
+    closeList();
+    out.push(mdInline(line));
+  }
+  if (code) out.push('</code></pre>');
+  closeList();
+  return out.join('\n');
+};
 
 // Приоритет языка (BUS-397): сервер me.lang → localStorage → tg.language_code → 'ru'.
 // Сервер — источник истины: выбор в оверлее и профиле синхронизируется через /api/profile.
