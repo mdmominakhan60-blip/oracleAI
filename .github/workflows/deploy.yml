@@ -109,7 +109,7 @@ jobs:
             "DEPLOY_SHA='$DEPLOY_SHA' APP_DIR='$APP_DIR' bash -s" <<'REMOTE'
           set -Eeuo pipefail
 
-          REPO_URL="https://github.com/astartv1ai-del/oracleAI.git"
+          REPO_URL="https://github.com/mdmominakhan60-blip/oracleAI.git"
           COMPOSE_FILE="infra/docker-compose.yml"
           PREVIOUS_SHA=""
 
