@@ -242,7 +242,7 @@ Workflow `.github/workflows/deploy.yml` запускается после push �
 ```bash
 sudo install -d -o deploy -g deploy -m 755 /opt/oracleAI
 cd /opt/oracleAI
-git clone https://github.com/astartv1ai-del/oracleAI.git .
+git clone https://github.com/mdmominakhan60-blip/oracleAI.git .
 cp .env.production.example .env
 chmod 600 .env
 # заполнить .env реальными credentials и доменом
