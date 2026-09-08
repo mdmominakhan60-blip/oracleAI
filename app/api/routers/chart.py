@@ -384,7 +384,8 @@ async def chart_interpret(user=Depends(confirmed_age_user), db=Depends(get_db)):
                    chart, mode=chart.get("mode", "full"), precision=chart.get("precision", "exact"),
                    time_known=bool(user["birth_time_known"]), cache_hit=False, live=bool(live),
                    status="ok", user_state="live_interpretation")
-    return {"text": text, "structured": chart.get("interpretation_structured")}
+    return {"text": text, "structured": chart.get("interpretation_structured"),
+            "human": chart.get("interpretation_human")}
 
 
 @router.get("/matrix")
