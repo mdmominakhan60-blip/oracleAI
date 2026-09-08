@@ -100,7 +100,7 @@ async def test_welcome_chain_cohort_conversion_and_exit(db):
     await _track(db, "first_ritual", tg_id=5001, day=_day(3))
     # 5002 не конвертировала.
     # Касание дошло только 5001.
-    await _delivery(db, 5001, "welcome_chain", f"d1:5001", days_ago=4)
+    await _delivery(db, 5001, "welcome_chain", "d1:5001", days_ago=4)
     await db.commit()
 
     res = await analytics_repo.owner_scenarios(
