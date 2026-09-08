@@ -65,6 +65,10 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
       this.renderAuthRequired(e);
       return;
     }
+    // BUS-510: /api/me загрузился позже интро (язык — первый шаг, BUS-397);
+    // теперь известны birth_date/chart_mode — до-добавляем CTA-слайд карты,
+    // если оверлей интро ещё открыт.
+    this.introMaybeAddChartSlide();
     this.loadAgents();
     this.loadToday();
     this.go('home');
@@ -185,28 +189,15 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
   };
   app.maybeIntro = function() {
     if (localStorage.getItem('oracle_intro_seen')) return;
-    // первый день + дата рождения уже есть, а карты нет — в финал интро
-    // добавляем CTA «собрать натальную карту» (строится у Астролога в чате)
-    const needChart = !!(this.me && this.me.birth_date && !this.me.chart_mode);
-    const firstName = this.me && this.me.name ? esc(this.me.name.split(' ')[0]) : '';
+    // Финальный CTA-слайд карты (дата рождения есть, карты нет) до-добавляется
+    // после /api/me — introMaybeAddChartSlide ниже: интро рендерится раньше
+    // загрузки профиля (язык — первый шаг, BUS-397).
     // FE-008: слайды первого входа — на языке интерфейса, а не только на русском.
     const slides = [
       `<div class="intro-slide"><div class="intro-emoji">🔮</div><div class="intro-title">${esc(t('intro1Title'))}</div><div class="intro-sub">${esc(t('intro1Sub'))}</div></div>`,
       `<div class="intro-slide"><div class="intro-emoji">🎴</div><div class="intro-title">${esc(t('intro2Title'))}</div><div class="intro-sub">${esc(t('intro2Sub'))}</div></div>`,
       `<div class="intro-slide"><div class="intro-emoji">✨</div><div class="intro-title">${esc(t('intro3Title'))}</div><div class="intro-sub">${esc(t('intro3Sub'))}</div></div>`,
     ];
-    if (needChart) {
-      const lead = firstName
-        ? t('introChartCopyName').replace('{name}', firstName)
-        : t('introChartCopy');
-      slides.push(`<div class="intro-slide">
-        <div class="intro-emoji">🌌</div>
-        <div class="intro-title">${esc(t('introChartTitle'))}</div>
-        <div class="intro-sub">${lead} ${esc(t('introChartCopyTail'))}</div>
-        <button class="btn btn-primary" style="margin-top:14px;width:100%" data-act="chat-fn" data-chat="astro" data-fn="featureChart" data-intro-chart>${esc(t('introChartCta'))}</button>
-      </div>`);
-    }
-    const last = slides.length - 1;
     const ov = document.createElement('div');
     ov.id = 'intro';
     ov.innerHTML = `
@@ -218,11 +209,14 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
       <button class="intro-skip" data-intro-skip>${esc(t('introSkip'))}</button>`;
     document.body.appendChild(ov);
     const track = ov.querySelector('.intro-track');
-    const dots = ov.querySelectorAll('.intro-dots span');
+    // BUS-510: last и dots — не статики: CTA-слайд карты до-добавляется
+    // после /api/me (introMaybeAddChartSlide), состав меняется живьём.
     // Текущий слайд — состояние, а не разбор текста кнопки: подпись кнопки
     // локализована, и сравнение с RU-строкой ломало логику на EN (FE-008).
     let current = 0;
     const sync = () => {
+      const dots = ov.querySelectorAll('.intro-dots span');
+      const last = dots.length - 1;
       current = Math.max(0, Math.min(last, Math.round(track.scrollLeft / (track.clientWidth || 1))));
       dots.forEach((d, k) => d.classList.toggle('active', k === current));
       ov.querySelector('.intro-start').textContent = current === last ? t('introStart') : t('introNext');
@@ -235,20 +229,43 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
       haptic('success');
     };
     ov.querySelector('[data-intro-start]').addEventListener('click', () => {
-      if (current < last) {
+      const lastNow = ov.querySelectorAll('.intro-dots span').length - 1;
+      if (current < lastNow) {
         track.scrollBy({ left: track.clientWidth, behavior: 'smooth' });
       } else done();
     });
     ov.querySelector('[data-intro-skip]').addEventListener('click', done);
-    // CTA финального слайда: гасим интро здесь, сам же клик ловит
-    // делегированный обработчик 13-events (data-act="chat-fn") и открывает
-    // чат Астролога с формой построения карты
-    if (needChart) {
-      ov.querySelector('[data-intro-chart]').addEventListener('click', () => {
-        try { localStorage.setItem('oracle_intro_seen', '1'); } catch (e) {}
-        ov.remove();
-      });
-    }
+  };
+
+  // BUS-510: интро рендерится до /api/me (язык — первый шаг, BUS-397):
+  // this.me ещё null, финальный CTA-слайд карты неизвестен. После загрузки
+  // /api/me добавляем его в живой оверлей; если пользователь уже ушёл —
+  // оверлея нет, тихо выходим.
+  app.introChartSlideHtml = function() {
+    const firstName = this.me && this.me.name ? esc(this.me.name.split(' ')[0]) : '';
+    const lead = firstName
+      ? t('introChartCopyName').replace('{name}', firstName)
+      : t('introChartCopy');
+    return `<div class="intro-slide">
+      <div class="intro-emoji">🌌</div>
+      <div class="intro-title">${esc(t('introChartTitle'))}</div>
+      <div class="intro-sub">${lead} ${esc(t('introChartCopyTail'))}</div>
+      <button class="btn btn-primary" style="margin-top:14px;width:min(300px,100%)" data-act="chat-fn" data-chat="astro" data-fn="featureChart" data-intro-chart>${esc(t('introChartCta'))}</button>
+    </div>`;
+  };
+  app.introMaybeAddChartSlide = function() {
+    const ov = document.getElementById('intro');
+    if (!ov || ov.querySelector('[data-intro-chart]')) return;
+    const needChart = !!(this.me && this.me.birth_date && !this.me.chart_mode);
+    if (!needChart) return;
+    ov.querySelector('.intro-track').insertAdjacentHTML('beforeend', this.introChartSlideHtml());
+    ov.querySelector('.intro-dots').insertAdjacentHTML('beforeend', '<span></span>');
+    // «Начать» на новом финальном слайде: подпись пересчитывает scroll-sync,
+    // активный dot обновится при долистывании.
+    ov.querySelector('[data-intro-chart]').addEventListener('click', () => {
+      try { localStorage.setItem('oracle_intro_seen', '1'); } catch (e) {}
+      ov.remove();
+    });
   };
 
   // Гайд первого входа в чат: три коротких шага, только один раз на устройстве.

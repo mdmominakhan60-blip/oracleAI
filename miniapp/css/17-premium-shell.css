@@ -177,8 +177,12 @@
     width: min(420px, calc(100vw - 48px));
     box-shadow: 0 40px 90px -30px rgba(0, 0, 0, .85);
   }
+  /* BUS-510: на широком frame интро-колонка центрируется #intro
+     (align-items:center) — локальное margin:auto дублировало центрирование
+     в другой системе координат и смещало ось относительно слайда.
+     Держим ту же ширину колонки, что у .intro-title/.intro-sub/.intro-start. */
   #intro .intro-start, #intro .intro-skip, #intro .intro-dots {
-    max-width: 460px; margin-left: auto; margin-right: auto; width: calc(100% - 64px);
+    width: min(300px, calc(100% - 64px));
   }
   /* sheet инструментов живёт внутри chat-shell (внутри frame) */
   .tool-expand { border-radius: 0 0 34px 34px; overflow: hidden; }
