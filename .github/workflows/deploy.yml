@@ -109,7 +109,9 @@ jobs:
             "DEPLOY_SHA='$DEPLOY_SHA' APP_DIR='$APP_DIR' bash -s" <<'REMOTE'
           set -Eeuo pipefail
 
-          REPO_URL="https://github.com/mdmominakhan60-blip/oracleAI.git"
+          # Приватный репо: клон/fetch только по SSH через read-only deploy key,
+          # установленный на VPS (~deploy/.ssh/config → IdentityFile).
+          REPO_URL="git@github.com:mdmominakhan60-blip/oracleAI.git"
           COMPOSE_FILE="infra/docker-compose.yml"
           PREVIOUS_SHA=""
 
