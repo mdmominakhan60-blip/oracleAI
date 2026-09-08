@@ -396,7 +396,8 @@ const profileFormat = (key, values = {}) => Object.entries(values).reduce(
 
 const HOME_I18N = {
   ru: {
-    ritualLabel: 'Твой мягкий ритуал дня', ritualCta: 'Открыть разговор', welcomeKicker: 'СЕГОДНЯ — БЕЗ СПЕШКИ', welcomeTitle: 'Начни с того, что уже звучит внутри.', welcomeCopy: 'Один вопрос. Один бережный шаг. Остальное можно оставить на потом.', welcomePrompt: 'С чего хочется начать?', seasonalAria: 'Сезонный ритуал', seasonalKicker: 'Сезонный знак',
+    ritualLabel: 'Твой мягкий ритуал дня', welcomeKicker: 'СЕГОДНЯ — БЕЗ СПЕШКИ', focusAskToday: 'Спросить о своём дне', focusExpand: 'Развернуть', focusCollapse: 'Свернуть', heroNextPrefix: 'Дальше', accMoonBadge: 'сегодня',
+    flipCardAria: 'Перевернуть карту',
     rhythmAria: 'Твой ритм на сегодня', rhythmKicker: 'Твой ритм', rhythmTitle: 'Вернуться к себе', stepsAria: '{count} из 2 бережных шагов',
     diaryDoneAria: 'Дневник заполнен, открыть записи', diaryOpenAria: 'Открыть дневник состояния', diaryDone: 'Дневник уже заполнен', diaryOpen: 'Отметить своё состояние',
     diaryDoneCopy: 'Дневник уже ждёт тебя в личной библиотеке.', diaryPromptFallback: 'Одно честное предложение о том, как ты сейчас.',
@@ -405,14 +406,14 @@ const HOME_I18N = {
     week: 'Вся неделя', today: 'сегодня', lunarDay: '{day}-й лунный день', moonTitle: '🌙 Лунный календарь', moonWeek: 'Неделя',
     personal: 'Только для тебя', todaySign: 'Знак на сегодня', forecastFallbackTitle: 'Начни с того, что уже чувствуешь.', forecastFallbackCopy: 'Открой личный знак дня или задай Оракулу вопрос — это тоже хороший способ вернуться к себе.',
     daySymbol: 'Символ дня', cardNearby: 'Карта, которая рядом', cardCopy: 'Носи эту энергию сегодня — карта дня задаёт тон всему: от решений до встреч.', cardHint: 'Тапни карту — она развернётся со смыслом ↻',
-    nextKicker: 'Один бережный шаг', nextTitle: 'Продолжить ритуал', chooseMood: 'Выбери настроение', talkTo: 'С кем поговорим?',
     guidesTitle: 'Твои проводники', guidesCopy: 'Не нужно знать «правильный» вопрос. Выбери того, с кем хочется побыть сегодня — он поможет разложить мысли по местам.',
     listening: 'Готов слушать тебя', nearby: 'рядом для тебя', start: 'Начать', openChatAria: 'Открыть диалог с {name}', ask: 'Можно спросить', evidenceFirst: 'Факты → интерпретация', toolCount: '{count} инструментов', profileQuality: 'Специализированный профиль',
     ritualOneDone: 'Одна опора уже есть. Второй шаг — только если захочется.', ritualNoneDone: 'Выбери одну маленькую точку опоры. Этого достаточно.',
     seasonal: [['Зимний свет', 'Разреши себе меньше спешки и больше тёплых пауз.'], ['Время расцветать', 'Выбери один маленький шаг, который хочется начать для себя.'], ['Сезон полноты', 'Заметь, что уже стало твоей опорой, и поблагодари себя.'], ['Время бережно отпустить', 'Освободи место для того, что действительно важно сейчас.']],
   },
   en: {
-    ritualLabel: 'Your gentle daily ritual', ritualCta: 'Open the conversation', welcomeKicker: 'TODAY — WITHOUT RUSH', welcomeTitle: 'Start with what is already alive inside.', welcomeCopy: 'One question. One gentle step. The rest can wait.', welcomePrompt: 'What would you like to begin with?', seasonalAria: 'Seasonal ritual', seasonalKicker: 'Seasonal sign',
+    ritualLabel: 'Your gentle daily ritual', welcomeKicker: 'TODAY — WITHOUT RUSH', focusAskToday: 'Ask about your day', focusExpand: 'Expand', focusCollapse: 'Collapse', heroNextPrefix: 'Next up', accMoonBadge: 'today',
+    flipCardAria: 'Flip the card',
     rhythmAria: 'Your rhythm for today', rhythmKicker: 'Your rhythm', rhythmTitle: 'Return to yourself', stepsAria: '{count} of 2 gentle steps',
     diaryDoneAria: 'Diary completed, open entries', diaryOpenAria: 'Open mood diary', diaryDone: 'Diary completed', diaryOpen: 'Check in with yourself',
     diaryDoneCopy: 'Your entry is waiting in your private library.', diaryPromptFallback: 'One honest sentence about how you are right now.',
@@ -421,7 +422,6 @@ const HOME_I18N = {
     week: 'Full week', today: 'today', lunarDay: 'lunar day {day}', moonTitle: '🌙 Moon calendar', moonWeek: 'Week',
     personal: 'Just for you', todaySign: 'Today’s sign', forecastFallbackTitle: 'Begin with what you already feel.', forecastFallbackCopy: 'Open your personal sign for today or ask the Oracle a question — both are gentle ways to return to yourself.',
     daySymbol: 'Symbol of the day', cardNearby: 'A card by your side', cardCopy: 'Carry this energy through the day — this card sets a tone for choices and encounters.', cardHint: 'Tap the card to reveal its meaning ↻',
-    nextKicker: 'One gentle step', nextTitle: 'Continue your ritual', chooseMood: 'Choose a mood', talkTo: 'Who would you like to talk to?',
     guidesTitle: 'Your guides', guidesCopy: 'You do not need the “right” question. Choose the voice you want to spend time with today — it will help you sort through your thoughts.',
     listening: 'Ready to listen', nearby: 'here for you', start: 'Start', openChatAria: 'Open chat with {name}', ask: 'You can ask', evidenceFirst: 'Evidence → reflection', toolCount: '{count} tools', profileQuality: 'Specialist profile',
     ritualOneDone: 'One anchor is already here. Take the second step only if you want to.', ritualNoneDone: 'Choose one small anchor. That is enough.',

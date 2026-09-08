@@ -242,6 +242,32 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
     if (trigger) trigger.setAttribute('aria-expanded', String(open));
   };
 
+  // BUS-517 (R-10): аккордеоны главной «Сегодня в фокусе» — скрытие через [hidden],
+  // анимация раскрытия — CSS-градиент, при prefers-reduced-motion отключается там же.
+
+  app.toggleHomeAcc = function(el) {
+    haptic('light');
+    const acc = el && el.closest ? el.closest('.home-acc') : null;
+    if (!acc) return;
+    const body = acc.querySelector('.home-acc-body');
+    const head = acc.querySelector('.home-acc-head');
+    if (!body || !head) return;
+    const open = body.hidden;
+    body.hidden = !open;
+    head.setAttribute('aria-expanded', String(open));
+  };
+
+  // «Развернуть»/«Свернуть» прогноза в hero: снимает line-clamp, текст меняется на месте.
+
+  app.toggleForecastExpand = function(el) {
+    haptic('soft');
+    const txt = document.getElementById('hero-forecast-txt');
+    if (!txt || !el) return;
+    const expanded = txt.classList.toggle('forecast-clamped') === false;
+    el.setAttribute('aria-expanded', String(expanded));
+    el.firstChild.textContent = expanded ? homeT('focusCollapse') : homeT('focusExpand');
+  };
+
   // Лунный календарь: компакт — «кратко о сегодня» + раскрытие всей недели по кнопке
 
   app.toggleMoonWeek = function() {
