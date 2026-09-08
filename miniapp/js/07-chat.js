@@ -55,9 +55,70 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
     this.view = 'hub';
     this.renderNav();
     if (typeof this.syncBackButton === 'function') this.syncBackButton();
+    // R-8 (BUS-509): в чате вся высота экрана — диалогу. Нижняя навигация
+    // скрывается; путь назад — back в .chat-head и BackButton Telegram.
+    this.setChatChrome(true);
     this.renderChat(document.getElementById('app-main'));
     if (after) setTimeout(after, 60);
     this.maybeChatGuide();
+  };
+
+  /* ═══ R-8 (BUS-509): viewport чата ═══
+     1) nav-hidden — прячет .app-nav, пока открыт чат.
+     2) heads-hidden — шапки (.app-header + .chat-head) уходят при
+        скролле вниз, возвращаются при скролле вверх. */
+  app.setChatChrome = function(chatActive) {
+    const root = document.getElementById('app-root');
+    if (!root) return;
+    root.classList.toggle('nav-hidden', !!chatActive);
+    if (!chatActive) {
+      // Вышли из чата — шапки показываем сразу, иначе «застрянут» скрытыми.
+      root.classList.remove('heads-hidden');
+      root.classList.remove('chat-live');
+      this._chatScrollCleanup && this._chatScrollCleanup();
+    } else {
+      this.initChatScrollHeads();
+    }
+  };
+
+  // Шапки при скролле: направление ленты сообщений — sentinel не нужен,
+  // хватает порога дельты у .chat-messages (скроллер не всплывает — ловим в capture).
+  app.initChatScrollHeads = function() {
+    if (this._chatScrollCleanup) return;
+    const root = document.getElementById('app-root');
+    const main = document.getElementById('app-main');
+    if (!root || !main) return;
+    let lastY = 0;
+    let ticking = false;
+    // Окно подавления эха: смена класса меняет высоту скроллера, и у нижнего
+    // края браузер подожмёт scrollTop в обратную сторону — это не жест
+    // пользователя, реагировать нельзя (иначе шапка осциллирует).
+    let suppressUntil = 0;
+    const apply = (hidden) => {
+      if (root.classList.contains('heads-hidden') === hidden) return;
+      root.classList.toggle('heads-hidden', hidden);
+      suppressUntil = performance.now() + 400;
+    };
+    const onScroll = (event) => {
+      const box = event.target;
+      if (!box || !box.classList || !box.classList.contains('chat-messages')) return;
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        if (performance.now() < suppressUntil) { lastY = box.scrollTop; return; }
+        const y = box.scrollTop;
+        // Порог 36px отсекает микродрожание скролла и «спринг» iOS-резинки.
+        if (y - lastY > 36) apply(true);
+        else if (lastY - y > 36 || y <= 0) apply(false);
+        lastY = y;
+      });
+    };
+    main.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    this._chatScrollCleanup = () => {
+      main.removeEventListener('scroll', onScroll, { capture: true });
+      this._chatScrollCleanup = null;
+    };
   };
 
   // список чатов-сессий агента; лимита количества нет
@@ -335,8 +396,15 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
       chiromant: { kicker: 'БЕРЕЖНОЕ ЧТЕНИЕ ЛАДОНИ', title: 'Сначала — что действительно видно', text: 'Пришли фото ладони: Мира разберёт видимые зоны и свяжет их с твоим вопросом.' },
     };
     const introGuide = introGuides[a.code] || introGuides.oracle;
+    // R-8 (BUS-509): диалог начался — подсказки не нужны (intro уже не
+    // рендерится по тому же условию), композер становится компактнее.
+    document.getElementById('app-root').classList.toggle('chat-live', messages.length >= 2);
+
+    // R-8 (BUS-509): intro рендерится уже зная viewport — при открытой
+    // клавиатуре/малой высоте сразу свёрнут в kicker (не дожидаясь события).
+    const introCollapsed = !!(this._viewportCompact);
     const introHtml = messages.length <= 1 ? `
-        <section class="agent-intro agent-intro--compact agent-intro--${esc(a.code)}" style="${this.agentThemeStyle(a, a.code)}" aria-label="${esc(chatLang() === 'en' ? 'Guide introduction' : 'Знакомство с проводником')}">
+        <section class="agent-intro agent-intro--compact ${introCollapsed ? 'agent-intro--collapsed' : ''} agent-intro--${esc(a.code)}" style="${this.agentThemeStyle(a, a.code)}" aria-label="${esc(chatLang() === 'en' ? 'Guide introduction' : 'Знакомство с проводником')}">
           <span class="ai-kicker">${introGuide.kicker}</span>
           <div class="ai-persona">
             <div class="ai-face">${agentSprite(a, false)}</div>
@@ -637,6 +705,7 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
   app.closeChat = function() {
     this.chat.key = null;
     this.chat.pending = null; // гонка B1: закрыли чат — несозревший виджет никому не нужен
+    this.setChatChrome(false);
     this.go('hub');
   };
   // свайп по табам агентов: вбок листаем Оракул → Астролог → Таролог → …

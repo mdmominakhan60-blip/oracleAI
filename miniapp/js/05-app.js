@@ -175,8 +175,35 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
   };
 
   // G001 клавиатура: композер поднимается, когда Telegram раскрывает клавиатуру
+  // R-8 (BUS-509): для bottom-pinned композера опираемся на stable-высоту
+  // Telegram (viewportStableHeight), а не viewportHeight — по документации
+  // docs.telegram.org viewportHeight «недостаточно плавный» для pinned-элементов.
+  // Слушаем viewportChanged и применяем значение только в устойчивом состоянии
+  // (isStateStable), когда анимация клавиатуры завершилась.
 
   app.initViewport = function() {
+    const root = document.getElementById('app-root');
+    const webApp = tg && tg();
+
+    const applyStableHeight = (px) => {
+      if (!root || !px) return;
+      root.style.setProperty('--tg-viewport-stable-height', px + 'px');
+    };
+
+    if (webApp && webApp.onEvent) {
+      webApp.onEvent('viewportChanged', (event) => {
+        if (!event || !event.isStateStable) return;
+        applyStableHeight(webApp.viewportStableHeight);
+        this.updateViewportMode(webApp.viewportStableHeight);
+      });
+      if (webApp.viewportStableHeight) applyStableHeight(webApp.viewportStableHeight);
+    }
+
+    // Fallback вне Telegram (браузер, e2e): считаем по visualViewport/innerHeight.
+    if (root && !root.style.getPropertyValue('--tg-viewport-stable-height')) {
+      applyStableHeight((window.visualViewport && window.visualViewport.height) || window.innerHeight);
+    }
+
     if (!window.visualViewport) return;
     window.visualViewport.addEventListener('resize', () => {
       const vv = window.visualViewport;
@@ -186,6 +213,23 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
       if (kb > 0) composer.style.paddingBottom = (kb + 8) + 'px';
       else composer.style.paddingBottom = '';
     }, { passive: true });
+  };
+
+  // R-8.3 (BUS-509): при малой высоте viewport (открыта клавиатура,
+  // узкий экран) intro-карточка чата коллапсирует до одной строки kicker.
+  // Компакт-режим держим классом на html — CSS решает видимость.
+  app.updateViewportMode = function(stableHeight) {
+    const h = Number(stableHeight)
+      || (tg() && tg().viewportStableHeight)
+      || (window.visualViewport && window.visualViewport.height)
+      || window.innerHeight || 0;
+    if (!h) return;
+    const compact = h < 480;
+    // renderChat читает флаг: intro при малой высоте рендерится сразу свёрнутым.
+    this._viewportCompact = compact;
+    document.documentElement.classList.toggle('viewport-compact', compact);
+    const intro = document.querySelector('.agent-intro');
+    if (intro) intro.classList.toggle('agent-intro--collapsed', compact);
   };
   app.maybeIntro = function() {
     if (localStorage.getItem('oracle_intro_seen')) return;
@@ -319,6 +363,11 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
     const root = document.getElementById('app-root');
     const name = this.me && this.me.name ? this.me.name : 'Мой профиль';
     const initial = this.me && this.me.name ? esc(this.me.name[0].toUpperCase()) : 'О';
+    // R-8 (BUS-509): innerHTML затирает классы состояния вьюпорта чата —
+    // сохраняем их (renderFrame перезапускается при смене языка в чате).
+    const keepNavHidden = root.classList.contains('nav-hidden');
+    const keepHeadsHidden = root.classList.contains('heads-hidden');
+    const keepChatLive = root.classList.contains('chat-live');
     root.innerHTML = `
       <header class="app-header">
         <div class="app-header-row">
@@ -341,6 +390,9 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
     this.renderNav();
     this.refreshHeaderStatus();
     this.refreshBellDot();
+    if (keepNavHidden) root.classList.add('nav-hidden');
+    if (keepHeadsHidden) root.classList.add('heads-hidden');
+    if (keepChatLive) root.classList.add('chat-live');
   };
 
   // BUS-399: второй ряд шапки — кристаллы и подписка, видны с любого экрана.

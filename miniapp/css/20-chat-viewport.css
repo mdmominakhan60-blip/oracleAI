@@ -1,0 +1,71 @@
+/* =============================================================
+   BUS-509 (R-8): Chat viewport — чату возвращаем высоту экрана.
+   Скрываем нижнюю навигацию в чате, прячем шапки при скролле
+   вниз (паттерн Telegram/iOS large-title), коллапсируем
+   intro-карточку при малой высоте viewport.
+   ============================================================= */
+
+/* ── R-8.1: в экране чата нижняя навигация не нужна ──
+   Каркас держит #app-root: flex-колонка (header / main / nav).
+   Класс вешает openChat (js/07-chat.js), снимает closeChat.
+   Навигация обратно — back-кнопка в .chat-head и BackButton Telegram. */
+#app-root.nav-hidden .app-nav { display: none; }
+
+/* Шапка приложения в чате не нужна: у чата своя head-панель
+   (имя проводника, back, сессии) — паттерн push-навигации iOS.
+   display, а не transform: высота реально возвращается чату. */
+#app-root.nav-hidden .app-header { display: none; }
+
+/* ── R-8.2: прятать шапку чата при скролле вниз ──
+   app.initChatScrollHeads() ставит класс heads-hidden на #app-root.
+   max-height: 0 + padding 0 — layout-высота реально отдаётся ленте
+   (transform места бы не вернул). Числовая база max-height (не none)
+   нужна, чтобы transition вообще анимировался. */
+#app-root.nav-hidden .chat-head {
+  max-height: 120px; /* ≥ фактической высоты шапки, даже двухстрочной */
+}
+#app-root.heads-hidden .chat-head {
+  max-height: 0;
+  /* min-height из 18-pixel-precision.css:112 и 15-ritual-redesign.css:288
+     перебил бы max-height: 0 — обнуляем вместе с паддингами. */
+  min-height: 0 !important;
+  margin: 0;
+  padding-top: 0; padding-bottom: 0;
+  border-bottom-width: 0;
+  overflow: hidden;
+}
+
+/* Чат-скроллер — прямый сосед: компенсируем сдвиг scrollTop,
+   чтобы точка чтения не прыгала в момент скрытия шапки. */
+#app-root.heads-hidden .chat-messages { scroll-margin-top: 0; }
+
+/* Анимация — только без reduced-motion (WCAG 2.3.3, гейт P2-002 §7). */
+@media (prefers-reduced-motion: no-preference) {
+  .chat-head {
+    transition: max-height .28s var(--ease), padding .28s var(--ease),
+      margin .28s var(--ease), border-bottom-width .28s var(--ease);
+  }
+}
+
+/* Диалог начался — подсказки композера не нужны (дублируют intro);
+   intro-карточка по тому же условию уже не рендерится. */
+#app-root.chat-live .suggest-chips { display: none; }
+
+/* R-8.4: высота app-shell — по stable-высоте Telegram, когда она известна.
+   viewportHeight не подходит для pinned-композера (дёргается в анимации
+   клавиатуры); 100dvh — fallback вне Telegram (браузер, e2e). */
+#app-root {
+  height: 100dvh;
+}
+#app-root[style*='--tg-viewport-stable-height'] {
+  height: var(--tg-viewport-stable-height, 100dvh);
+}
+
+/* ── R-8.3: intro-карточка → одна строка kicker ──
+   Класс вешается при открытой клавиатуре / малой высоте viewport
+   (app.updateViewportMode). В свёрнутом виде остаётся kicker —
+   персональная «шапка» проводника, остальное скрыто display: none. */
+.agent-intro--collapsed { padding: 6px 12px; margin: 0 0 4px; border: 0; background: none; box-shadow: none; }
+.agent-intro--collapsed .ai-kicker { font-size: 9px; }
+.agent-intro--collapsed .ai-persona,
+.agent-intro--collapsed .ai-next { display: none; }
