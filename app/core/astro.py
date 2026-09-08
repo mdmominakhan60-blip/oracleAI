@@ -796,11 +796,21 @@ def _chart_accents(chart: dict, time_known: bool | None) -> str:
     return "; ".join(bits)
 
 
+def _deg_suffix(item: dict) -> str:
+    """Градус позиции в формате chart_evidence: «, 14.3°». 0° — валидная долгота."""
+    deg = item.get("deg")
+    if deg is None:
+        return ""
+    return f", {deg}°"
+
+
 def chart_brief(chart: dict, *, time_known: bool | None = None) -> str:
     """Краткая текстовая выжимка карты для промпта агента.
 
     `time_known=False` — время рождения неизвестно, дома посчитаны по полудню:
     их нельзя показывать и тем более нельзя давать LLM делать домовые выводы.
+    Градусы планет (в отличие от домов) не зависят от времени рождения и идут
+    в том же формате, что и evidence block /api/chart/interpret.
     """
     if chart.get("mode") == "full" and chart.get("planets"):
         parts = []
@@ -827,13 +837,13 @@ def chart_brief(chart: dict, *, time_known: bool | None = None) -> str:
         angular_data_available = time_known is True and chart.get("precision", "exact") == "exact"
         asc = chart.get("ascendant") if angular_data_available else None
         if asc:
-            parts.append(f"Асцендент в {asc['sign']}")
+            parts.append(f"Асцендент в {asc['sign']}{_deg_suffix(asc)}")
         mc = chart.get("mc") if angular_data_available else None
         if mc and mc.get("sign"):
-            parts.append(f"MC в {mc['sign']}")
+            parts.append(f"MC в {mc['sign']}{_deg_suffix(mc)}")
         for p in chart["planets"]:
             house = f", {p['house']} дом" if (p.get("house") and angular_data_available) else ""
-            parts.append(f"{p['name']} в {p['sign']}{house}"
+            parts.append(f"{p['name']} в {p['sign']}{_deg_suffix(p)}{house}"
                          + (" (R)" if p["retro"] else ""))
         brief = "; ".join(parts)
         if not angular_data_available:
@@ -848,11 +858,11 @@ def chart_brief(chart: dict, *, time_known: bool | None = None) -> str:
         nodes = chart.get("nodes") or []
         if nodes:
             brief += ". Узлы и Лилит: " + "; ".join(
-                f"{n['name']} в {n['sign']}" for n in nodes if n.get("sign"))
+                f"{n['name']} в {n['sign']}{_deg_suffix(n)}" for n in nodes if n.get("sign"))
         additional = chart.get("additional_points") or []
         if additional:
             brief += ". Дополнительные точки: " + "; ".join(
-                f"{p['name']} в {p['sign']}" for p in additional if p.get("sign"))
+                f"{p['name']} в {p['sign']}{_deg_suffix(p)}" for p in additional if p.get("sign"))
         accents = _chart_accents(chart, angular_data_available)
         if accents:
             brief += ". АКЦЕНТЫ КАРТЫ: " + accents

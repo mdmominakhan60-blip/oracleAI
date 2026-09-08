@@ -60,6 +60,25 @@ async def test_all_agents_receive_shared_context_and_compact_natal_json(db, user
     assert '"Марс"' in prompt or "Марс" in prompt
 
 
+@pytest.mark.asyncio
+async def test_agent_prompt_carries_fixture_chart_degrees(db, user):
+    """BUS-648: промпт агента на фикстурной карте содержит её реальные градусы —
+    и в brief, и в natal_json; LLM получает привязку к конкретной карте."""
+    prompt = await runtime.system_for(
+        db, user, get("astro"), question="Опиши мою карту"
+    )
+    import json as _json
+
+    chart = _json.loads(user["chart_json"])
+    moon = next(p for p in chart["planets"] if p["name"] == "Луна")
+    # Градусы в chart_brief-блоке промпта.
+    assert f"Луна в {moon['sign']}, {moon['deg']}°" in prompt
+    # Градусы в компактной JSON-сводке промпта.
+    assert f'"deg":{moon["deg"]}' in prompt
+    # Предписание цитировать позиции присутствует.
+    assert "градус" in prompt
+
+
 def test_compact_natal_summary_is_bounded_and_respects_unknown_time():
     chart = {
         "precision": "unknown",
@@ -76,3 +95,35 @@ def test_compact_natal_summary_is_bounded_and_respects_unknown_time():
     assert summary["houses_available"] is False
     assert "house" not in summary["planets"]["Марс"]
     assert "Неизвестная точка" not in json.dumps(summary, ensure_ascii=False)
+
+
+def test_compact_natal_summary_carries_degrees():
+    """BUS-648: градусы планет и узлов в natal_json; дома — только при точном времени."""
+    chart = {
+        "precision": "exact",
+        "ascendant": {"sign": "Весы", "element": "воздух", "deg": 21.7},
+        "mc": {"sign": "Рак", "element": "вода", "deg": 21.7},
+        "planets": [
+            {"name": "Солнце", "sign": "Близнецы", "element": "воздух", "deg": 0.0, "house": 9},
+            {"name": "Луна", "sign": "Рак", "element": "вода", "deg": 14.3, "house": 10},
+        ],
+        "nodes": [{"name": "Раху (Северный узел)", "sign": "Водолей", "deg": 5.1, "house": 5}],
+    }
+    summary = shared_context.compact_natal_summary(chart, time_known=True)
+    assert summary["planets"]["Солнце"]["deg"] == 0.0
+    assert summary["planets"]["Луна"]["deg"] == 14.3
+    assert summary["nodes"]["rahu"]["deg"] == 5.1
+    assert summary["ascendant"]["deg"] == 21.7
+    assert summary["mc"]["deg"] == 21.7
+    assert summary["planets"]["Луна"]["house"] == 10
+
+
+def test_natal_json_degrees_visible_without_time_known():
+    """Долгота не зависит от времени рождения — deg остаётся при unknown precision."""
+    chart = {
+        "precision": "unknown",
+        "planets": [{"name": "Марс", "sign": "Дева", "element": "земля", "deg": 7.8, "house": 6}],
+    }
+    summary = shared_context.compact_natal_summary(chart, time_known=False)
+    assert summary["planets"]["Марс"]["deg"] == 7.8
+    assert "house" not in summary["planets"]["Марс"]

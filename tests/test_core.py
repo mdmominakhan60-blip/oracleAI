@@ -174,10 +174,10 @@ def test_celtic_cross_positions_are_classic():
 def _full_chart_fixture():
     return {
         "mode": "full",
-        "ascendant": {"sign": "Лев"},
+        "ascendant": {"sign": "Лев", "deg": 12.5},
         "planets": [
-            {"name": "Венера", "sign": "Весы", "house": 7, "retro": False},
-            {"name": "Луна", "sign": "Рак", "house": 4, "retro": False},
+            {"name": "Венера", "sign": "Весы", "deg": 8.4, "house": 7, "retro": False},
+            {"name": "Луна", "sign": "Рак", "deg": 0.0, "house": 4, "retro": False},
         ],
         "aspects": [],
         "houses": [],
@@ -195,6 +195,38 @@ def test_chart_brief_shows_houses_with_time():
     brief = astro.chart_brief(_full_chart_fixture(), time_known=True)
     assert "7 дом" in brief
     assert "полдн" not in brief.lower()
+
+
+def test_chart_brief_carries_degrees_like_chart_evidence():
+    """BUS-648: градусы позиций в агентском контексте — формат chart_evidence."""
+    brief = astro.chart_brief(_full_chart_fixture(), time_known=True)
+    assert "Венера в Весы, 8.4°, 7 дом" in brief
+    assert "Асцендент в Лев, 12.5°" in brief
+    # 0° — легитимная долгота, не «нет данных».
+    assert "Луна в Рак, 0.0°" in brief
+
+
+def test_chart_brief_degrees_survive_unknown_time():
+    """Долгота не зависит от времени рождения — градусы идут и без него."""
+    brief = astro.chart_brief(_full_chart_fixture(), time_known=False)
+    assert "Венера в Весы, 8.4°" in brief
+    assert "Луна в Рак, 0.0°" in brief
+    assert "7 дом" not in brief
+    # ASC/MC по-прежнему заблокированы без точного времени.
+    assert "Асцендент" not in brief
+
+
+def test_chart_brief_tolerates_missing_degrees():
+    """Старые сохранённые карты без deg не ломают краткий формат."""
+    chart = {
+        "mode": "full",
+        "ascendant": {"sign": "Лев"},
+        "planets": [{"name": "Венера", "sign": "Весы", "house": 7, "retro": False}],
+        "aspects": [], "houses": [],
+    }
+    brief = astro.chart_brief(chart, time_known=True)
+    assert "Венера в Весы, 7 дом" in brief
+    assert "Асцендент в Лев" in brief
 
 
 # ─────────────── инварианты после эзотерического аудита ─────────────────────
