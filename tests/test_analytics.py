@@ -87,6 +87,50 @@ async def test_track_open_records_d30_milestone(db):
     assert counts[analytics.E_RETURN_D30] == 1
 
 
+async def test_track_open_utm_prop_only_when_valid(db):
+    """BUS-562: utm из startapp — отдельный prop miniapp_open; невалид = organic.
+
+    Словарь аналитики: source — server-owned (push|broadcast из dispatch-
+    контекста), utm — пасс-тру токен. Milestone-механика D1/D7/D30 не меняется.
+    """
+    await users.ensure(db, 3003, "В")
+    user = await users.get(db, 3003)
+
+    async def last_open_props(tg_id: int):
+        cur = await db.execute(
+            "SELECT props_json FROM events WHERE tg_id=? AND name=? "
+            "ORDER BY created_at DESC, id DESC LIMIT 1",
+            (tg_id, analytics.E_MINIAPP_OPEN),
+        )
+        row = await cur.fetchone()
+        return json.loads(row["props_json"]) if row and row["props_json"] else None
+
+    await chat.track_open(db, user)
+    assert await last_open_props(3003) is None  # organic — props нет
+
+    await chat.track_open(db, user, utm="bc42")
+    assert await last_open_props(3003) == {"utm": "bc42"}
+
+    await chat.track_open(db, user, utm="Push Channel!")  # не ascii-токен
+    assert await last_open_props(3003) is None
+
+    await chat.track_open(db, user, utm="x" * 100)  # длиннее лимита
+    assert await last_open_props(3003) is None
+
+    # milestones не затронуты utm-веткой
+    old = datetime.now(timezone.utc) - timedelta(days=8)
+    await db.execute(
+        "UPDATE events SET day=?, created_at=? WHERE tg_id=? AND name=?",
+        (old.date().isoformat(), old.isoformat(), 3003, analytics.E_MINIAPP_OPEN),
+    )
+    await db.commit()
+    await chat.track_open(db, user, utm="bc42")
+    cur = await db.execute(
+        "SELECT COUNT(*) c FROM events WHERE tg_id=3003 AND name=?",
+        (analytics.E_RETURN_D1,))
+    assert (await cur.fetchone())["c"] == 1
+
+
 async def test_activation_funnel_uses_first_open_cohort(db):
     await analytics.track_now(
         db, analytics.E_MINIAPP_OPEN, 1001, surface="miniapp",

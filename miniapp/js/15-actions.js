@@ -55,6 +55,9 @@
     moon: () => call('openMoon'),
     'moon-week': () => call('toggleMoonWeek'),
     'moon-day': (el, data) => call('toggleMoonDay', parseInt(data.i, 10)),
+    // BUS-517 (R-10): аккордеоны главной и «Развернуть» прогноза в hero
+    'home-acc': (el) => call('toggleHomeAcc', el),
+    'forecast-expand': (el) => call('toggleForecastExpand', el),
     ptab: (el, data) => call('switchPTab', data.tab),
     'new-session': () => call('newSession'),
     'open-session': (el, data) => call('openSession', parseInt(data.tid, 10)),

@@ -11,7 +11,8 @@
     return {
       me: null,
       agents: [],
-      today: null,
+      // BUS-517: undefined = /api/today ещё в полёте (shimmer в hero), null = ошибка → fallback.
+      today: undefined,
       spreads: null,
       moonWeek: null,
       dailyPulse: null,

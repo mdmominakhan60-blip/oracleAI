@@ -83,14 +83,22 @@ def test_miniapp_stylesheet_imports_match_asset_version() -> None:
 
 
 def test_home_welcome_card_is_bilingual_and_moon_free() -> None:
+    # BUS-517 (R-10): hero «Сегодня» актуализирован под спеку HOME_FOCUS_SPEC_2026-09:
+    # приветствие и CTA двуязычны, лунный чип и forecast-expand в hero; старый
+    # hero-moon-orb по-прежнему запрещён.
     home = (JS_DIR / "06-home.js").read_text(encoding="utf-8")
     utils = (JS_DIR / "01-utils.js").read_text(encoding="utf-8")
     assert "class=\"welcome-card\"" in home
-    assert "homeT('welcomeTitle')" in home
-    assert "homeT('welcomeCopy')" in home
-    assert "welcomeTitle: 'Start with what is already alive inside.'" in utils
-    assert "welcomeCopy: 'One question. One gentle step. The rest can wait.'" in utils
+    assert "focusAskToday: 'Спросить о своём дне'" in utils
+    assert "focusAskToday: 'Ask about your day'" in utils
+    assert "focusExpand: 'Развернуть'" in utils
+    assert "focusExpand: 'Expand'" in utils
+    assert "today-moon-chip" in home
+    assert "forecast-expand" in home
     assert "hero-moon-orb" not in home
+    # Устаревшие ключи редизайна вычищены (спека §11).
+    for stale_key in ("welcomeTitle", "welcomeCopy", "welcomePrompt", "ritualCta"):
+        assert f"{stale_key}: '" not in utils
 
 
 def test_agent_quality_proof_is_visible_on_hub_and_chat() -> None:
