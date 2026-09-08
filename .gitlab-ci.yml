@@ -1,0 +1,56 @@
+# GitLab CI (зеркало gitlab.com/mdmominakhan60/oracleAI).
+#
+# ПОЧЕМУ ЭТОТ ФАЙЛ СУЩЕСТВУЕТ: с 2026-09-08 GitHub Actions аккаунта
+# mdmominakhan60-blip заблокирован биллингом (BUS-546, лимит Free 2000 мин
+# исчерпан; сброс ~01.10). Board/user решил (ask 526f3e51): GitHub CI не
+# платим, в paperclip-oracleai Actions отключены, а на GitLab поднимаем
+# минимальные гейты, чтобы master не оставался совсем без проверок.
+#
+# ГРАБЛИ BUS-541 НЕ ПОВТОРЯТЬ: полный pytest-прогон (13–16 мин + сервисы
+# pgvector/redis) на GitLab Free (400 compute-мин/мес) сожжёт квоту за ~25
+# прогонов. Поэтому здесь только дешёвые статические гейты; полный тестовый
+# прогон — локально (`make test`) перед мержем, как описано в CONTRIBUTING.md.
+#
+# Возврат к GitHub CI после снятия биллинг-блока: этот файл не мешает —
+# GitHub-конвейер (ci.yml/deploy.yml) независим; джобы можно отключить через
+# Settings → CI/CD или удалить файл.
+
+# Дедуп push-vs-MR: у ветки с открытым MR — только MR-пайплайн.
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+
+stages:
+  - lint
+
+# Python-статика: ruff (0.6.9 pinned в requirements-dev.txt), compileall,
+# репо-гигиена, архитектурный линт, cache-busting, design contract, SQL-shim
+# инвентарь. Ничего внешнего не нужно — только скрипты и stdlib.
+# ВНИМАНИЕ: check_architecture.py обходит весь чекоут — локальные
+# незатреканные *.py (worktree-мусор) уронят его; на чистом CI-чекоуте их нет.
+python-lint:
+  stage: lint
+  image: python:3.12-slim
+  script:
+    - pip install --quiet ruff==0.6.9
+    - python -m ruff check app scripts tests
+    - python -m compileall -q app scripts tests
+    - python scripts/check_repository_hygiene.py
+    - python scripts/check_architecture.py
+    - python scripts/check_cache_busting.py
+    - python scripts/check_design_contract.py
+    - python scripts/check_p004_infrastructure.py
+    - bash -n infra/backup-postgres.sh infra/restore-postgres.sh
+    - python scripts/sql_shim_inventory.py > /dev/null
+    - git --no-pager diff --exit-code docs/SQL_SHIM_INVENTORY.md
+      || (echo "SQL_SHIM_INVENTORY.md is stale — run scripts/sql_shim_inventory.py and commit."; exit 1)
+
+# JS-синтаксис миниаппа/админки/скриптов (node 22, как в GitHub CI).
+js-syntax:
+  stage: lint
+  image: node:22-slim
+  script:
+    - find miniapp/js admin scripts -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
