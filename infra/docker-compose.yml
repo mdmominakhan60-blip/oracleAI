@@ -287,8 +287,12 @@ services:
     command:
       - "--path.rootfs=/host"
       - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+      # BUS-603: textfile collector — метрики фейлов Paperclip пишутся
+      # экспортёром (cron-режим) в .prom-файл на хосте.
+      - "--collector.textfile.directory=/textfile"
     volumes:
       - /:/host:ro,rslave
+      - /home/softis/apps/oraclAI/Business/projects/engineering-platform/infra/host/var/textfile:/textfile:ro
     networks:
       - oracle_internal
     restart: unless-stopped

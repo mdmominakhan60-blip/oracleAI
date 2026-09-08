@@ -1,0 +1,225 @@
+{
+  "title": "Paperclip Systemic Failures (BUS-603)",
+  "uid": "paperclip-systemic",
+  "timezone": "browser",
+  "refresh": "60s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "S* fail rate per hour",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "paperclip_fail_rate_hourly{cls=\"S1\"}",
+          "legendFormat": "S1 (ede_diagnostic)",
+          "refId": "A"
+        },
+        {
+          "expr": "paperclip_fail_rate_hourly{cls=\"S3\"}",
+          "legendFormat": "S3 (child-lost)",
+          "refId": "B"
+        },
+        {
+          "expr": "paperclip_fail_rate_hourly{cls=\"S4\"}",
+          "legendFormat": "S4 (SIGTERM 143)",
+          "refId": "C"
+        },
+        {
+          "expr": "paperclip_fail_rate_hourly{cls=\"S2\"}",
+          "legendFormat": "S2 (restart)",
+          "refId": "D"
+        },
+        {
+          "expr": "paperclip_fail_rate_hourly{cls=\"S*\"}",
+          "legendFormat": "S* total (threshold 20)",
+          "refId": "E"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 20,
+                "color": "yellow"
+              },
+              {
+                "value": 50,
+                "color": "red"
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 10
+      }
+    },
+    {
+      "id": 2,
+      "title": "Paperclip restarts last hour",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "paperclip_restarts_last_hour",
+          "legendFormat": "Restarts",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 5,
+                "color": "red"
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 8,
+        "h": 5
+      }
+    },
+    {
+      "id": 3,
+      "title": "Host memory PSI stalled derivative (5m)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(node_pressure_memory_stalled_seconds_total[2m]) * 100",
+          "legendFormat": "PSI memory full % (2m)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 20,
+                "color": "yellow"
+              },
+              {
+                "value": 50,
+                "color": "red"
+              }
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 10,
+        "w": 16,
+        "h": 5
+      }
+    },
+    {
+      "id": 4,
+      "title": "Host memory & swap",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "(1 - node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes) * 100",
+          "legendFormat": "Swap %",
+          "refId": "A"
+        },
+        {
+          "expr": "node_memory_MemAvailable_bytes / 1024 / 1024 / 1024",
+          "legendFormat": "Available RAM GiB",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {}
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Available RAM GiB"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "decgib"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 8
+      }
+    },
+    {
+      "id": 5,
+      "title": "Alert status (current firing)",
+      "type": "alertlist",
+      "options": {
+        "description": "Active alerts from paperclip-systemic-failures + oracleai-host-resources",
+        "dashboardTags": [],
+        "datasource": "Prometheus",
+        "enableInfiniteLeafNodeSplitting": false,
+        "filterItems": [],
+        "groupBy": [],
+        "groupMode": false,
+        "groupKey": [],
+        "groupPriority": [],
+        "hideViewControls": false,
+        "includeCurrent": true,
+        "limit": 20,
+        "maxTags": 5,
+        "maxWidth": 400,
+        "minimalAlertsCard": false,
+        "onlyBackground": false,
+        "query": "",
+        "refresh": 30,
+        "searchQuery": "",
+        "showExact": false,
+        "sortOrder": 2,
+        "stateFilter": [
+          "firing"
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 24,
+        "h": 6
+      }
+    }
+  ],
+  "schemaVersion": 39,
+  "version": 1
+}
