@@ -147,10 +147,15 @@ async def test_deleted_users_excluded_from_segments(db):
 
 
 async def test_unknown_segment_falls_back_to_all(db):
-    """_segment_sql fallback на 'all' — поведение broadcast и поиска."""
+    """Неизвестный сегмент даёт то же условие, что и 'all' (fallback).
+
+    BUS-387 обернул каждое условие анти-тестовым фильтром not_synthetic,
+    поэтому напрямую сравниваем с условием сегмента 'all', а не с литералом.
+    """
     where, params = users_repo._segment_sql("выдумка")
-    assert where == "1=1"
-    assert params == {}
+    all_where, all_params = users_repo._segment_sql("all")
+    assert where == all_where
+    assert params == all_params
 
 
 # ─────────────────────── Δ7д, churn-карточки, goal ────────────────────────────

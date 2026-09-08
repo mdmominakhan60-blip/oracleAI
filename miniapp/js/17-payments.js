@@ -45,7 +45,6 @@
       emptyPlans: 'Тарифы временно недоступны.', emptyProducts: 'Пакеты скоро появятся.', pay: 'Оплатить', payProduct: 'Оплатить {title}',
       footer: 'OracleAI не хранит данные карты или ключи кошелька. По вопросам оплаты можно открыть историю заказов и обратиться в поддержку.',
       orders: 'История заказов', noOrders: 'Заказов пока нет.', retry: 'Повторить', closeAria: 'Закрыть',
-      // BUS-398: промокоды и маркетплейсы
       promoTitle: 'ПРОМОКОД', promoHead: 'Есть золотой билет?', promoPlaceholder: 'Код вида ORA-XXXXXXXX', promoApply: 'Активировать',
       promoHint: 'Промокод из письма, подарка или маркетплейса активирует доступ или Кристаллы.',
       promoMarket: 'КУПИТЬ НА МАРКЕТПЛЕЙСЕ', marketHead: 'Купить через маркетплейсы',
@@ -186,9 +185,9 @@
   }
 
   // BUS-398: EN-локаль при 409/404 — отказ приходит RU-текстом от бэкенда,
-  // сопоставляем ключевую подстроку; нераспознанное показываем как есть (RU).
+  // сопоставляем ключевую подстроку; нераспознанное уходит в friendlyError.
   function promoRefusalText(err) {
-    const raw = String(err && err.message || '');
+    const raw = String(friendlyError(err) || '');
     if (payLang() !== 'en') return raw;
     const hit = PROMO_REFUSAL_EN.find(([needle]) => raw.includes(needle));
     return hit ? hit[1] : raw;
