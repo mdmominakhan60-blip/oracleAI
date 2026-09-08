@@ -719,7 +719,64 @@
     }
   };
 
-  // Разбор карты простыми словами: ИИ-объяснение по разделам (кэш на сервере).
+  // Разбор карты простыми словами (BUS-650 Э8b): структурный рендер по блокам
+  // human-first контракта v2 (r.human), legacy richMd(r.text) — fallback.
+  // Секция = блок контракта; CTA блока уводит в чат к Астрологу с prefill.
+
+  app.renderInterpretSection = function(blockKey, block) {
+    const rows = (obj) => Object.values(obj || {}).map(f =>
+      f && f.text ? `<div class="fc-row-in"><span class="fc-row-label">${esc(f.label)}</span><span class="fc-row-text">${rich(f.text)}</span></div>` : '').join('');
+    const items = (arr) => (arr || []).map(x => `<li>${rich(x)}</li>`).join('');
+    let body = '';
+    if (blockKey === 'profile') {
+      const scales = block.scales || [];
+      body = `<div class="fc-scales">${scales.map(s => `
+        <div class="fc-scale" role="img" aria-label="${esc(s.label)}: ${esc(String(s.value))} из 100">
+          <span class="fc-scale-label">${esc(s.label)}</span>
+          <span class="fc-scale-track" aria-hidden="true"><span class="fc-scale-fill" style="width:${Math.max(0, Math.min(100, Number(s.value) || 0))}%"></span></span>
+          <span class="fc-scale-value">${esc(String(s.value))}</span>
+        </div>
+        ${s.drivers && s.drivers.length ? `<div class="fc-scale-drivers">${esc(profileT('interpretScaleDrivers'))} ${s.drivers.map(d => esc(d)).join(' · ')}</div>` : ''}`).join('')}
+      </div>
+      ${block.summary ? `<div class="fc-row-in" style="margin-top:8px">${rich(block.summary)}</div>` : ''}`;
+    } else if (blockKey === 'love' || blockKey === 'career') {
+      body = rows(block.fields);
+    } else if (blockKey === 'purpose') {
+      const details = [];
+      if (block.details && block.details.rahu) details.push(`<b>Раху</b> · ${rich(block.details.rahu)}`);
+      if (block.details && block.details.ketu) details.push(`<b>Кету</b> · ${rich(block.details.ketu)}`);
+      body = rich(block.text || '') + (details.length
+        ? `<details class="fc-details"><summary>${esc(profileT('interpretDetails'))}</summary>${details.map(d => `<div class="fc-row-in">${d}</div>`).join('')}</details>` : '');
+    } else if (block.items && block.items.length) {
+      body = `<ul class="fc-list">${items(block.items)}</ul>`;
+    } else {
+      body = rich(block.text || '');
+    }
+    const cta = block.cta && block.cta.label
+      ? `<button class="fc-cta" data-act="ask" data-chat="astro" data-q="${esc(block.cta.prefill || block.cta.label)}">${esc(block.cta.label)}</button>` : '';
+    return `<section class="fc-sec" data-sec="${esc(blockKey)}">
+      <h4 class="fc-sec-t">${esc(block.title || blockKey)}</h4>
+      <div class="fc-sec-body">${body}</div>
+      ${cta}
+    </section>`;
+  };
+
+  app.renderInterpretTechLayer = function(c) {
+    if (!c) return '';
+    const exact = c.precision === 'exact';
+    const rows = (ico, name, val) => `<div class="fc-row"><span class="fc-ico">${ico}</span><span class="fc-name">${esc(name)}</span><span class="fc-val">${val}</span></div>`;
+    const pRows = (c.planets || []).map(p => rows(SIGNS[p.sign] || '•', p.name,
+      `${esc(p.sign)} ${p.deg}°${exact && p.house ? ' · ' + esc(profileT('house')) + ' ' + p.house : ''}${p.retro ? ' ℞' : ''}`)).join('');
+    const aRows = (c.aspects || []).slice(0, 8).map(a => rows(a.glyph || '◈', `${esc(a.p1)} — ${esc(a.p2)}`,
+      `${esc(a.aspect)}${a.orb != null ? ' · ' + esc(profileT('orb')) + ' ' + a.orb + '°' : ''}`)).join('');
+    if (!pRows && !aRows) return '';
+    return `<details class="fc-details fc-tech">
+      <summary>${esc(profileT('interpretTechTitle'))}<span class="fc-tech-toggle">${esc(profileT('interpretTechOpen'))}</span></summary>
+      <div class="fc-tech-copy">${esc(profileT('interpretTechCopy'))}</div>
+      ${pRows ? `<div class="fc-tech-grid">${pRows}</div>` : ''}
+      ${aRows ? `<div class="fc-tech-grid" style="margin-top:6px">${aRows}</div>` : ''}
+    </details>`;
+  };
 
   app.explainChart = async function() {
     const box = document.getElementById('fc-explain');
@@ -732,7 +789,30 @@
     try {
       const r = await api('/api/chart/interpret', { method: 'POST' });
       box.dataset.loaded = '1';
-      box.innerHTML = '<div class="glass fc-explain">' + richMd(r.text) + '</div>';
+      const human = r && r.human;
+      if (human && human.contract_version === 2 && human.blocks) {
+        const order = human.render_order || Object.keys(human.blocks);
+        const sections = order.map(k => human.blocks[k] ? this.renderInterpretSection(k, human.blocks[k]) : '').join('');
+        const hooks = (human.question_hooks || []).map(h =>
+          `<button class="fc-hook" data-act="ask" data-chat="astro" data-q="${esc(h.question)}">${esc(h.question)}</button>`).join('');
+        const tech = this.renderInterpretTechLayer(this.chart);
+        const precisionNote = human.precision && human.precision.time_known === false
+          ? `<div class="fc-precision">${esc(human.precision.note || profileT('interpretPrecisionNoTime'))}</div>` : '';
+        box.innerHTML = `<div class="fc-explain">
+          <div class="fc-explain-head">
+            <h3 class="fc-explain-t">${esc(profileT('interpretTitle'))}</h3>
+            <div class="fc-explain-intro">${esc(profileT('interpretIntro'))}</div>
+          </div>
+          ${precisionNote}
+          ${sections}
+          ${hooks ? `<section class="fc-sec fc-hooks"><h4 class="fc-sec-t">${esc(profileT('interpretHooksTitle'))}</h4><div class="fc-hooks-list">${hooks}</div></section>` : ''}
+          ${tech}
+          <div class="fc-disclaimer">${esc(human.disclaimer || '')}</div>
+        </div>`;
+      } else {
+        // Legacy-путь: старый бэк/кэш без human-контракта — прежний сплошной рендер.
+        box.innerHTML = '<div class="glass fc-explain">' + richMd(r.text) + '</div>';
+      }
     } catch (e) {
       box.innerHTML = this.softEmpty({
         icon: '✦', eyebrow: profileT('chartReading'), title: profileT('chartReadingUnavailable'),
