@@ -425,3 +425,96 @@ async def test_onb_begin_gate_with_invite_passes(db, monkeypatch):
         f"инвайт должен открывать onb:begin: {cb.message.texts}"
     assert any("Рада тебя видеть" in t or "I" in t for t in cb.message.texts), \
         f"язык-экран не показан: {cb.message.texts}"
+
+
+# ─────────── BUS-633: кампанийные deep-link (horo_*, exp_*) через гейт ────────
+
+async def test_campaign_horolink_passes_gate_and_tracks_attribution(db, monkeypatch):
+    """horo_* deep-link пускает нового через гейт, E_START содержит props.arg,
+    «Код не принят» не показывается (в redeem кампания не ходит)."""
+    await users.ensure(db, 2301, "Мира", "m2301")
+    await content_repo.set_flag(db, "beta_invite_gate", is_on=True)
+    monkeypatch.setattr(content_repo, "is_on", _flag_on)
+    message = await _start_with(db, 2301, "horo_aries")
+    assert not any("листе ожидания" in t or "waitlist" in t.lower()
+                   for t in message.replied), \
+        f"кампанийный deep-link упёрся в гейт: {message.replied}"
+    assert not any("не принят" in t or "not found" in t.lower()
+                   for t in message.replied), \
+        f"кампания получила промо-отказ: {message.replied}"
+    assert any("Добро пожаловать" in t or "Welcome" in t for t in message.replied)
+    await analytics.drain()
+    cur = await db.execute(
+        "SELECT props_json FROM events WHERE tg_id=2301 AND name='start' LIMIT 1")
+    row = await cur.fetchone()
+    assert row is not None, "E_START не записан для кампании"
+    props = __import__("json").loads(row["props_json"] or "{}")
+    assert props["arg"] == "horo_aries"
+
+
+async def test_campaign_explink_passes_gate(db, monkeypatch):
+    """exp_* (EXP-003 пилот) тоже проходит гейт и пишет атрибуцию."""
+    await users.ensure(db, 2302, "Нина", "n2302")
+    await content_repo.set_flag(db, "beta_invite_gate", is_on=True)
+    monkeypatch.setattr(content_repo, "is_on", _flag_on)
+    message = await _start_with(db, 2302, "exp003_pilot_tg")
+    assert not any("листе ожидания" in t or "waitlist" in t.lower()
+                   for t in message.replied), \
+        f"exp-кампания упёрлась в гейт: {message.replied}"
+    await analytics.drain()
+    cur = await db.execute(
+        "SELECT props_json FROM events WHERE tg_id=2302 AND name='start' LIMIT 1")
+    row = await cur.fetchone()
+    assert row is not None
+    props = __import__("json").loads(row["props_json"] or "{}")
+    assert props["arg"] == "exp003_pilot_tg"
+
+
+async def test_campaign_returning_start_keeps_passing(db, monkeypatch):
+    """Повторный /start без кода после кампанийного входа — онбордед-путь,
+    гейт не трогает (onboarded после завершения онбординга)."""
+    await users.ensure(db, 2303, "Оксана", "o2303")
+    await content_repo.set_flag(db, "beta_invite_gate", is_on=True)
+    monkeypatch.setattr(content_repo, "is_on", _flag_on)
+    first = await _start_with(db, 2303, "horo_leo")
+    assert not any("листе ожидания" in t for t in first.replied)
+    await users.update(db, 2303, onboarded=True)
+    second = await _bare_start(db, 2303)
+    assert any("С возвращением" in t or "Welcome back" in t for t in second.replied)
+
+
+async def test_gate_refusal_single_message_with_unknown_code(db, monkeypatch):
+    """Некампанийный неизвестный код при активном гейте — ОДНО сообщение
+    (waitlist), без промо-отказа (дефект двойного сообщения BUS-508)."""
+    await users.ensure(db, 2304, "Павел", "p2304")
+    await content_repo.set_flag(db, "beta_invite_gate", is_on=True)
+    monkeypatch.setattr(content_repo, "is_on", _flag_on)
+    message = await _start_with(db, 2304, "SOMERANDOMCODE")
+    assert len(message.replied) == 1, \
+        f"ожидалось одно сообщение, получила {len(message.replied)}: {message.replied}"
+    assert "листе ожидания" in message.replied[0] or \
+        "waitlist" in message.replied[0].lower()
+
+
+async def test_promo_refusal_still_shown_when_gate_passes(db, monkeypatch):
+    """Гейт пропустил (mpl-ваучер редемнулся позже / онбордед) — промо-отказ
+    различимый остаётся: гашение только на пути waitlist."""
+    await users.ensure(db, 2305, "Рита", "r2305")
+    await users.update(db, 2305, onboarded=True)  # гейт не трогает
+    await content_repo.set_flag(db, "beta_invite_gate", is_on=True)
+    monkeypatch.setattr(content_repo, "is_on", _flag_on)
+    message = await _start_with(db, 2305, "SOMERANDOMCODE")
+    assert any("не найден" in t or "not found" in t.lower()
+               for t in message.replied), \
+        f"различимый промо-отказ пропал для онбордед: {message.replied}"
+
+
+async def test_campaign_prefix_does_not_hijack_plain_words(db, monkeypatch):
+    """Слова, не начинающиеся с префикса (например, 'expensive'), кампанией
+    не считаются — идут в промо-путь и при активном гейте дают waitlist."""
+    await users.ensure(db, 2306, "Саша", "s2306")
+    await content_repo.set_flag(db, "beta_invite_gate", is_on=True)
+    monkeypatch.setattr(content_repo, "is_on", _flag_on)
+    message = await _start_with(db, 2306, "expensive")
+    assert len(message.replied) == 1
+    assert "листе ожидания" in message.replied[0]

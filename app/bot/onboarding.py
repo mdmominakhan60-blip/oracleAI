@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from aiogram import F, Router
 from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.fsm.context import FSMContext
@@ -97,6 +98,17 @@ async def _menu(db, tg_id: int):
 
 # ─────────────────────────────── /start ───────────────────────────────────────
 
+#: Deep-link префиксы маркетинговых кампаний, открывающие бету без инвайта.
+#: horo_* — 12 TG-каналов-спутников гороскопов (BUS-502/511), exp<номер>_ —
+#: эксперименты контента (EXP-003: exp003_pilot_tg). Гейт BUS-269 остаётся
+#: для «голого» /start и произвольных кодов; атрибуция кампании — props.arg.
+_CAMPAIGN_EXP_RE = re.compile(r"^exp\d+_")
+
+
+def _campaign_arg(arg: str) -> bool:
+    return arg.startswith("horo_") or bool(_CAMPAIGN_EXP_RE.match(arg))
+
+
 async def _beta_gate_refused(db, message: Message, user) -> bool:
     """Гейт контролируемой беты (BUS-269): новых без инвайта — waitlist-ответ.
 
@@ -134,6 +146,7 @@ async def start_deeplink(message: Message, command: CommandObject,
 
     ref_id = referrals.parse_ref(arg)
     invite_granted = False
+    promo_refusal = None
     if ref_id:
         result = await referrals.apply(db, message.from_user.id, ref_id)
         if result:
@@ -154,6 +167,10 @@ async def start_deeplink(message: Message, command: CommandObject,
                 ))
             except Exception as e:  # noqa: BLE001
                 log.info("не смогла уведомить пригласившую %s: %s", ref_id, e)
+    elif arg and _campaign_arg(arg):
+        # Deep-link кампании (horo_*, exp_*): не промокод — в redeem не ходим,
+        # чтобы не показывать «Код не принят». Гейт ниже кампанию пускает.
+        pass
     elif arg:
         try:
             granted = await billing_svc.redeem_promo(db, message.from_user.id, arg)
@@ -162,7 +179,7 @@ async def start_deeplink(message: Message, command: CommandObject,
             # попадает в обычный /start. Подтверждение выдачи — для любого
             # kind ваучера (mpl_sku1_crystals100, mpl_sku2_trial7d), не только invite.
             granted = None
-            await message.answer(billing_svc.promo_refusal_text(exc.reason))
+            promo_refusal = billing_svc.promo_refusal_text(exc.reason)
         if granted:
             # B4 (BUS-355): платный ваучер маркетплейс-партии = оплаченный инвайт —
             # критерий по ПАРТИИ (batch prefix mpl_), не по kind: бесплатный
@@ -173,13 +190,24 @@ async def start_deeplink(message: Message, command: CommandObject,
 
     # Гейт контролируемой беты (BUS-269): новые без валидного инвайта — waitlist.
     # B4 (BUS-355): покупатель маркетплейс-ваучера (mpl_*) = оплаченный инвайт.
+    # Кампанийные deep-link (horo_*, exp_*) тоже проходят: вход из одобренных
+    # CEO каналов (BUS-502/633), атрибуция — props.arg события start.
     # Проверка персистентная — покрывает также редем через /promo и miniapp,
     # когда человек вернулся в бота повторным /start.
-    if await content_repo.is_on(db, "beta_invite_gate") and not user["onboarded"]:
-        if not invite_granted and not await growth.redeemed_mpl_voucher(
-                db, message.from_user.id):
-            await _beta_gate_refused(db, message, user)
-            return
+    gate_refused = (await content_repo.is_on(db, "beta_invite_gate")
+                    and not user["onboarded"]
+                    and not invite_granted
+                    and not _campaign_arg(arg)
+                    and not await growth.redeemed_mpl_voucher(
+                        db, message.from_user.id))
+    if gate_refused:
+        # UX: одно различимое сообщение. Текст промо-отказа («код не принят»)
+        # при активном гейте лишний — человек с некодом получает только
+        # waitlist (дефект двойного сообщения из QA-вердикта BUS-508).
+        await _beta_gate_refused(db, message, user)
+        return
+    if promo_refusal:
+        await message.answer(promo_refusal)
 
     await analytics.track(db, analytics.E_START, message.from_user.id,
                           props={"arg": arg[:40]})
