@@ -426,11 +426,19 @@ async def thread_history(db, user, agent: str, limit: int = 60) -> dict:
             "messages": messages}
 
 
-async def track_open(db, user, surface: str = "miniapp") -> None:
-    """Writes an open and one-time D1/D7/D30 return milestones server-side."""
+async def track_open(db, user, surface: str = "miniapp",
+                     utm: str | None = None) -> None:
+    """Writes an open and one-time D1/D7/D30 return milestones server-side.
+
+    utm — pass-through из Telegram startapp-параметра (BUS-562): валидный
+    ascii-токен пишется отдельным prop, source остаётся server-owned
+    (ANALYTICS_EVENT_DICTIONARY.md); невалид/отсутствие = organic, без prop.
+    """
+    props = {"utm": analytics.safe_web_source(utm)}
+    props = {k: v for k, v in props.items() if v}
     tg_id = user["tg_id"]
     await analytics.track_now(db, analytics_repo.E_MINIAPP_OPEN, tg_id,
-                              surface=surface)
+                              props=props or None, surface=surface)
     cur = await db.execute(
         "SELECT MIN(day) first_day FROM events WHERE tg_id=:tg_id AND name=:name",
         {"tg_id": tg_id, "name": analytics_repo.E_MINIAPP_OPEN},

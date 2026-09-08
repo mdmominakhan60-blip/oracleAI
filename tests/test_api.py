@@ -201,6 +201,42 @@ async def test_new_user_auth_lifecycle_requires_start_then_allows_me(client, db)
     assert same["name"] == "Новый пользователь"
 
 
+async def test_me_start_param_writes_utm_prop(client, db, user):
+    """BUS-562: X-Start-Param с /api/me доезжает до miniapp_open.props.utm."""
+    res = await client.get("/api/me", params=as_user(user),
+                           headers={"X-Start-Param": "bc42"})
+    assert res.status_code == 200
+    cur = await db.execute(
+        "SELECT props_json FROM events WHERE tg_id=? AND name='miniapp_open' "
+        "ORDER BY created_at DESC, id DESC LIMIT 1", (user["tg_id"],))
+    row = await cur.fetchone()
+    assert row is not None
+    assert json.loads(row["props_json"]) == {"utm": "bc42"}
+
+
+async def test_me_invalid_start_param_is_organic_no_error(client, db, user):
+    """Мусор в start_param — не ошибка запроса, а organic (prop отброшен)."""
+    res = await client.get("/api/me", params=as_user(user),
+                           headers={"X-Start-Param": "not a utm token!"})
+    assert res.status_code == 200
+    cur = await db.execute(
+        "SELECT props_json FROM events WHERE tg_id=? AND name='miniapp_open' "
+        "ORDER BY created_at DESC, id DESC LIMIT 1", (user["tg_id"],))
+    row = await cur.fetchone()
+    assert row is not None and row["props_json"] is None
+
+
+async def test_me_without_start_param_untouched(client, db, user):
+    """Без заголовка поведение прежнее: miniapp_open без props."""
+    res = await client.get("/api/me", params=as_user(user))
+    assert res.status_code == 200
+    cur = await db.execute(
+        "SELECT props_json FROM events WHERE tg_id=? AND name='miniapp_open' "
+        "ORDER BY created_at DESC, id DESC LIMIT 1", (user["tg_id"],))
+    row = await cur.fetchone()
+    assert row is not None and row["props_json"] is None
+
+
 async def test_blocked_user_is_refused(client, db, user):
     await users.set_status(db, user["tg_id"], "blocked")
     res = await client.get("/api/me", params=as_user(user))

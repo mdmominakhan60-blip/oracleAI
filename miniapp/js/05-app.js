@@ -39,7 +39,12 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
     // блокирует старт: read-ручки примут back-compat x-init-data.
     if (!sessionState.token) await mintSession();
     try {
-      this.me = await api('/api/me');
+      // Атрибуция deep-link (BUS-562): startapp-параметр уходит только на /api/me
+      // в заголовке — сервер валидирует и пишет utm в miniapp_open. Приложение
+      // стартует именно с /api/me, отдельное «событие входа» не нужно.
+      const startParam = (tg() && tg().initDataUnsafe && tg().initDataUnsafe.start_param) || '';
+      const meHeaders = startParam ? { 'X-Start-Param': startParam.slice(0, 64) } : {};
+      this.me = await api('/api/me', { headers: meHeaders });
       if (this.me) {
         const flags = this.me.flags ? this.me.flags : {};
         this.me.flags = flags;

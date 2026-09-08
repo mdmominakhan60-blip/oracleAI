@@ -20,7 +20,7 @@
 
 | Event | Момент | Allowed props | Surface | Owner | KPI |
 |---|---|---|---|---|---|
-| `miniapp_open` | Сервер успешно обработал `GET /api/me` для владельца. | optional `source`: `push` \| `broadcast` (server-side из Telegram startapp-параметра, pass-through — см. CRM lifecycle §Attribution); отсутствие prop = organic | `miniapp` | Product | Open rate, cohort start, push→open атрибуция (G-1). |
+| `miniapp_open` | Сервер успешно обработал `GET /api/me` для владельца. | optional `utm`: ascii-токен из Telegram `startapp` deep-link (pass-through из `X-Start-Param`, server-side валидация, ≤40 символов, без PII); отсутствие = organic | `miniapp` | Product | Open rate, cohort start, deep-link attribution. |
 | ~~`age_confirmed`~~ | ~~Возраст-гейт завершён.~~ Удалено (GAUNTLET v2): возрастная проверка больше не выполняется. | — | — | — | Removed |
 | `first_ritual` | Первая успешная отметка дневной практики, не повторная отметка за день. | `surface_action`: `practice_done` | `bot`/`miniapp` | Product | First ritual completion, time-to-first-value. |
 | `first_question` | Первый завершённый обычный или crisis-safe вопрос с ответом. | `agent`, optional `safety=crisis` | caller surface | AI/Product | First question completion, first-value rate. |

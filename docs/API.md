@@ -55,7 +55,7 @@ HTTP API обслуживает Telegram Mini App, административн�
 | Method | Path | Назначение | Тело / ключевые поля |
 |---|---|---|---|
 | `GET` | `/api/health` | Здоровье БД и LLM-цепочки. | — |
-| `GET` | `/api/me` | Bootstrap профиля, лимитов, флагов, памяти и агентов. | — |
+| `GET` | `/api/me` | Bootstrap профиля, лимитов, флагов, памяти и агентов. | optional `X-Start-Param`: utm/deep-link token из Telegram startapp (BUS-562) |
 | `POST` | `/api/profile` | Настройки профиля. | `oracle_name`, `persona`, `morning_push`, `memory_enabled`, `lang`, `tz`, `goal` |
 | `POST` | `/api/experiment-exposure` | Техническая отметка показа A/B-варианта. | `experiment`, `variant` |
 | `GET` | `/api/personas` | Доступные образы проводника. | — |

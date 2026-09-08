@@ -91,12 +91,16 @@ async def public_config(db=Depends(get_db)):
 
 @router.get("/me")
 async def me(user=Depends(touched_user), db=Depends(get_db),
-             x_session_id: str | None = Header(default=None, max_length=64)):
+             x_session_id: str | None = Header(default=None, max_length=64),
+             x_start_param: str | None = Header(default=None, max_length=64)):
     """Всё, что нужно интерфейсу на старте: профиль, лимиты, тариф, фичи."""
     chart = users.chart_of(user)
     allowance = await limits.allowance(db, user, check_followup=False)
     canonical_entitlements = await entitlements.snapshot(db, user)
-    await chat.track_open(db, user)
+    # Атрибуция deep-link (BUS-562): start_param из tg://miniapp?startapp=... —
+    # пасс-тру utm-токен; валидирует и обрезает сервер (safe_web_source),
+    # невалидное значение отбрасывается на стороне сервера, не ошибка.
+    await chat.track_open(db, user, utm=x_start_param)
     # Мост session→user (BUS-195): первый аутентифицированный вызов связывает
     # анонимный sid лендинга/миниаппа с пользователем. Идентификаторы кладёт
     # сервер; заголовок только предлагает sid, tg_id из клиента не берётся.
