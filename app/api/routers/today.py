@@ -79,14 +79,21 @@ async def _next_action(db, user) -> dict:
 
 @router.get("/moon/week")
 async def moon_week(user=Depends(confirmed_age_user), days: int = 7):
-    """Лунная лента: считаем на сервере, чтобы бот и приложение совпадали."""
+    """Лунная лента: считаем на сервере, чтобы бот и приложение совпадали.
+
+    Каждый день — результат moon_day: старые поля (name/emoji/advice/day)
+    плюс структурированные параметры (phase/moon_sign/lunar_day/transit).
+    Персональный аспект считается к карте пользовательницы, если карта есть;
+    без карты transit=None, а рекомендация деградирует к общему качеству дня.
+    """
     today_date = date.today()
+    chart = users.chart_of(user)
     out = []
     for i in range(max(1, min(days, 30))):
         d = today_date + timedelta(days=i)
-        phase = astro.moon_phase(d)
+        md = astro.moon_day(d, chart or None)
         out.append({"date": d.isoformat(), "weekday": d.weekday(),
-                    "day_num": d.day, **phase})
+                    "day_num": d.day, **md})
     return out
 
 

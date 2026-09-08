@@ -411,7 +411,16 @@ async def test_chart_and_matrix(client, user):
 async def test_moon_week(client, user):
     res = await client.get("/api/moon/week", params=as_user(user, {"days": 7}))
     assert res.status_code == 200
-    assert len(res.json()) == 7
+    data = res.json()
+    assert len(data) == 7
+    # BUS-647 Э7a: каждый день несёт структурированные параметры дня
+    # (движок рекомендаций), старые поля сохранены.
+    for day in data:
+        assert day["engine"] == "moon-engine-v1"
+        assert day["phase"]["name"] == day["name"]
+        assert 1 <= day["lunar_day"]["n"] <= 30
+        assert day["lunar_day"]["path"]
+        assert day["moon_sign"] is None or day["moon_sign"]["element"]
 
 
 # ─────────────────────────── совместимость ────────────────────────────────────
