@@ -108,7 +108,9 @@ button:disabled,
 }
 .btn-primary {
   color: var(--color-on-accent);
-  background: linear-gradient(135deg, var(--color-accent-strong), var(--color-accent-deep));
+  /* BUS-741 (P0 §3.1): ручной градиент через алиасы accent-strong/deep — тот же
+     champagne, но мимо единого токена; переведён на --grad-primary. */
+  background: var(--grad-primary);
 }
 .btn-ghost {
   color: var(--color-text-secondary);

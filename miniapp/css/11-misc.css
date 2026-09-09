@@ -8,8 +8,8 @@
    ============================================================================ */
 .ref-card {
   display: flex; align-items: center; gap: 12px;
-  background: linear-gradient(135deg, rgba(230,193,120,.12), rgba(167,139,250,.08));
-  border: 1px solid rgba(230,193,120,.4); border-radius: 18px; padding: 14px;
+  background: linear-gradient(135deg, rgba(245,212,139,.12), rgba(167,139,250,.08));
+  border: 1px solid rgba(245,212,139,.4); border-radius: 18px; padding: 14px;
   box-shadow: 0 0 24px -8px var(--gold-glow);
 }
 .ref-ico { font-size: 26px; flex: none; filter: drop-shadow(0 0 10px var(--violet-glow)); }
@@ -42,7 +42,7 @@
   align-items: center;
   background:
     radial-gradient(120% 80% at 80% 0%, rgba(167,139,250,.22), transparent 55%),
-    radial-gradient(100% 70% at 10% 90%, rgba(230,193,120,.16), transparent 55%),
+    radial-gradient(100% 70% at 10% 90%, rgba(245,212,139,.16), transparent 55%),
     linear-gradient(180deg, #0d0b1e 0%, #08070f 100%);
   animation: fadeIn .4s var(--ease);
 }
@@ -61,7 +61,7 @@
 .intro-title { font-family: var(--font-serif); font-size: 24px; font-weight: 700; color: var(--gold-bright); margin-top: 20px; letter-spacing: .4px; line-height: 1.3; width: min(300px, 100% - 64px); min-height: 2.6em; }
 .intro-sub { font-size: 14.5px; color: var(--text-dim); margin-top: 12px; line-height: 1.65; width: min(300px, 100% - 64px); }
 .intro-dots { display: flex; justify-content: center; gap: 7px; margin-bottom: 22px; }
-.intro-dots span { width: 8px; height: 8px; border-radius: 50%; background: rgba(230,193,120,.25); transition: .25s var(--ease); }
+.intro-dots span { width: 8px; height: 8px; border-radius: 50%; background: rgba(245,212,139,.25); transition: .25s var(--ease); }
 .intro-dots span.active { background: var(--gold); box-shadow: 0 0 10px var(--gold-glow); width: 22px; border-radius: 99px; }
 /* BUS-510: кнопка живёт в колонке #intro (align-items:center); прежний
    margin:0 32px вместе с width:100% из .btn-primary растягивал её за
@@ -97,7 +97,7 @@
    ============================================================================ */
 
 /* v4.20 — canonical natal wheel: semantic layers, readable labels and aspect legend */
-.n-wheel-ring { fill: rgba(8, 7, 24, .34); stroke: rgba(230,193,120,.28); stroke-width: 1; }
+.n-wheel-ring { fill: rgba(8, 7, 24, .34); stroke: rgba(245,212,139,.28); stroke-width: 1; }
 .n-zodiac-ring { fill: none; stroke: rgba(167,139,250,.24); stroke-width: 1; stroke-dasharray: 4 4; }
 .n-aspect-ring { fill: none; stroke: rgba(255,255,255,.07); stroke-width: 1; }
 .n-sign-glyph { fill: var(--champagne-300, #ffd98f); font: 15px Cinzel, Georgia, serif; }
@@ -105,7 +105,7 @@
 .n-house path { fill: none; stroke: rgba(167,139,250,.28); stroke-width: .9; }
 .n-house line { stroke: rgba(167,139,250,.14); stroke-width: .7; }
 .n-house-number { fill: var(--text-muted, #a49cc8); font: 7px Arial, sans-serif; }
-.n-planet-orb { fill: rgba(24,22,48,.92); stroke: var(--gold, #e6c178); stroke-width: 1.35; filter: url(#oracle-wheel-glow); }
+.n-planet-orb { fill: rgba(24,22,48,.92); stroke: var(--gold, #f5d48b); stroke-width: 1.35; filter: url(#oracle-wheel-glow); }
 .n-planet-glyph { fill: var(--gold-bright, #ffd98f); font: 14px Cinzel, Georgia, serif; font-weight: 700; }
 .n-planet-label { fill: var(--text-muted, #a49cc8); font: 6px Arial, sans-serif; }
 .n-retro { fill: #ff7b86; font: 8px Arial, sans-serif; font-weight: 700; }
@@ -113,7 +113,7 @@
 .n-node text { fill: var(--violet, #a78bfa); font: 10px Cinzel, Georgia, serif; font-weight: 700; }
 .n-aspect { fill: none; opacity: .9; }
 .n-angle { fill: var(--violet, #a78bfa); font: 8px Arial, sans-serif; letter-spacing: 1px; }
-.n-sun-core { fill: rgba(230,193,120,.1); stroke: var(--gold, #e6c178); stroke-width: 1.5; }
+.n-sun-core { fill: rgba(245,212,139,.1); stroke: var(--gold, #f5d48b); stroke-width: 1.5; }
 .n-sun-glyph { fill: var(--gold-bright, #ffd98f); font: 23px Cinzel, Georgia, serif; }
 .n-sun-sign { fill: var(--text-muted, #a49cc8); font: 10px Arial, sans-serif; }
 @media (prefers-reduced-motion: reduce) {
