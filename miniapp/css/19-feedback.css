@@ -119,8 +119,8 @@
   transition: .18s var(--ease);
 }
 .fb-nps-btn.active {
-  background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
-  color: #1c1430;
+  background: var(--grad-primary);
+  color: var(--color-on-accent);
   border-color: transparent;
 }
 .fb-nps-labels {

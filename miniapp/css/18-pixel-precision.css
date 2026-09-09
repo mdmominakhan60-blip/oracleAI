@@ -231,8 +231,8 @@
 }
 .header-sub--active > :first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .header-sub--cta {
-  color: #211a37;
-  background: linear-gradient(145deg, var(--champagne-300), var(--champagne-500));
+  color: var(--color-on-accent);
+  background: var(--grad-primary);
   border: 1px solid transparent;
   box-shadow: 0 4px 12px -6px rgba(245, 212, 139, .8);
 }

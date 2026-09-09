@@ -40,6 +40,10 @@
   --hover-bg: rgba(245, 212, 139, .08);
   --hover-border: rgba(245, 212, 139, .35);
   --focus-outline: 2px solid var(--champagne-300);
+  /* BUS-741 (P0 §3.1): единственный primary-градиент и его тень.
+     Все primary-действия ссылаются сюда — ручные объявления запрещены. */
+  --grad-primary: linear-gradient(135deg, var(--champagne-300), var(--champagne-500));
+  --shadow-primary: 0 12px 23px -15px rgba(245, 212, 139, .9);
 
   /* 4px spacing scale: every layout value should be one of these steps. */
   --space-1: 4px;
@@ -115,7 +119,8 @@
   --motion-slow: 420ms;
   --motion-ritual: cubic-bezier(.22, .9, .24, 1);
   --sh-card: 0 18px 50px -18px rgba(0, 0, 0, 0.85);
-  --sh-gold: 0 0 0 1px rgba(230,193,120,.06), 0 18px 50px -22px rgba(230,193,120,.18);
+  /* BUS-741 (P0 §3.4): мигрировано с legacy-золота E6C178 на champagne (потребителей нет). */
+  --sh-gold: 0 0 0 1px rgba(245,212,139,.06), 0 18px 50px -22px rgba(245,212,139,.18);
 
   /* Legacy aliases retained for feature modules during the migration. */
   --ink-950: var(--color-bg-primary);

@@ -29,7 +29,7 @@
 .atab:active { transform: scale(.95); }
 .atab.active {
   border-color: var(--gold); color: var(--gold-bright);
-  background: rgba(230,193,120,.1); box-shadow: 0 0 12px -4px rgba(230,193,120,.55);
+  background: rgba(245,212,139,.1); box-shadow: 0 0 12px -4px rgba(245,212,139,.55);
 }
 .atab-x { padding: 3px 10px; font-size: 14px; }
 
@@ -37,10 +37,10 @@
 .toolbar {
   display: flex; align-items: center; gap: 6px; overflow-x: auto;
   padding: 8px 14px 2px; scrollbar-width: thin;
-  scrollbar-color: rgba(230,193,120,.3) transparent; flex: none;
+  scrollbar-color: rgba(245,212,139,.3) transparent; flex: none;
 }
 .toolbar::-webkit-scrollbar { height: 3px; }
-.toolbar::-webkit-scrollbar-thumb { background: rgba(230,193,120,.35); border-radius: 99px; }
+.toolbar::-webkit-scrollbar-thumb { background: rgba(245,212,139,.35); border-radius: 99px; }
 .tchip {
   display: inline-flex; align-items: center; gap: 6px; flex: none;
   font-size: 12px; font-weight: 600; letter-spacing: .2px;
@@ -106,7 +106,7 @@
   font-size: 12px; font-weight: 600; line-height: 1.2;
   transition: .18s var(--ease);
 }
-.te-chip:hover { color: var(--ac-bright, var(--gold-bright)); border-color: var(--ac, var(--gold)); background: var(--ac-surface, rgba(230,193,120,.07)); transform: translateY(-1px); }
+.te-chip:hover { color: var(--ac-bright, var(--gold-bright)); border-color: var(--ac, var(--gold)); background: var(--ac-surface, rgba(245,212,139,.07)); transform: translateY(-1px); }
 .te-chip:active { transform: scale(.96); }
 .te-ico { font-size: 17px; flex: none; }
 
@@ -127,7 +127,7 @@
 .cg-title { font-family: var(--font-serif); font-size: 19px; font-weight: 700; color: var(--gold-bright); margin-top: 12px; letter-spacing: .3px; }
 .cg-sub { font-size: 13.5px; color: var(--text-dim); line-height: 1.6; margin-top: 8px; }
 .cg-dots { display: flex; justify-content: center; gap: 6px; margin: 16px 0; }
-.cg-dots span { width: 7px; height: 7px; border-radius: 50%; background: rgba(230,193,120,.25); transition: .25s var(--ease); }
+.cg-dots span { width: 7px; height: 7px; border-radius: 50%; background: rgba(245,212,139,.25); transition: .25s var(--ease); }
 .cg-dots span.active { background: var(--gold); box-shadow: 0 0 8px var(--gold-glow); width: 18px; border-radius: 99px; }
 .cg-btns { display: flex; gap: 8px; }
 .cg-btns .btn { flex: 1; }
@@ -135,7 +135,7 @@
 /* деликатная подсветка свежего ответа агента */
 .msg.fresh { animation: msgIn .35s var(--ease), freshGlow 1.6s ease-out; }
 @keyframes freshGlow {
-  0% { box-shadow: 0 0 0 1px rgba(230,193,120,.45), 0 0 18px rgba(230,193,120,.25); }
+  0% { box-shadow: 0 0 0 1px rgba(245,212,139,.45), 0 0 18px rgba(245,212,139,.25); }
   100% { box-shadow: none; }
 }
 

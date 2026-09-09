@@ -34,7 +34,7 @@
 .pay-plans { display: grid; gap: 10px; }
 .pay-plan { position: relative; overflow: hidden; padding: 15px; border: 1px solid rgba(225,214,255,.13); border-radius: 21px; background: linear-gradient(145deg, rgba(255,255,255,.07), rgba(185,166,255,.05)); box-shadow: var(--shadow-ritual); }
 .pay-plan--featured { border-color: rgba(245,212,139,.48); background: radial-gradient(circle at 100% 0, rgba(245,212,139,.18), transparent 42%), linear-gradient(145deg, rgba(245,212,139,.12), rgba(185,166,255,.07)); }
-.pay-plan__badge { position: absolute; top: 12px; right: 13px; padding: 4px 7px; border-radius: 7px; color: #2b203b; background: var(--champagne-400); font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.pay-plan__badge { position: absolute; top: 12px; right: 13px; padding: 4px 7px; border-radius: 7px; color: var(--color-on-accent); background: var(--champagne-400); font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
 .pay-plan__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .pay-plan h3, .pay-product h3 { margin: 3px 0 0; color: var(--text-main); font: 700 19px/1.08 var(--font-display); }
 .pay-plan__sigil { color: var(--champagne-300); font-size: 20px; }

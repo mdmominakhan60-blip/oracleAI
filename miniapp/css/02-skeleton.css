@@ -17,7 +17,7 @@
   height: 168px; border-radius: var(--r-l); overflow: hidden; position: relative;
   display: flex; align-items: flex-end; padding: 20px;
   background:
-    radial-gradient(120% 90% at 85% 0%, rgba(230,193,120,.32), transparent 55%),
+    radial-gradient(120% 90% at 85% 0%, rgba(245,212,139,.32), transparent 55%),
     radial-gradient(100% 100% at 0% 20%, rgba(167,139,250,.28), transparent 60%),
     linear-gradient(160deg, #1a1736, #0d0c1d);
   border: 1px solid var(--border);
@@ -27,7 +27,7 @@
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #fcd, #f7cf8c 35%, #6b5bd6 100%);
   filter: blur(1px);
-  box-shadow: inset -20px -20px 60px rgba(0,0,0,.4), 0 0 70px rgba(230,193,120,.25);
+  box-shadow: inset -20px -20px 60px rgba(0,0,0,.4), 0 0 70px rgba(245,212,139,.25);
   animation: orbFloat 8s ease-in-out infinite;
 }
 @keyframes orbFloat { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
@@ -44,7 +44,7 @@
   display: grid; place-items: center; font-size: 26px;
   background: linear-gradient(145deg, #241c4a, #100d24);
   border: 1px solid var(--border-strong);
-  box-shadow: 0 6px 18px -8px rgba(230,193,120,.4);
+  box-shadow: 0 6px 18px -8px rgba(245,212,139,.4);
 }
 
 /* быстрые агенты — кольцо аватаров */
