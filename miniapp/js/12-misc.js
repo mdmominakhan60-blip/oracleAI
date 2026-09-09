@@ -778,12 +778,31 @@
     </details>`;
   };
 
-  app.explainChart = async function() {
-    const box = document.getElementById('fc-explain');
+  // BUS-650 Э8b: вызов с двух экранов — кнопка в чате (экран карты, контейнер
+  // по aria-controls) и ghost-кнопка в модалке full-chart (#fc-explain).
+  app.explainChart = async function(btn) {
+    const box = btn && btn.getAttribute('aria-controls')
+      ? document.getElementById(btn.getAttribute('aria-controls'))
+      : document.getElementById('fc-explain');
     if (!box) return;
+    const expanded = btn && btn.getAttribute('aria-expanded') === 'true';
     if (box.dataset.loaded) {
-      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+      // повторный тап по кнопке на экране карты — сворачиваем/разворачиваем блок
+      if (btn) {
+        const show = !expanded;
+        box.style.display = show ? 'block' : 'none';
+        btn.setAttribute('aria-expanded', String(show));
+        haptic('light');
+      } else {
+        box.style.display = box.style.display === 'none' ? 'block' : 'none';
+      }
       return;
+    }
+    if (btn) {
+      btn.classList.add('is-loading');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="chart-interpret-spin" aria-hidden="true">✦</span>' + esc(btn.dataset.loadingLabel || btn.textContent);
     }
     box.innerHTML = '<div class="loader-ring" style="margin:10px auto"></div>';
     try {
@@ -809,15 +828,33 @@
           ${tech}
           <div class="fc-disclaimer">${esc(human.disclaimer || '')}</div>
         </div>`;
+        if (btn) {
+          btn.classList.remove('is-loading');
+          btn.disabled = false;
+          if (btn.dataset.label) btn.textContent = btn.dataset.label;
+          btn.setAttribute('aria-expanded', 'true');
+        }
       } else {
         // Legacy-путь: старый бэк/кэш без human-контракта — прежний сплошной рендер.
         box.innerHTML = '<div class="glass fc-explain">' + richMd(r.text) + '</div>';
+        if (btn) {
+          btn.classList.remove('is-loading');
+          btn.disabled = false;
+          if (btn.dataset.label) btn.textContent = btn.dataset.label;
+          btn.setAttribute('aria-expanded', 'true');
+        }
       }
     } catch (e) {
       box.innerHTML = this.softEmpty({
         icon: '✦', eyebrow: profileT('chartReading'), title: profileT('chartReadingUnavailable'),
         copy: profileT('chartReadingUnavailableCopy'), tone: 'recovery'
       });
+      if (btn) {
+        btn.classList.remove('is-loading');
+        btn.disabled = false;
+        if (btn.dataset.label) btn.textContent = btn.dataset.label;
+      }
+      haptic('error');
     }
   };
 

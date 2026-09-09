@@ -79,6 +79,8 @@
     'toggle-memory': () => call('toggleMemory'),
     'full-chart': () => call('openFullChart'),
     'fc-explain': () => call('explainChart'),
+    // BUS-650 Э8b: кнопка разбора на экране карты (в чате), отдельный контейнер
+    'explain-chart': (el) => call('explainChart', el),
     'del-mem': (el, data) => call('delMem', parseInt(data.id, 10)),
     'add-mem': () => call('addMem'),
     'pick-open': () => call('openSpreadPicker'),

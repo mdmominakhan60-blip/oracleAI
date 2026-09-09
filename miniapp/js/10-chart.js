@@ -206,7 +206,7 @@
         </div>
       </details>
       <div class="chart-interpret-entry">
-        <button class="btn btn-primary${oracleLang() === 'en' ? '' : ''}" style="width:100%" data-act="explain-chart" aria-expanded="false" aria-controls="chart-interpret">${oracleLang() === 'en' ? '🧠 Personal OracleAI reading' : '🧠 Персональный разбор OracleAI'}</button>
+        <button class="btn btn-primary" style="width:100%" data-act="explain-chart" aria-expanded="false" aria-controls="chart-interpret" data-label="${oracleLang() === 'en' ? '🧠 Personal OracleAI reading' : '🧠 Персональный разбор OracleAI'}" data-loading-label="${oracleLang() === 'en' ? 'Reading your chart…' : 'Читаю твою карту…'}">${oracleLang() === 'en' ? '🧠 Personal OracleAI reading' : '🧠 Персональный разбор OracleAI'}</button>
         <p class="chart-interpret-entry__hint">${oracleLang() === 'en' ? 'One tap — your chart is translated into meaning: human language first, astrology on request.' : 'Один тап — твоя карта переводится в смыслы: сначала человеческим языком, астрология — по желанию.'}</p>
         <div id="chart-interpret" style="margin-top:12px"></div>
       </div>
