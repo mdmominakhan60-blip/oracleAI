@@ -57,6 +57,12 @@ Use `scripts/ops_alerts.py` to confirm `scheduler_stale`, `scheduler_status_miss
 
 Stop destructive maintenance, preserve the last verified backup and checksum, record backup age, restore into an isolated destination, run SQLite integrity/migration/selfcheck, and do not declare recovery until the post-restore read-only smoke passes.
 
+### Production wipe guard (BUS-660 → BUS-709)
+
+08.09 незагарденный `selfcheck` (TRUNCATE между секциями, база из `DATABASE_URL`) очистил прод-БД. Два слоя защиты, оба обязательны:
+1. **Кодовый гард** (`scripts/selfcheck.py::_guard_truncate`): `selfcheck` работает только на `*_test`-базах или при `APP_ENV=dev` — проверка по фактической базе подключения (`current_database()`), не по env. Попытка против прода → RuntimeError до любого DDL. Selfcheck против прода НЕ запускается никогда (см. DEPLOYMENT.md).
+2. **Грант app-роли** (DevOps): у прод-роли приложения отобрано право TRUNCATE на все таблицы. Проверка «Прод-грант: app-роль без TRUNCATE (BUS-660)» в наборе selfcheck зеленеет только после выполненного гранта; её падение — эскалация DevOps. Cutover-гейт G2 не проходится без зелёного гарда.
+
 ## Required staging tabletop
 
 Run four synthetic scenarios: one critical safety failure, one privacy exposure, one payment/webhook inconsistency and one provider outage. For each scenario record detection source, acknowledgement time, containment action, owner, rollback/feature-flag command, communication decision and recovery time. The current local alert dry-run confirms privacy-safe detection of HTTP 5xx, webhook failure, stale backup and scheduler error signals; real alert delivery and on-call acknowledgement remain OPEN.

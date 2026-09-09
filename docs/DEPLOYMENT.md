@@ -99,9 +99,24 @@ sed -i "s/^RELEASE_ID=.*/RELEASE_ID=$(git rev-parse --short HEAD)/" .env
 # 2) Собрать ВСЕ build-сервисы compose (api, bot, worker, beat, migrate) — селективный перекат оставляет beat/бота на старом образе
 docker compose -f infra/docker-compose.yml build --pull api bot worker beat migrate
 docker compose -f infra/docker-compose.yml up -d
-docker compose -f infra/docker-compose.yml exec api python -m scripts.selfcheck
+# ⛔ Selfcheck ТОЛЬКО на _test-базе или APP_ENV=dev. Против прода selfcheck
+# НЕ запускается: его _truncate_all очищает базу между секциями, 08.09 это
+# уничтожило прод-БД (incident BUS-660). Гард BUS-709 откажет при попытке
+# (RuntimeError «TRUNCATE на проду запрещён»), а проверка «Прод-грант»
+# в наборе selfcheck подтверждает грант без TRUNCATE у app-роли.
+# Прод-selfcheck (health без DDL) делают read-only путями: /api/health,
+# verify-deploy.sh и smoke через smoke-id 999000000+ (BUS-315/BUS-385).
+# Запуск на ДЕПОЙ-СТЕНДЕ (test-база): env подменяется ВНУТРИ контейнера
+# флагами exec (-e), env-префикс shell до compose контейнеру не передаётся.
+# TEST_DATABASE_URL — как в Makefile (_test): oracle_test @ postgres:5432.
+docker compose -f infra/docker-compose.yml exec \
+  -e APP_ENV=test -e ALLOW_DB_RESET=1 \
+  -e DATABASE_URL="postgresql+asyncpg://oracle_test:$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)@postgres:5432/oracle_test" \
+  api python -m scripts.selfcheck
 # После подтверждения ключей провайдера повторить с внешним smoke-test:
-# docker compose -f infra/docker-compose.yml exec -e SELF_CHECK_LIVE=1 api python -m scripts.selfcheck
+# docker compose -f infra/docker-compose.yml exec -e APP_ENV=test -e ALLOW_DB_RESET=1 \
+#   -e DATABASE_URL="postgresql+asyncpg://oracle_test:$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)@postgres:5432/oracle_test" \
+#   -e SELF_CHECK_LIVE=1 api python -m scripts.selfcheck
 docker compose -f infra/docker-compose.yml logs --tail=100 api bot worker beat
 curl --fail --silent --show-error https://YOUR_DOMAIN/api/health
 # 3) Верификация деплоя (anti-recidive BUS-194/350/373)
