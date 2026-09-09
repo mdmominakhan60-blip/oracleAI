@@ -11,8 +11,21 @@
 #     (host-gateway = сам VPS), но скрейп-таргеты omniroute/ПК в конфиге нет —
 #     override-файл задаёт extra_hosts явно пустым, чтобы resolved-конфиг VPS
 #     не зависел от ПК-специфики BUS-270.
+#
+# D3 (LLM-канал a_tunnel): ssh-туннель ПК->VPS биндит omniroute на loopback VPS
+#     (127.0.0.1:20128), контейнеры его не видят. Bridge oracleai-llm-bridge
+#     (user-systemd на VPS, ~/.local/bin/oracleai-llm-bridge.py) слушает
+#     172.17.0.1:20128 (docker0). host.docker.internal:host-gateway у api/bot
+#     резолвит контейнер -> host -> docker0 -> bridge -> tunnel -> ПК-omniroute.
+#     В .env VPS: CUSTOM_LLM_BASE_URL=http://host.docker.internal:20128/v1
 services:
   prometheus:
     networks: !override
       - oracle_internal
     extra_hosts: !override []
+  api:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  bot:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
