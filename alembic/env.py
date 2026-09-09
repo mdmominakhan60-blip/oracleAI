@@ -15,7 +15,18 @@ if config.config_file_name is not None:
 
 
 def _database_url() -> str:
-    url = os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+    # BUS-755: compose migrate-сервис работает админ-ролью (oracle, DDL).
+    # DATABASE_URL_ADMIN применяется, только если указывает на ту же базу,
+    # что и DATABASE_URL: в тестах (make _test) DATABASE_URL переопределяется
+    # на oracle_test через -e, а env_file-наследие несёт прод-DATABASE_URL_ADMIN.
+    # Без этой проверки миграции тестов ушли бы в прод-БД.
+    admin = os.getenv("DATABASE_URL_ADMIN", "").strip()
+    base = os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+
+    def _db_name(url: str) -> str:
+        return url.rsplit("/", 1)[-1].split("?")[0] if url else ""
+
+    url = admin if admin and base and _db_name(admin) == _db_name(base) else base
     if url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
     return url

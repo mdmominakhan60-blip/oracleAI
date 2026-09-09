@@ -23,6 +23,10 @@ x-app-common: &app-common
     APP_ENV: ${APP_ENV:?APP_ENV must be set explicitly}
     DATA_DIR: /opt/oracle/data
     DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set to a PostgreSQL URL}
+    # BUS-755: DATABASE_URL_ADMIN задаётся ТОЛЬКО migrate-сервису (DDL, роль
+    # oracle) — см. сервис migrate ниже. В x-app-common её нет: app-контейнеры
+    # получают переменную разве что через env_file ../.env, но код приложения
+    # читает только DATABASE_URL (DML-only роль oracleai_app, BUS-745).
     REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     CELERY_ENABLED: ${CELERY_ENABLED:-1}
     CELERY_TASK_ALWAYS_EAGER: ${CELERY_TASK_ALWAYS_EAGER:-0}
@@ -86,6 +90,12 @@ services:
   migrate:
     <<: *app-common
     command: ["alembic", "upgrade", "head"]
+    environment:
+      <<: *app-environment
+      # BUS-755: alembic-миграции идут админ-ролью (DDL). Гейт :? —
+      # деплой fail-closed, если в .env нет админ-DSN. App-контейнеры
+      # работают ролью oracleai_app: код читает только DATABASE_URL.
+      DATABASE_URL_ADMIN: ${DATABASE_URL_ADMIN:?DATABASE_URL_ADMIN must be set to an admin (DDL) PostgreSQL URL}
     depends_on:
       postgres:
         condition: service_healthy
