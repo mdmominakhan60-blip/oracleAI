@@ -1,0 +1,18 @@
+# OCI VPS override для прода oracleAI — BUS-704 (план BUS-642 r2, фаза 1, drift-фиксы D1–D2).
+# База: infra/docker-compose.yml. Применение на VPS:
+#   docker compose -f infra/docker-compose.yml -f infra/docker-compose.oci.yml up -d
+#
+# D1: прод-стек больше не требует external-сеть staging (oracle_staging_internal).
+#     На ПК сеть существовала физически (staging-стек), на чистом VPS её нет —
+#     прод не стартовал бы. Staging на VPS (r2 §4) — изолированный проект,
+#     скрейп staging подключается отдельным override после G1 (план r2 §5 фаза 1).
+#
+# D2: host.docker.internal:host-gateway на prometheus остаётся безвредным
+#     (host-gateway = сам VPS), но скрейп-таргеты omniroute/ПК в конфиге нет —
+#     override-файл задаёт extra_hosts явно пустым, чтобы resolved-конфиг VPS
+#     не зависел от ПК-специфики BUS-270.
+services:
+  prometheus:
+    networks: !override
+      - oracle_internal
+    extra_hosts: !override []
