@@ -97,6 +97,76 @@ def test_moon_phase_is_stable_for_a_date():
     assert 1 <= first["day"] <= 31
 
 
+# ───────────── BUS-391/Э7a: движок рекомендаций лунного дня ─────────────────
+
+def test_moon_day_is_pure_function_of_inputs():
+    """Детерминированность: одинаковые параметры → одинаковая рекомендация."""
+    d = date(2026, 9, 8)
+    chart = astro.compute_chart("1990-06-21", "14:30", "Казань", 55.79, 49.12,
+                                "Europe/Moscow")
+    base = astro.moon_day(d)
+    again = astro.moon_day(d)
+    personal = astro.moon_day(d, chart)
+    personal_again = astro.moon_day(d, chart)
+    assert base == again
+    assert personal == personal_again
+    assert base == astro.moon_day(d, None)
+    # Контракт структуры: оси фаза/знак/лунный день присутствуют всегда.
+    for md in (base, personal):
+        assert md["engine"] == "moon-engine-v1"
+        assert md["phase"]["name"] == md["name"]
+        assert 1 <= md["lunar_day"]["n"] <= 30
+        assert md["lunar_day"]["path"]
+        if md["moon_sign"]:
+            assert md["moon_sign"]["element"]
+
+
+def test_moon_day_personal_transit_axis():
+    """С картой появляется ось аспекта к Солнцу/Луне/ASC; без неё её нет."""
+    chart = astro.compute_chart("1990-06-21", "14:30", "Казань", 55.79, 49.12,
+                                "Europe/Moscow")
+    assert chart["precision"] == "exact" and chart["ascendant"]
+    personal = astro.moon_day(date(2026, 9, 8), chart)
+    anon = astro.moon_day(date(2026, 9, 8))
+    t = personal["transit"]
+    assert t and t["planet"] in ("Солнце", "Луна", "Асцендент")
+    assert t["code"] in ("conjunction", "opposition", "trine", "square", "sextile")
+    assert 0 <= t["orb_exact"] <= 8.0
+    # Аспект попадает в текст рекомендации — параметры видны, а не спрятаны.
+    assert t["aspect"] in personal["advice"] and t["planet"] in personal["advice"]
+    assert "твоей" in personal["advice"]
+    # Без карты тот же день деградирует к общему качеству, но не ломается.
+    assert anon["transit"] is None
+    assert "качество дня" in anon["advice"]
+
+
+def test_moon_day_neighbor_days_differ_contentwise():
+    """Различимость: соседние дни отличаются хотя бы по одной оси, и это
+    видно в тексте рекомендации — не косметическая перестановка слов."""
+    seen = set()
+    texts = []
+    for i in range(7):
+        md = astro.moon_day(date(2026, 9, 8) + __import__("datetime").timedelta(days=i))
+        axis = (md["name"], md["moon_sign"]["sign"] if md["moon_sign"] else None,
+                md["lunar_day"]["n"])
+        seen.add(axis)
+        texts.append(md["advice"])
+    # 7 дней подряд не могут схлопнуться в одну ось-комбинацию: знак и лунный
+    # день меняются каждый 1–2,5 дня, фаза — каждые ~3,7 дня.
+    assert len(seen) >= 4
+    # Тексты содержательно различны (лунный день/знак вплетены в совет).
+    assert len(set(texts)) >= 5
+
+
+def test_moon_day_lunar_day_quality_axis():
+    """Ось качества: тёмные дни помечены, траектория соответствует дню цикла."""
+    md = astro.moon_day(date(2026, 9, 10))  # расчётный 29-й лунный день
+    assert md["lunar_day"]["quality"] == "тёмный"
+    assert md["lunar_day"]["path"] == astro._MOON_DAY_PATH[md["lunar_day"]["n"]]
+    assert md["advice"].startswith(("тишина", "пора", "сила", "семя", "эмоции",
+                                    "первые", "закрывай", "отпускай", "загадай"))
+
+
 def test_chart_never_raises_and_marks_mode():
     chart = astro.compute_chart("1990-06-21", "14:30", "Казань", 55.79, 49.12,
                                 "Europe/Moscow")

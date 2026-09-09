@@ -56,6 +56,34 @@
       paid: 'Оплата прошла — доступ уже открывается ✦', paymentPassed: 'Оплата подтверждена — доступ уже открывается ✦', paymentFailed: 'Telegram не подтвердил оплату. Попробуй ещё раз.', payProduct: 'Оплатить продукт',
       cryptoOpened: asset => `Счёт ${asset} открыт. После оплаты заказ появится в истории.`,
       statuses: { pending: 'ожидает оплаты', paid: 'оплачен', failed: 'ошибка', refunded: 'возвращён' },
+      // BUS-635: витрина тарифов — включения и состояния CTA.
+      includes: 'Что входит', currentPlan: 'Твой тариф', choosePlan: 'Выбрать', currentPlanCta: 'Текущий тариф',
+      planBadgeRecommended: 'Выбор большинства', planBadgeHighest: 'Наивысший приоритет',
+      featureLabels: {
+        'today.basic': 'Гороскоп и карта дня',
+        'astro.basic': 'Натальная карта',
+        'astro.advanced': 'Расширенная астрология',
+        'tarot.basic': 'Таро дня',
+        'tarot.advanced': 'Расклады Таро',
+        'palm.basic': 'Линии ладони',
+        'palm.advanced': 'Глубокий разбор ладони',
+        'ai.chat': 'Диалоги с Оракулом',
+        'ai.memory': 'Память между сессиями',
+        'ai.deep_context': 'Глубокий контекст разговора',
+        'report.natal.basic': 'Базовый отчёт по карте',
+        'report.natal.deep.limited': 'Глубокий отчёт (лимит)',
+        'report.natal.deep': 'Глубокие отчёты по карте',
+        'report.synastry.deep.limited': 'Отчёт о совместимости (лимит)',
+        'report.synastry.deep': 'Отчёт о совместимости',
+        'monthly_report': 'Ежемесячный обзор',
+        'priority_queue': 'Приоритетная очередь',
+        'voice': 'Голосовые сообщения',
+        'advanced_reports': 'Продвинутые отчёты',
+        'concierge_tools': 'Инструменты консьержа',
+        'history.basic': 'История сессий',
+        'premium.preview': 'Превью премиум-функций',
+        'crystals.purchase': 'Покупка Кристаллов',
+      },
     },
     en: {
       space: 'YOUR SPACE', choose: 'Choose your rhythm', heroCopy: 'No unnecessary steps. Access opens only after the provider confirms your payment.',
@@ -81,17 +109,45 @@
       paid: 'Payment received — access is opening ✦', paymentPassed: 'Payment confirmed — access is opening ✦', paymentFailed: 'Telegram did not confirm the payment. Please try again.', payProduct: 'Pay for product',
       cryptoOpened: asset => `Invoice for ${asset} opened. Your order will appear in history after payment.`,
       statuses: { pending: 'pending', paid: 'paid', failed: 'failed', refunded: 'refunded' },
+      includes: 'What is included', currentPlan: 'Your plan', choosePlan: 'Choose', currentPlanCta: 'Current plan',
+      planBadgeRecommended: 'Most popular', planBadgeHighest: 'Highest priority',
+      featureLabels: {
+        'today.basic': 'Daily horoscope and card',
+        'astro.basic': 'Natal chart',
+        'astro.advanced': 'Advanced astrology',
+        'tarot.basic': 'Daily tarot',
+        'tarot.advanced': 'Tarot spreads',
+        'palm.basic': 'Palm lines',
+        'palm.advanced': 'Deep palm reading',
+        'ai.chat': 'Chats with the Oracle',
+        'ai.memory': 'Memory between sessions',
+        'ai.deep_context': 'Deep conversation context',
+        'report.natal.basic': 'Basic chart report',
+        'report.natal.deep.limited': 'Deep report (limited)',
+        'report.natal.deep': 'Deep chart reports',
+        'report.synastry.deep.limited': 'Synastry report (limited)',
+        'report.synastry.deep': 'Synastry report',
+        'monthly_report': 'Monthly overview',
+        'priority_queue': 'Priority queue',
+        'voice': 'Voice messages',
+        'advanced_reports': 'Advanced reports',
+        'concierge_tools': 'Concierge tools',
+        'history.basic': 'Session history',
+        'premium.preview': 'Premium feature preview',
+        'crystals.purchase': 'Crystal purchases',
+      },
     },
   };
 
   const PAYMENT_CATALOG = {
     en: {
+      // BUS-635: ключи — v2-коды планов (server price book), legacy-коды не рендерятся.
       plans: {
         free: { title: '✦ Spark', tagline: 'A gentle return: your daily card and one question a week' },
-        guide: { title: '✦✦ Guiding', tagline: 'One question and a personal forecast every day' },
-        vip: { title: '✦✦✦ VIP Oracle', tagline: 'A personal astrologer 24/7 — less than one consultation' },
-        vip_year: { title: '✦✦✦ VIP for a year', tagline: 'Eight months for the price of twelve' },
-        concierge: { title: '👑 Concierge', tagline: 'Unlimited access, priority and exclusive readings' },
+        vip_core: { title: 'VIP', tagline: 'A personal AI guide, memory and regular depth' },
+        vip_plus: { title: 'VIP Plus', tagline: 'The best pick for regular work and extended readings' },
+        pro: { title: 'Pro', tagline: 'High allowance, advanced reports and priority processing' },
+        concierge_v2: { title: 'Concierge', tagline: 'Top-quality routing and a generous fair-use allowance' },
       },
       products: {
         spread_one: { title: 'Reading “One card”', description: 'A quick, honest answer to one question' },
@@ -157,16 +213,35 @@
     </button>`;
   }
 
-  function planCard(plan, featured) {
+  // BUS-635: машинные коды features из price book в человеческие лейблы;
+  // незнакомый код показываем как есть — не теряем включение.
+  function featureLabel(code) {
+    const labels = PAYMENT_I18N[payLang()].featureLabels || {};
+    return labels[code] || code;
+  }
+
+  function planBadgeText(plan) {
+    if (!plan.badge) return '';
+    if (plan.badge === 'recommended') return payT('planBadgeRecommended');
+    if (plan.badge === 'highest priority') return payT('planBadgeHighest');
+    return String(plan.badge);
+  }
+
+  function planCard(plan, featured, isCurrent) {
     const annual = paymentState().billingPeriod === 'annual';
     const price = Number((annual ? plan.annual_price_stars : plan.price_stars) || 0);
     const code = plan.code || plan.sku || 'ACCESS';
-    return `<article class="pay-plan${featured ? ' pay-plan--featured' : ''}">
-      ${featured ? `<span class="pay-plan__badge">${esc(payT('popular'))}</span>` : ''}
+    const features = Array.isArray(plan.features) ? plan.features : [];
+    const badge = planBadgeText(plan);
+    const ctaText = isCurrent ? payT('currentPlanCta') : payT('openStars');
+    return `<article class="pay-plan${featured ? ' pay-plan--featured' : ''}${isCurrent ? ' pay-plan--current' : ''}">
+      ${badge ? `<span class="pay-plan__badge">${esc(badge)}</span>` : ''}
+      ${isCurrent ? `<span class="pay-plan__current-tag">${esc(payT('currentPlan'))}</span>` : ''}
       <div class="pay-plan__top"><div><span class="pay-kicker">${esc(code)}</span><h3>${esc(catalogText(plan, 'title', payT('defaultPlan')))}</h3></div><span class="pay-plan__sigil">✦</span></div>
       <p>${esc(catalogText(plan, 'tagline', payT('defaultPlanCopy')))}</p>
-      <div class="pay-price"><strong>${price ? stars(price) : (payLang() === 'en' ? 'By request' : 'По запросу')}</strong><small>${annual ? (payLang() === 'en' ? 'per year' : 'за год') : esc(payT('perPeriod'))}</small></div>
-      <button class="btn btn-primary pay-cta" data-act="pay-stars" data-plan="${esc(code)}" ${price ? '' : 'disabled'}>${esc(payT('openStars'))}</button>
+      ${features.length ? `<ul class="pay-plan__features" aria-label="${esc(payT('includes'))}">${features.map(f => `<li>${esc(featureLabel(f))}</li>`).join('')}</ul>` : ''}
+      <div class="pay-price"><strong>${price ? stars(price) : (payLang() === 'en' ? 'Free' : 'Бесплатно')}</strong><small>${annual ? (payLang() === 'en' ? 'per year' : 'за год') : esc(payT('perPeriod'))}</small></div>
+      <button class="btn btn-primary pay-cta" data-act="${isCurrent ? 'none' : 'pay-stars'}" data-plan="${esc(code)}" ${price && !isCurrent ? '' : 'disabled'}>${esc(ctaText)}</button>
     </article>`;
   }
 
@@ -230,7 +305,9 @@
     const method = state.method || 'stars';
     const asset = activeAsset();
     const canonical = data.catalog || {};
-    const plans = (canonical.plans && canonical.plans.length ? canonical.plans : (data.plans || []))
+    // BUS-635: единая витрина — только v2-канонический каталог. Legacy data.plans
+    // ($9.99/$24.99) скрыты из витрины; действующие подписки живут до конца срока.
+    const plans = (canonical.plans || [])
       .filter(plan => plan.is_active !== 0 && plan.is_public !== 0);
     const legacyGroups = data.products && typeof data.products === 'object' ? data.products : data;
     const legacyProducts = Object.values(legacyGroups).filter(Array.isArray).flat();
@@ -241,6 +318,11 @@
     const busy = state.busy ? `<div class="pay-busy" role="status"><span class="loader-ring"></span><span>${esc(payT('busy'))}</span></div>` : '';
     const error = state.error ? `<div class="pay-alert pay-alert--error" role="alert">${esc(state.error)}<button class="btn btn-ghost" data-act="payment-retry">${esc(payT('retry'))}</button></div>` : '';
     const balance = Number(data.crystals || 0).toLocaleString(payLang() === 'en' ? 'en-US' : 'ru-RU');
+    // BUS-635: текущий tier подписки — v2-код или legacy-алиас, сведённый сервером;
+    // сравнение по коду плана подсвечивает карточку и переводит её CTA в неактивное.
+    const currentTier = (canonical.current_entitlements && canonical.current_entitlements.tier)
+      || (typeof data.current_plan === 'string' ? data.current_plan : '');
+    const currentTierKey = String(currentTier || '').toLowerCase();
     main.innerHTML = `<div class="screen pay-screen">
       <section class="pay-hero"><div class="pay-hero__orb">✦</div><div><span class="pay-kicker">${esc(payT('space'))}</span><h1>${esc(payT('choose'))}</h1><p>${esc(payT('heroCopy'))}</p></div></section>
       <section class="pay-balance"><span class="pay-balance__icon">✦</span><div><small>${esc(payT('balance'))}</small><strong>${balance}</strong></div><span class="pay-balance__hint">${esc(payT('balanceHint'))}</span></section>
@@ -252,7 +334,12 @@
       ${promoSection()}
       ${marketplaceSection()}
       ${busy}${error}
-      <section class="pay-section"><div class="pay-section-head"><div><span class="pay-kicker">${esc(payT('subscription'))}</span><h2>${esc(payT('depth'))}</h2></div><span class="pay-section-count">${esc(planCount(plans.length))}</span></div><div class="pay-period-toggle" role="tablist" aria-label="${payLang() === 'en' ? 'Billing period' : 'Период оплаты'}"><button class="btn btn-ghost ${state.billingPeriod === 'monthly' ? 'is-active' : ''}" data-act="payment-period" data-period="monthly">${payLang() === 'en' ? 'Monthly' : 'Месяц'}</button><button class="btn btn-ghost ${state.billingPeriod === 'annual' ? 'is-active' : ''}" data-act="payment-period" data-period="annual">${payLang() === 'en' ? 'Annual · save 2 months' : 'Год · экономия 2 месяцев'}</button></div><div class="pay-plans">${plans.length ? plans.map((plan, index) => planCard(plan, index === 1 || (plans.length === 1))).join('') : `<div class="pay-empty">${esc(payT('emptyPlans'))}</div>`}</div></section>
+      <section class="pay-section"><div class="pay-section-head"><div><span class="pay-kicker">${esc(payT('subscription'))}</span><h2>${esc(payT('depth'))}</h2></div><span class="pay-section-count">${esc(planCount(plans.length))}</span></div><div class="pay-period-toggle" role="tablist" aria-label="${payLang() === 'en' ? 'Billing period' : 'Период оплаты'}"><button class="btn btn-ghost ${state.billingPeriod === 'monthly' ? 'is-active' : ''}" data-act="payment-period" data-period="monthly">${payLang() === 'en' ? 'Monthly' : 'Месяц'}</button><button class="btn btn-ghost ${state.billingPeriod === 'annual' ? 'is-active' : ''}" data-act="payment-period" data-period="annual">${payLang() === 'en' ? 'Annual · save 2 months' : 'Год · экономия 2 месяцев'}</button></div><div class="pay-plans">${plans.length ? plans.map((plan, index) => {
+        const code = String(plan.code || '').toLowerCase();
+        const isCurrent = code && code === currentTierKey;
+        const featured = plan.badge === 'recommended' || index === 1 || (plans.length === 1);
+        return planCard(plan, featured, isCurrent);
+      }).join('') : `<div class="pay-empty">${esc(payT('emptyPlans'))}</div>`}</div></section>
       <section class="pay-section"><div class="pay-section-head"><div><span class="pay-kicker">${esc(payT('oneOff'))}</span><h2>${esc(payT('reserve'))}</h2></div></div><div class="pay-products">${(method === 'crypto' ? crystalProducts : [...crystalProducts, ...otherProducts]).slice(0, 5).map(product => productCard(product, method, asset)).join('') || `<div class="pay-empty">${esc(payT('emptyProducts'))}</div>`}</div></section>
       <section class="pay-footer-note"><span>◌</span><p>${esc(payT('footer'))}</p><button class="btn btn-ghost" data-act="payment-orders">${esc(payT('orders'))}</button></section>
     </div>`;
@@ -283,7 +370,11 @@
           }),
         });
         if (state.data.current_plan && state.data.plans) {
-          const title = (state.data.plans.find(p => p.code === state.data.current_plan) || {}).title;
+          const currentCode = String(state.data.current_plan).toLowerCase();
+          const tier = state.data.catalog && state.data.catalog.current_entitlements
+            ? String(state.data.catalog.current_entitlements.tier || '').toLowerCase() : '';
+          const pool = (state.data.catalog && state.data.catalog.plans) || state.data.plans;
+          const title = (pool.find(p => String(p.code || '').toLowerCase() === (tier || currentCode)) || {}).title;
           if (title) this.me.plan = Object.assign({}, this.me.plan, { title });
         }
         this.refreshHeaderStatus();

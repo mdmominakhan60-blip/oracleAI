@@ -38,7 +38,15 @@
 .pay-plan__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .pay-plan h3, .pay-product h3 { margin: 3px 0 0; color: var(--text-main); font: 700 19px/1.08 var(--font-display); }
 .pay-plan__sigil { color: var(--champagne-300); font-size: 20px; }
-.pay-plan p { min-height: 32px; margin: 9px 0 10px; color: var(--text-soft); font-size: 11.5px; line-height: 1.43; }
+.pay-plan p { margin: 9px 0 10px; color: var(--text-soft); font-size: 11.5px; line-height: 1.43; }
+/* BUS-635: включения тарифа — компактный список на карточке. */
+.pay-plan__features { margin: 0 0 10px; padding: 0; list-style: none; display: grid; gap: 4px; }
+.pay-plan__features li { position: relative; padding-left: 15px; color: var(--text-soft); font-size: 10.5px; line-height: 1.35; }
+.pay-plan__features li::before { content: '✦'; position: absolute; left: 0; top: 0; color: var(--champagne-300); font-size: 9px; line-height: 1.6; }
+.pay-plan--current { border-color: rgba(123,224,197,.45); }
+.pay-plan--current .pay-cta { opacity: .6; }
+.pay-plan__current-tag { position: absolute; top: 12px; left: 13px; padding: 4px 7px; border-radius: 7px; color: #0d2b22; background: var(--color-success, #9aefd2); font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.pay-plan--current .pay-plan__badge { position: static; display: inline-block; margin-left: 6px; }
 .pay-price { display: flex; align-items: baseline; gap: 7px; margin-bottom: 12px; }
 .pay-price strong { color: var(--champagne-300); font: 700 21px/1 var(--font-display); }
 .pay-price small { color: var(--text-muted); font-size: 10px; }

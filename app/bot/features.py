@@ -598,13 +598,16 @@ async def diary_write(message: Message, state: FSMContext, db):
 @router.message(Command("moon"))
 async def moon_cmd(message: Message, db):
     from datetime import date, timedelta
+    from ..repo import users as users_repo
+    user = await users_repo.get(db, message.from_user.id)
+    chart = users_repo.chart_of(user) if user else {}
     lines = ["🌙 <b>Лунная неделя</b>", ""]
     for i in range(7):
         day = date.today() + timedelta(days=i)
-        phase = astro.moon_phase(day)
+        md = astro.moon_day(day, chart or None)
         mark = "→ " if i == 0 else "   "
-        lines.append(f"{mark}{day.strftime('%d.%m')} {phase['emoji']} "
-                     f"{phase['name']} — {phase['advice']}")
+        lines.append(f"{mark}{day.strftime('%d.%m')} {md['emoji']} "
+                     f"{md['name']} — {md['advice']}")
     lines.append("\n<i>Спроси Астролога, какой день лучше для твоего решения 🌌</i>")
     await message.answer("\n".join(lines),
                          reply_markup=await _menu(db, message.from_user.id))

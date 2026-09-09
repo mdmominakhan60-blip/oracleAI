@@ -513,14 +513,15 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
 
   app.scrollToBottom = function() {
     const box = document.querySelector('.chat-messages, .screen');
-    if (box) {
-      box.scrollTop = box.scrollHeight;
-      // параллакс только на экранах (Сегодня/Агенты/Профиль) — в чате фон
-      // не должен двигаться при скролле ленты (иначе выглядит «битым»)
-      const sf = document.querySelector('.starfield');
-      if (sf && !box.classList.contains('chat-messages')) {
-        sf.style.transform = 'translateY(' + (box.scrollTop * 0.08) + 'px)';
-      }
+    if (!box) return;
+    // автоскролл только если пользователь у низа — не дёргать при чтении истории
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+    if (atBottom) box.scrollTop = box.scrollHeight;
+    // параллакс только на экранах (Сегодня/Агенты/Профиль) — в чате фон
+    // не должен двигаться при скролле ленты (иначе выглядит «битым»)
+    const sf = document.querySelector('.starfield');
+    if (sf && !box.classList.contains('chat-messages')) {
+      sf.style.transform = 'translateY(' + (box.scrollTop * 0.08) + 'px)';
     }
   };
 

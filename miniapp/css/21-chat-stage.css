@@ -1,0 +1,49 @@
+/* =============================================
+   ОРАКУЛ · модуль 21-chat-stage — стадия работы + markdown v2 (BUS-636 Э5)
+   ============================================= */
+
+/* ── стадия работы: компактная полоска над typing-точками ── */
+.chat-stage {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 7px 12px; margin: 2px 0 4px;
+  border-radius: 99px;
+  background: rgba(230, 193, 120, .08);
+  border: 1px solid rgba(230, 193, 120, .18);
+  color: var(--gold-bright); font-size: 12.5px; font-weight: 500;
+  letter-spacing: .2px;
+  animation: fadeIn .3s var(--ease);
+}
+.chat-stage__text { flex: 1; min-width: 0; }
+.chat-stage__timer {
+  flex: none; font-variant-numeric: tabular-nums;
+  color: var(--text-faint); font-size: 11.5px; font-weight: 400;
+}
+
+/* ── markdown в ответах: минималистично, не ломает чат ── */
+.msg.assistant .md-h {
+  display: block; font-family: var(--font-serif);
+  color: var(--gold); font-size: 15px; font-weight: 700;
+  margin: 10px 0 4px; letter-spacing: .2px;
+}
+.msg.assistant .md-h:first-child { margin-top: 0; }
+.msg.assistant ul, .msg.assistant ol {
+  margin: 6px 0; padding-left: 18px;
+  color: var(--text-dim);
+}
+.msg.assistant li { margin: 2px 0; line-height: 1.6; }
+.msg.assistant li::marker { color: var(--gold-deep); }
+.msg.assistant pre {
+  margin: 8px 0; padding: 10px 12px; border-radius: 10px;
+  background: rgba(0,0,0,.35); border: 1px solid var(--border);
+  overflow-x: auto; font-size: 12.5px; line-height: 1.55;
+}
+.msg.assistant pre code {
+  background: none; padding: 0; font-size: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.msg.assistant code {
+  background: rgba(230,193,120,.1); border-radius: 4px;
+  padding: 1px 5px; font-size: 12.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--gold-bright);
+}

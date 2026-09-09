@@ -628,6 +628,200 @@ def moon_phase(d: date | None = None) -> dict:
             "day": round(days) + 1}
 
 
+# ─────────────────── лунный день: знак/аспекты/качество ──────────────────────
+
+# Тёмные дни классического 30-дневного цикла: 1, 4, 9, 12, 15, 23, 26, 29 —
+# дни сатурнического качества; остальные — рабочие.
+_MOON_DAY_QUALITY = {
+    1: "тёмный", 4: "тёмный", 9: "тёмный", 12: "тёмный", 15: "тёмный",
+    23: "тёмный", 26: "тёмный", 29: "тёмный",
+}
+
+# Траектория лунного дня: одна ось смысла на каждый день цикла.
+_MOON_DAY_PATH = {
+    1: "семя: задуманное сегодня растёт весь цикл",
+    2: "набухание замысла: собирай информацию, не действуй",
+    3: "первое давление: лучше сопротивление, чем спешка",
+    4: "пауза: решения, принятые сегодня, липнут к неудаче",
+    5: "поворот: закрепи выбор — сегодня слово прилипает",
+    6: "отклик: сказанное сегодня возвращается живым",
+    7: "слово: говори и записывай — день несёт силу форм",
+    8: "преображение: очисти форму прежнего замысла",
+    9: "дым: тревожные вести — не проверяй их резко",
+    10: "род: семья и дом прибавляют силы",
+    11: "пик силы: каждая деталь требует внимания",
+    12: "милость: сердце мягко, но не для просьб",
+    13: "круг: возвращаются старые знаки и переписки",
+    14: "канал: тянись к древнему и обучающему",
+    15: "искушение: соблазны громче, чем кажутся",
+    16: "равновесие: гармония внутри и с людьми",
+    17: "радость: день облегчённых встреч и шуток",
+    18: "зеркало: очисти то, что тебя задевает",
+    19: "очищение: кайма цикла — суд над лишним",
+    20: "дракон: день решительного расширения",
+    21: "трибуна: сила на высших ступенях, тишина и смелость",
+    22: "ключи: учись и учи — день знания и дорог",
+    23: "раскол: разрывай, а не чини",
+    24: "пробуждение: замысел обретает первый свет формы",
+    25: "сон: ничего не начинай — прислушивайся к знакам",
+    26: "сбор: плоды и рычаги прежних трудов",
+    27: "наваждение: не верь явному — открывай скрытое",
+    28: "организация: создавай и восстанавливай порядок",
+    29: "пустота: никому ничего не обещай",
+    30: "прощение: завершай цикл очищением и отдачей",
+}
+
+# Знак Луны задаёт фокус энергии дня.
+_MOON_SIGN_FOCUS = {
+    "Овен": "напор и новые начинания",
+    "Телец": "тело, ресурсы и то, что можно потрогать",
+    "Близнецы": "слова, контакты и короткие дела",
+    "Рак": "дом, близкие и чувства",
+    "Лев": "творчество, признание и щедрость",
+    "Дева": "порядок, здоровье и детали",
+    "Весы": "партнёрство и эстетика",
+    "Скорпион": "глубина, правда и трансформация",
+    "Стрелец": "горизонты, обучение и дальние планы",
+    "Козерог": "структура, цель и ответственность",
+    "Водолей": "свобода, идеи и нестандартные решения",
+    "Рыбы": "интуиция, творчество и отдых",
+}
+
+# Смысл транзитного аспекта Луны к натальной точке карты (Солнце/Луна/ASC).
+_ASPECT_TO_CHART = {
+    ("conjunction", "Солнце"): "воля и настроение совпадают — сильный день для тебя",
+    ("conjunction", "Луна"): "чувства у руля — доверяй им, но не решай судьбу сгоряча",
+    ("conjunction", "Асцендент"): "тебя видно: день работает на первое впечатление",
+    ("opposition", "Солнце"): "мир тянет одеяло: отложи конфронтацию, не решай на эмоциях",
+    ("opposition", "Луна"): "эмоциональные качели: близкие задевают — реагируй позже",
+    ("opposition", "Асцендент"): "роль навязывают извне: держи границы",
+    ("trine", "Солнце"): "мягкая поддержка: дела идут сами — используй день",
+    ("trine", "Луна"): "гармония с собой: день для семьи и разговоров по душам",
+    ("trine", "Асцендент"): "ты в потоке: образ располагает — время знакомств и выступлений",
+    ("square", "Солнце"): "трение с волей: не продавливай — сегодня камни виднее",
+    ("square", "Луна"): "внутреннее напряжение: снижай обороты, телу нужен отдых",
+    ("square", "Асцендент"): "важные встречи лучше перенести: впечатление подводит",
+    ("sextile", "Солнце"): "шанс на мелочь: короткие просьбы проходят легко",
+    ("sextile", "Луна"): "тёплый фон: неудобные разговоры пройдут спокойнее обычного",
+    ("sextile", "Асцендент"): "лёгкость в контакте: обнови связи — напиши первым",
+}
+
+
+def _moon_phase_index(elong: float) -> int:
+    """Индекс фазы 0–7 по элонгации Луны (0° = новолуние, 180° = полнолуние)."""
+    return int(((elong % 360) / 360.0) * 8 + 0.5) % 8
+
+
+def _moon_aspect_to_chart(moon_abs_deg: float, chart: dict | None) -> dict | None:
+    """Первый (по орбу) транзитный аспект Луны к Солнцу/Луне/ASC натальной карты.
+
+    chart — результат compute_chart; имена и abs_deg_exact — в соглашениях
+    движка (POINT_RU, абсолютная эклиптическая долгота). Точность важнее
+    round(): abs_deg_exact хранит полную точность kerykeion.
+    """
+    if not chart:
+        return None
+    targets: list[tuple[str, float]] = []
+    for name in ("Солнце", "Луна"):
+        p = _chart_planet(chart, name)
+        if p and p.get("abs_deg_exact") is not None:
+            targets.append((name, float(p["abs_deg_exact"])))
+    asc = chart.get("ascendant")
+    if asc and asc.get("abs_deg_exact") is not None:
+        targets.append(("Асцендент", float(asc["abs_deg_exact"])))
+    if not targets:
+        return None
+    best = None
+    for tname, tdeg in targets:
+        for code, angle in _ASPECT_ANGLE.items():
+            orb = _SYNASTRY_ORBS.get(code, 8.0)
+            off = abs(_delta360(moon_abs_deg, tdeg) - angle)
+            if off <= orb and (best is None or off < best["orb_exact"]):
+                best = {"planet": tname, "code": code, "aspect": ASPECT_RU[code][0],
+                        "glyph": ASPECT_RU[code][1], "orb": round(off, 1),
+                        "orb_exact": off}
+    return best
+
+
+def moon_day(d: date | None = None, chart: dict | None = None) -> dict:
+    """Структурированные параметры лунного дня + детерминированная рекомендация.
+
+    Композиция осей: фаза (эфемериды) → знак Луны (эфемериды) → лунный день
+    (классическая характеристика) → аспект Луны к натальной карте (если дана).
+    Чистая функция от (дата, карта): без рандома и внешнего состояния.
+    При недоступных эфемеридах фаза деградирует к синодическому календарю,
+    знак/аспект остаются None — движок честно помечает деградацию.
+    """
+    d = d or date.today()
+    sign_pair = _light_sky(d)["moon"]
+    sign_name = sign_pair[0] if sign_pair else None
+    sign_element = sign_pair[1] if sign_pair else None
+
+    # Фаза и лунный день по эфемеридам: элонгация Луна−Солнце в 12:00 UTC.
+    elong = None
+    moon_abs = None
+    try:
+        from kerykeion import AstrologicalSubjectFactory
+        subj = AstrologicalSubjectFactory.from_birth_data(
+            name="moonday", year=d.year, month=d.month, day=d.day,
+            hour=12, minute=0, city="-", lat=52.5, lng=13.4, tz_str="UTC", online=False,
+            zodiac_type=ZODIAC_TYPE,
+            houses_system_identifier=HOUSE_SYSTEM_IDENTIFIER,
+            perspective_type=PERSPECTIVE_TYPE,
+            active_points=ACTIVE_POINTS)
+        elong = (subj.moon.abs_pos - subj.sun.abs_pos) % 360
+        moon_abs = float(subj.moon.abs_pos)
+    except Exception as e:  # noqa: BLE001
+        log.debug("эфемеридная фаза недоступна (%s), синодический фолбэк", e)
+
+    syn = moon_phase(d)  # синодический фолбэк и источник name/emoji
+    if elong is not None:
+        idx = _moon_phase_index(elong)
+    else:
+        idx = MOON_PHASES.index((syn["name"], syn["emoji"], syn["advice"]))
+    phase_name, emoji = MOON_PHASES[idx][0], MOON_PHASES[idx][1]
+
+    # Лунный день: доля элонгации от 360° → 1..30; фолбэк — доля синодического
+    # цикла от опорной даты. Ограничение 1..30 — защита от округления на границе.
+    if elong is not None:
+        lunar_day = min(30, int(elong / 360.0 * 29.530588) + 1)
+    else:
+        lunar_day = syn["day"]
+    lunar_day = max(1, lunar_day)
+
+    quality = _MOON_DAY_QUALITY.get(lunar_day, "обычный")
+    path = _MOON_DAY_PATH[lunar_day]
+    focus = _MOON_SIGN_FOCUS.get(sign_name) if sign_name else None
+    transit = _moon_aspect_to_chart(moon_abs, chart) if (chart and moon_abs is not None) else None
+
+    # ── детерминированная композиция: фаза → знак → лунный день → аспект ──
+    parts = [MOON_PHASES[idx][2]]
+    if sign_name and focus:
+        parts.append(f"Луна в {sign_name} — день про {focus}")
+    parts.append(f"{lunar_day}-й лунный день: {path}")
+    if transit:
+        sense = _ASPECT_TO_CHART[(transit["code"], transit["planet"])]
+        parts.append(f"Луна {transit['glyph']} твоей {transit['planet']} "
+                     f"({transit['aspect']}, орб {transit['orb']}°): {sense}")
+    else:
+        parts.append("качество дня: " + quality)
+    advice = ". ".join(parts) + "."
+
+    return {
+        # Обратная совместимость: name/emoji/advice/day — старые поля.
+        "name": phase_name,
+        "emoji": emoji,
+        "advice": advice,
+        "day": lunar_day,
+        # Структурированные параметры дня (Э7a) рядом с рекомендацией.
+        "phase": {"name": phase_name, "emoji": emoji},
+        "moon_sign": ({"sign": sign_name, "element": sign_element} if sign_name else None),
+        "lunar_day": {"n": lunar_day, "quality": quality, "path": path},
+        "transit": transit,
+        "engine": "moon-engine-v1",
+    }
+
+
 def today_sky(d: date | None = None) -> dict:
     """«Небо сегодня»: знак сезона Солнца + фаза Луны."""
     d = d or date.today()

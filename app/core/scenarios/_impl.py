@@ -22,7 +22,7 @@ from datetime import date, datetime, timedelta, timezone
 from ...repo import dialog as dialog_repo
 from ...repo import readings as readings_repo
 from ...repo import users as users_repo
-from .. import agents, astro, chart_interpretation, chart_products, interpretation, llm, memory, shared_context, tarot
+from .. import agents, astro, chart_human, chart_interpretation, chart_products, interpretation, llm, memory, shared_context, tarot
 from .. import tool_registry as skills
 from ..stable import stable_seed
 
@@ -612,6 +612,30 @@ async def interpret_chart(db, user, chart: dict) -> tuple[str, bool]:
     evidence = interpretation.chart_evidence(chart, time_known=time_known)
     text = ""
     live = False
+
+    # Preferred path: human-first contract v2 (BUS-523). Human meaning first,
+    # technical astrology as the collapsed second level. The v1 structured
+    # path below stays as fallback; the legacy Markdown path after that.
+    if llm.enabled() and chart.get("calculation"):
+        try:
+            system = await agents.system_for(db, user, agents.get("astro"))
+            candidate = await llm.complete(
+                system,
+                chart_human.prompt(evidence.as_prompt_block(), await skills.guide(db, "natal")),
+                tier="main", max_tokens=3600, purpose="chart_interpret_human_v2",
+                tg_id=user["tg_id"], db=db,
+            )
+            payload = chart_interpretation.parse_json_object(candidate)
+            issues = chart_human.validate_payload(payload, chart, time_known=time_known)
+            if not issues:
+                scales = chart_human.profile_scales(chart, time_known=time_known)
+                hooks = chart_human.question_hooks(chart, time_known=time_known)
+                chart["interpretation_human"] = chart_human.build_blocks_contract(
+                    payload, hooks=hooks, scales=scales, time_known=time_known)
+                return chart_human.render_human_text(payload, hooks, scales), True
+            log.info("human-first chart interpretation rejected: %s", "; ".join(issues[:8]))
+        except Exception as e:  # noqa: BLE001
+            log.info("human-first chart interpretation unavailable: %s", type(e).__name__)
 
     # Preferred path: strict structured contract. The legacy Markdown path below
     # remains a compatibility fallback for providers that cannot return valid JSON.
