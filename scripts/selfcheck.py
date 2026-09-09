@@ -232,13 +232,55 @@ def core_smoke():
 # один — PostgreSQL из DATABASE_URL, поэтому секции делят одну базу и перед
 # прогоном очищают её через TRUNCATE (кроме миграционных таблиц).
 
+_SAFE_DB_SUFFIXES = ("_test",)
+_SAFE_APP_ENVS = ("dev",)
+
+
+def _env(name: str, default: str = "") -> str:
+    return os.environ.get(name, default)
+
+
+def _database_name(url: str) -> str:
+    from urllib.parse import urlsplit
+
+    return urlsplit(url).path.lstrip("/")
+
+
+def _is_safe_db_name(db_name: str) -> bool:
+    return any(db_name.endswith(sfx) for sfx in _SAFE_DB_SUFFIXES)
+
+
+def _guard_truncate(db_name: str) -> None:
+    """Запрещает TRUNCATE на не-test базах вне dev. Работает по ФАКТИЧЕСКОЙ
+    базе подключения (current_database()), а не по DATABASE_URL из env —
+    env может рассинхронизироваться с реальным коннектом (BUS-660)."""
+    if _is_safe_db_name(db_name):
+        return
+    app_env = _env("APP_ENV", "").lower()
+    if app_env in _SAFE_APP_ENVS:
+        return
+    raise RuntimeError(
+        "selfcheck отклонён: подключение указывает на производственную базу "
+        f"{db_name!r} при APP_ENV={app_env!r}. "
+        "TRUNCATE на проду запрещён (BUS-660). "
+        "Запускай selfcheck на *_test-базе или APP_ENV=dev."
+    )
+
+
 async def _truncate_all(db) -> None:
     """Очищает все таблицы кроме alembic_version и migrations_applied, затем
     заново засевает дефолты: раньше каждая секция получала свежую базу с сидом,
     теперь делим одну и возвращаем ей состояние «засеяна с нуля»."""
+    cur = await db.execute("SELECT current_database()")
+    row = await cur.fetchone()
+    db_name = row["current_database"]
+    # Гард по фактической базе подключения (current_database), а не по
+    # DATABASE_URL из env — env может рассинхронизироваться с реальным
+    # коннектом (BUS-660).
+    _guard_truncate(db_name)
     cur = await db.execute(
         "SELECT tablename FROM pg_tables WHERE schemaname='public'")
-    tables = [row["tablename"] for row in await cur.fetchall()]
+    tables = [r["tablename"] for r in await cur.fetchall()]
     keep = {"alembic_version", "migrations_applied"}
     drop = [t for t in tables if t not in keep]
     if drop:
@@ -248,6 +290,38 @@ async def _truncate_all(db) -> None:
     from app.data.seed import seed_defaults
     async with db.transaction():
         await seed_defaults(db)
+
+
+async def prod_grant_check():
+    """Прод-грант BUS-660/BUS-709: на production у app-роли не должно быть
+    права TRUNCATE ни на одну таблицу — тогда даже ошибочный запуск
+    selfcheck (или иной код) не сможет очистить прод-БД. Зелёная проверка
+    подтверждает, что грант DevOps выполнен. Вне прода неприменима."""
+    if _env("APP_ENV", "").lower() != "production":
+        raise SkipCheck("только для APP_ENV=production (грант без TRUNCATE)")
+    from app.data.session import connect
+    db = await connect(seed=False)
+    try:
+        cur = await db.execute("SELECT current_user")
+        db_user = (await cur.fetchone())["current_user"]
+        cur = await db.execute(
+            "SELECT count(*) AS n FROM pg_tables WHERE schemaname='public' "
+            "AND has_table_privilege(current_user, "
+            "format('%I.%I', schemaname, tablename), 'TRUNCATE')")
+        n = (await cur.fetchone())["n"]
+        if n:
+            cur = await db.execute(
+                "SELECT tablename FROM pg_tables WHERE schemaname='public' "
+                "AND has_table_privilege(current_user, "
+                "format('%I.%I', schemaname, tablename), 'TRUNCATE')")
+            offenders = sorted(r["tablename"] for r in await cur.fetchall())
+            raise RuntimeError(
+                f"роль '{db_user}' имеет TRUNCATE на {len(offenders)} таблицах "
+                f"прода: {offenders[:10]}. Грант BUS-709 не выполнен — "
+                "эскалируй DevOps (BUS-660).")
+        return f"роль '{db_user}' без TRUNCATE — грант BUS-709 выполняется"
+    finally:
+        await db.close()
 
 
 async def db_smoke():
@@ -471,32 +545,43 @@ def config_report():
 
 # ────────────────────────────────── запуск ────────────────────────────────────
 
-print("🔮 Самопроверка Оракула\n")
-check("Синтаксис всех .py", syntax_all)
-check("Ядро: колода, астрология, Матрица, совместимость", core_smoke)
-check("Импорты всех модулей", imports_all)
-check("Файлы Mini App и админки", frontend_assets)
-check("Безопасность: кризисный протокол", safety_filter)
-check("Практики: каталог и программы", practices_catalog)
-check("Память: упаковка векторов и близость", memory_vectors)
-check("Карточки для сторис", share_cards)
-check("PDF-разбор для маркетплейса", pdf_pipeline)
-check("База данных: схема, миграции, сид", lambda: asyncio.run(db_smoke()))
-check("Деньги: идемпотентность оплаты и баланс ✦", lambda: asyncio.run(money_smoke()))
-check("Лимиты и путь вопроса", lambda: asyncio.run(limits_smoke()))
-check("Практики: старт, отметка, стрик", lambda: asyncio.run(practices_smoke()))
-check("Гороскопы по знакам", lambda: asyncio.run(horoscopes_smoke()))
-check("Вебхук web-оплаты: подпись и идемпотентность",
-      lambda: asyncio.run(webhook_smoke()))
-check("LLM: живой запрос к цепочке провайдеров", lambda: asyncio.run(llm_smoke()))
-check("Конфигурация .env", config_report)
 
-print()
-if errors:
-    print(f"❌ Проблем: {errors}. Пришли вывод Клоду — поправит.")
-    sys.exit(1)
-if warnings:
-    print(f"✨ Всё работает. Предупреждений: {warnings} (см. ⏭ выше).")
-else:
-    print("✨ Всё чисто.")
-print("Запуск: python -m app.bot.main  ·  uvicorn app.api.main:app --port 8080")
+def run() -> int:
+    """Прогон всех проверок. Вынесен из top-level, чтобы импорт модуля
+    (тесты) не запускал selfcheck как side-effect (BUS-709)."""
+    print("🔮 Самопроверка Оракула\n")
+    check("Синтаксис всех .py", syntax_all)
+    check("Ядро: колода, астрология, Матрица, совместимость", core_smoke)
+    check("Импорты всех модулей", imports_all)
+    check("Файлы Mini App и админки", frontend_assets)
+    check("Безопасность: кризисный протокол", safety_filter)
+    check("Практики: каталог и программы", practices_catalog)
+    check("Память: упаковка векторов и близость", memory_vectors)
+    check("Карточки для сторис", share_cards)
+    check("PDF-разбор для маркетплейса", pdf_pipeline)
+    check("База данных: схема, миграции, сид", lambda: asyncio.run(db_smoke()))
+    check("Деньги: идемпотентность оплаты и баланс ✦", lambda: asyncio.run(money_smoke()))
+    check("Лимиты и путь вопроса", lambda: asyncio.run(limits_smoke()))
+    check("Практики: старт, отметка, стрик", lambda: asyncio.run(practices_smoke()))
+    check("Гороскопы по знакам", lambda: asyncio.run(horoscopes_smoke()))
+    check("Вебхук web-оплаты: подпись и идемпотентность",
+          lambda: asyncio.run(webhook_smoke()))
+    check("LLM: живой запрос к цепочке провайдеров", lambda: asyncio.run(llm_smoke()))
+    check("Прод-грант: app-роль без TRUNCATE (BUS-660)",
+          lambda: asyncio.run(prod_grant_check()))
+    check("Конфигурация .env", config_report)
+
+    print()
+    if errors:
+        print(f"❌ Проблем: {errors}. Пришли вывод Клоду — поправит.")
+        return 1
+    if warnings:
+        print(f"✨ Всё работает. Предупреждений: {warnings} (см. ⏭ выше).")
+    else:
+        print("✨ Всё чисто.")
+    print("Запуск: python -m app.bot.main  ·  uvicorn app.api.main:app --port 8080")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(run())
