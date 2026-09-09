@@ -535,7 +535,11 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
 
   app.loadToday = async function() {
     try { this.today = await api('/api/today'); } catch (e) { this.today = null; }
-    try { this.moonWeek = await api('/api/moon/week'); } catch (e) { this.moonWeek = null; }
+    // BUS-649 Э7b: moonWeekState различает loading/error/loaded — home рендерит
+    // соответствующее состояние вместо молчаливого исчезновения блока.
+    this.moonWeekState = 'loading';
+    try { this.moonWeek = await api('/api/moon/week'); this.moonWeekState = 'loaded'; }
+    catch (e) { this.moonWeek = null; this.moonWeekState = 'error'; }
     try {
       const [diary, prompt, practices] = await Promise.all([
         api('/api/diary'),

@@ -174,6 +174,21 @@
 .mc-detail { padding: 2px 15px 13px 73px; font-size: 14px; line-height: 1.7; color: var(--text-dim);
   border-top: 1px dashed rgba(230,193,120,.25); }
 .mc-detail .mc-adv em { color: var(--gold-bright); font-style: normal; font-weight: 600; }
+/* BUS-649 Э7b: формула дня (данные движка Э7a) + бейдж знака Луны */
+.mc-sign { font-size: 12px; color: var(--gold-deep); white-space: nowrap; }
+.mc-formula, .md-formula, .mt-formula {
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px; line-height: 1.45; letter-spacing: .2px;
+  color: var(--text-dim); display: block;
+}
+.mc-formula { margin-top: 1px; }
+.md-formula { margin-top: 2px; color: var(--gold-deep); }
+.mt-formula { margin-top: 3px; margin-bottom: 2px; color: var(--gold-deep); }
+/* BUS-649 Э7b: состояния лунного аккордеона (loading/error/empty) */
+.moon-state { display: flex; align-items: center; gap: 12px; padding: 16px 4px; min-height: 64px; }
+.moon-state--loading { justify-content: center; }
+.moon-state .ms-ico { font-size: 20px; color: var(--gold); flex: none; }
+.moon-state .ms-txt { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
 .moon-note { margin-top: 10px; padding: 13px 16px; font-size: 13.5px; color: var(--gold-bright);
   background: rgba(255,255,255,.045); border-radius: var(--r-s); border: 1px dashed rgba(230,193,120,.38); line-height: 1.55; }
 .moon-note b { font-weight: 700; color: var(--gold-bright); }
