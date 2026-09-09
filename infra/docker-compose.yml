@@ -86,6 +86,11 @@ services:
   migrate:
     <<: *app-common
     command: ["alembic", "upgrade", "head"]
+    environment:
+      # BUS-755: alembic ходит от админ-роли (владелец схемы, DDL для будущих
+      # миграций). DATABASE_URL (oracleai_app, DML-only — BUS-745) остаётся в
+      # base-определении и перекрывается здесь. Секрет — в ../.env, не в git.
+      DATABASE_URL_ADMIN: ${DATABASE_URL_ADMIN:?DATABASE_URL_ADMIN must be set to a PostgreSQL admin URL}
     depends_on:
       postgres:
         condition: service_healthy

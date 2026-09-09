@@ -15,7 +15,13 @@ if config.config_file_name is not None:
 
 
 def _database_url() -> str:
-    url = os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+    # BUS-755: migrate-сервис работает от админ-роли (владелец схемы, DDL);
+    # DATABASE_URL в проде — app-роль oracleai_app (DML-only, без DDL/BUS-745).
+    url = (
+        os.getenv("DATABASE_URL_ADMIN")
+        or os.getenv("DATABASE_URL")
+        or config.get_main_option("sqlalchemy.url")
+    )
     if url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
     return url
