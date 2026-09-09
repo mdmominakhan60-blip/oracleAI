@@ -56,7 +56,6 @@
       paid: 'Оплата прошла — доступ уже открывается ✦', paymentPassed: 'Оплата подтверждена — доступ уже открывается ✦', paymentFailed: 'Telegram не подтвердил оплату. Попробуй ещё раз.', payProduct: 'Оплатить продукт',
       cryptoOpened: asset => `Счёт ${asset} открыт. После оплаты заказ появится в истории.`,
       statuses: { pending: 'ожидает оплаты', paid: 'оплачен', failed: 'ошибка', refunded: 'возвращён' },
-      // BUS-635: витрина тарифов — включения и состояния CTA.
       includes: 'Что входит', currentPlan: 'Твой тариф', choosePlan: 'Выбрать', currentPlanCta: 'Текущий тариф',
       planBadgeRecommended: 'Выбор большинства', planBadgeHighest: 'Наивысший приоритет',
       featureLabels: {
