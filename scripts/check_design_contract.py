@@ -34,9 +34,10 @@ def main() -> int:
     # Order is validated by prefix sequence; two features may share a numeric
     # prefix (16-visual-qa + 16-payments, 18-pixel-reconstruction + precision);
     # total count must match files on disk. 20-chat-viewport — BUS-509.
+    # 21-chat-stage — BUS-636 (стадия работы чата); гейт пропустил добавление.
     expected_prefixes = ["00-", "01-", "02-", "03-", "04-", "05-", "06-", "07-",
                          "08-", "09-", "10-", "11-", "12-", "13-", "14-", "15-",
-                         "16-", "16-", "17-", "18-", "18-", "19-", "20-"]
+                         "16-", "16-", "17-", "18-", "18-", "19-", "20-", "21-"]
     import_order_ok = (
         len(imports) == len(expected_prefixes)
         and len(imports) == len(list((ROOT / "miniapp" / "css").glob("*.css")))
@@ -49,6 +50,7 @@ def main() -> int:
         and imports[20] == "18-pixel-precision.css"
         and imports[21] == "19-feedback.css"
         and imports[22] == "20-chat-viewport.css"
+        and imports[23] == "21-chat-stage.css"
     )
     reduced_motion = "prefers-reduced-motion: reduce" in styles or any(
         "prefers-reduced-motion: reduce" in path.read_text(encoding="utf-8")
