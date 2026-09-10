@@ -56,6 +56,46 @@ groups:
         Крайняя мера: systemctl --user restart paperclip.service (убивает раны).
 
         '
+  - alert: PaperclipCgroupSwapNearLimit
+    expr: paperclip_cgroup_swap_usage_ratio > 0.7
+    for: 5m
+    labels:
+      severity: warning
+      stack: oracleai
+    annotations:
+      summary: 'Cgroup-swap paperclip {{ $value | printf "%.0f" }}% потолка MemorySwapMax'
+      description: 'Предвестник oomd pressure-kill (BUS-786): ночная серия kill''ов начиналась
+        с заполнения cgroup-swap до потолка 6G, затем PSI some >30% → oomd убивал сервис.
+
+        Первое действие: cat /sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/paperclip.service/memory.swap.current;
+        systemctl --user status paperclip (Memory/Swap строки); pgrep -fc ''/.local/bin/claude''.
+
+        Если >90% — закрыть лишние активные раны (интерактивно, НЕ рестартом сервиса в ран-времени).'
+  - alert: PaperclipCgroupSwapCritical
+    expr: paperclip_cgroup_swap_usage_ratio > 0.9
+    for: 2m
+    labels:
+      severity: critical
+      stack: oracleai
+    annotations:
+      summary: 'Cgroup-swap paperclip {{ $value | printf "%.0f" }}% потолка — kill imminent'
+      description: 'Свыше 90% MemorySwapMax (6G): следующий всплеск PSI → oomd pressure-kill сервиса.
+
+        Первое действие: дренаж активных ранов (интерактивно вне paperclip-ранов), проверить
+        journalctl --user -u paperclip --since 30m | grep -E ''oom|Killing''.'
+  - alert: PaperclipCgroupPSIHigh
+    expr: paperclip_cgroup_memory_psi_some_avg60 > 30
+    for: 3m
+    labels:
+      severity: critical
+      stack: oracleai
+    annotations:
+      summary: 'PSI some avg60 cgroup paperclip: {{ $value | printf "%.0f" }}% > 30%'
+      description: 'Тот же порог, по которому systemd-oomd убивает сервис (ManagedOOMMemoryPressure=kill@30%,
+        30s + reclaim). Значение уже в окне срабатывания kill-решения (BUS-786).
+
+        Первое действие: дренаж claude-ранов/снижение нагрузки немедленно; watch journalctl -f
+        systemd-oomd. Не запускать новые тяжёлые раны.'
 - name: oracleai-host-resources
   rules:
   - alert: OracleAISwapHigh
