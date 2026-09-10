@@ -15,9 +15,16 @@
 # D3 (LLM-канал a_tunnel): ssh-туннель ПК->VPS биндит omniroute на loopback VPS
 #     (127.0.0.1:20128), контейнеры его не видят. Bridge oracleai-llm-bridge
 #     (user-systemd на VPS, ~/.local/bin/oracleai-llm-bridge.py) слушает
-#     172.17.0.1:20128 (docker0). host.docker.internal:host-gateway у api/bot
-#     резолвит контейнер -> host -> docker0 -> bridge -> tunnel -> ПК-omniroute.
+#     172.17.0.1:20128 и 172.18.0.1:20128 (docker0 + gateway oracle_internal).
+#     host.docker.internal:host-gateway у api/bot резолвит в 172.17.0.1 —
+#     цепочка контейнер -> host -> INPUT(fw-ACCEPT docker-подсетей:20128) ->
+#     bridge -> tunnel -> ПК-omniroute. OCI-дефолтный INPUT REJECT (icmp-host-
+#     prohibited) режет host-порты кроме 22/80/443 — обход через fw-скрипт
+#     ~/.local/bin/oracleai-llm-bridge-fw.sh (docker-privileged, idempotent,
+#     вставляет ACCEPT перед REJECT; без sudo на VPS иначе не поставить).
 #     В .env VPS: CUSTOM_LLM_BASE_URL=http://host.docker.internal:20128/v1
+#     Верифицировано 2026-09-10 00:55Z: chat-вызов из infra-api-1 через
+#     host.docker.internal -> 200 OK за 2.1s (oc/claude-sonnet-5).
 services:
   prometheus:
     networks: !override
