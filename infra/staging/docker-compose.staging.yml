@@ -89,6 +89,13 @@ services:
       context: ../..
       dockerfile: infra/Dockerfile
     command: ["alembic", "upgrade", "head"]
+    environment:
+      <<: *staging-env
+      # BUS-755: сплит ролей как на проде. На staging один супервайзер
+      # oracle_staging (владелец БД) — DATABASE_URL_ADMIN по умолчанию
+      # берётся из DATABASE_URL; отдельная роль не нужна, но alembic
+      # из коробки поддерживает прод-механику BUS-745/755.
+      DATABASE_URL_ADMIN: ${DATABASE_URL_ADMIN:-${DATABASE_URL:?DATABASE_URL must be set}}
     depends_on:
       staging-postgres:
         condition: service_healthy

@@ -69,7 +69,7 @@ jobs:
           # Compose resolves env_file: ../.env and ${VAR:?} interpolation only via
           # --env-file when the compose file lives in a subdirectory; empty required
           # values are filled with placeholders — this step checks syntax, not secrets.
-          sed -i 's#^DATABASE_URL=$#DATABASE_URL=postgresql+asyncpg://placeholder:placeholder@postgres:5432/placeholder#; s#^POSTGRES_PASSWORD=$#POSTGRES_PASSWORD=placeholder#; s#^GRAFANA_ADMIN_PASSWORD=$#GRAFANA_ADMIN_PASSWORD=placeholder#' .env
+          sed -i 's#^DATABASE_URL=$#DATABASE_URL=postgresql+asyncpg://placeholder:placeholder@postgres:5432/placeholder#; s#^DATABASE_URL_ADMIN=$#DATABASE_URL_ADMIN=postgresql+asyncpg://placeholder:placeholder@postgres:5432/placeholder#; s#^POSTGRES_PASSWORD=$#POSTGRES_PASSWORD=placeholder#; s#^GRAFANA_ADMIN_PASSWORD=$#GRAFANA_ADMIN_PASSWORD=placeholder#' .env
           docker compose --env-file .env -f infra/docker-compose.yml config >/tmp/oracleai-compose.yml
           rm -f .env
 
