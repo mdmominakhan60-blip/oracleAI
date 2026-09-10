@@ -280,6 +280,36 @@ class NotificationPreferencesIn(BaseModel):
     secondary_enabled: bool = False
 
 
+@router.get("/subscription-sync/status")
+async def subscription_sync_status(ctx=Depends(current_admin),
+                                   db=Depends(get_db)):
+    """G-10: сколько клиенток расходятся users.sub_level vs tier_code."""
+    if ctx.role != "owner":
+        raise HTTPException(403, "сверка подписок доступна только владельцу")
+    from ...repo import subscription_sync
+    divergences = await subscription_sync.find_divergences(db, limit=10_000)
+    return {"divergent": len(divergences),
+            "sample": divergences[:10]}
+
+
+@router.post("/subscription-sync/reconcile")
+async def subscription_sync_reconcile(ctx=Depends(current_admin),
+                                      db=Depends(get_db)):
+    """G-10: выровнять users.sub_level по tier_code (канон волны A).
+
+    Второй вызов всегда показывает 0 — расхождений не остаётся.
+    """
+    if ctx.role != "owner":
+        raise HTTPException(403, "сверка подписок доступна только владельцу")
+    from ...repo import subscription_sync
+    report = await subscription_sync.reconcile(db, dry_run=False)
+    await admin_repo.audit(db, ctx.tg_id, "subscription_sync.reconcile",
+                           target="users.sub_level",
+                           payload={"divergent": report["divergent"],
+                                    "fixed": report.get("fixed", 0)})
+    return report
+
+
 @router.get("/payment-notifications")
 async def payment_notifications(ctx=Depends(current_admin), db=Depends(get_db)):
     if ctx.role != "owner":

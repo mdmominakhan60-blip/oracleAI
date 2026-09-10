@@ -187,6 +187,12 @@ async def upsert_subscription_state(db, tg_id: int, *, tier_code: str,
                     max(0, int(monthly_crystals_granted or 0)),
                 "updated_at": now,
             })
+        # G-10: users.sub_level следует за каноном (tier_code) той же транзакцией.
+        # Гейт subscription_sync: cut-over по плану BUS-735 r2 (Phase0=0 → 1).
+        from ..repo.content import is_on
+        if await is_on(db, "subscription_sync", tg_id):
+            from .subscription_sync import sync_sub_level
+            await sync_sub_level(db, tg_id)
     return (await get_subscription_state(db, tg_id)) or {}
 
 

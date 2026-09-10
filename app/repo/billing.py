@@ -198,6 +198,13 @@ async def complete_refund_revoke(db, order_id: int, *, tg_id: int) -> bool:
             "UPDATE users SET sub_until=NULL, sub_level='free' "
             "WHERE tg_id=:tg_id",
             {"tg_id": tg_id})
+        # G-10: отзыв гасит ОБЕ стороны (без этого обратный sync вернёт
+        # отозванный tier из state). tier_code — источник истины волны A.
+        await db.execute(
+            "UPDATE subscription_state SET tier_code='free', status='expired', "
+            "ai_message_limit=0, compute_budget_usd=0, updated_at=:updated_at "
+            "WHERE tg_id=:tg_id",
+            {"updated_at": utcnow(), "tg_id": tg_id})
     return True
 
 
