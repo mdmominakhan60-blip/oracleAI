@@ -14,13 +14,13 @@
   background:
     radial-gradient(circle at 40% 45%, rgba(90,60,160,.5), transparent 60%),
     radial-gradient(circle at 62% 30%, rgba(40,110,120,.28), transparent 55%),
-    radial-gradient(circle at 30% 65%, rgba(230,193,120,.14), transparent 50%);
+    radial-gradient(circle at 30% 65%, rgba(245,212,139,.14), transparent 50%);
   animation: nebulaDrift 26s ease-in-out infinite alternate; }
 .nebula.n2 { width: 42vmax; height: 42vmax; bottom: -16vmax; left: -12vmax;
   background:
     radial-gradient(circle at 55% 45%, rgba(40,110,120,.45), transparent 60%),
     radial-gradient(circle at 35% 30%, rgba(167,139,250,.26), transparent 55%),
-    radial-gradient(circle at 70% 70%, rgba(230,193,120,.13), transparent 50%);
+    radial-gradient(circle at 70% 70%, rgba(245,212,139,.13), transparent 50%);
   animation: nebulaDrift 32s ease-in-out infinite alternate-reverse; }
 @keyframes nebulaDrift { from { transform: translate(0,0) scale(1); } to { transform: translate(4vmax, 3vmax) scale(1.08); } }
 @media (prefers-reduced-motion: reduce) { .nebula { animation: none; } }
@@ -32,13 +32,13 @@
 }
 .chat-messages::-webkit-scrollbar-thumb, .screen::-webkit-scrollbar-thumb,
 .modal::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(230,193,120,.35), rgba(167,139,250,.3));
+  background: linear-gradient(180deg, rgba(245,212,139,.35), rgba(167,139,250,.3));
   border-radius: 99px;
 }
 .chat-messages::-webkit-scrollbar-track, .screen::-webkit-scrollbar-track,
 .modal::-webkit-scrollbar-track { background: transparent; }
-.chat-messages { scrollbar-width: thin; scrollbar-color: rgba(230,193,120,.35) transparent; }
-.screen { scrollbar-width: thin; scrollbar-color: rgba(230,193,120,.35) transparent; }
+.chat-messages { scrollbar-width: thin; scrollbar-color: rgba(245,212,139,.35) transparent; }
+.screen { scrollbar-width: thin; scrollbar-color: rgba(245,212,139,.35) transparent; }
 .modal { scrollbar-width: thin; }
 
 /* ── шаблоны-фразы: крупнее, читабельнее, явно «нажми-отредактируй» ── */

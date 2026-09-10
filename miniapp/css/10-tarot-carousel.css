@@ -27,7 +27,7 @@
 .swipe-hint { font-size: 11px; color: var(--text-faint); margin-top: 8px; }
 .s-err {
   margin-top: 10px; padding: 9px 12px; border-radius: var(--r-s); font-size: 12.5px;
-  color: #ffd2a6; background: rgba(255,120,80,.12); border: 1px solid rgba(255,140,100,.3);
+  color: var(--champagne-300); background: rgba(255,120,80,.12); border: 1px solid rgba(255,140,100,.3);
   animation: msgIn .3s var(--ease);
 }
 
@@ -79,7 +79,7 @@
 .tcard-face img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .t-rev {
   position: absolute; left: 0; right: 0; bottom: 0; text-align: center;
-  font-size: 9px; font-weight: 700; color: #ffd2a6; background: rgba(5,4,12,.72);
+  font-size: 9px; font-weight: 700; color: var(--champagne-300); background: rgba(5,4,12,.72);
   padding: 2px 0;
 }
 .tpos-pos {
@@ -110,11 +110,11 @@
 /* премиум-кнопка «выбрать схему» в чате */
 .pick-sel-btn {
   width: 100%; display: flex; align-items: center; gap: 12px; margin-top: 10px;
-  background: rgba(255,255,255,.04); border: 1px dashed rgba(230,193,120,.42);
+  background: rgba(255,255,255,.04); border: 1px dashed rgba(245,212,139,.42);
   border-radius: 16px; padding: 12px 14px; cursor: pointer; text-align: left;
   transition: .2s var(--ease);
 }
-.pick-sel-btn:hover { border-color: var(--gold); background: rgba(230,193,120,.07); transform: translateY(-1px); }
+.pick-sel-btn:hover { border-color: var(--gold); background: rgba(245,212,139,.07); transform: translateY(-1px); }
 .pick-sel-ico { font-size: 24px; flex: none; filter: drop-shadow(0 0 8px var(--gold-glow)); }
 .pick-sel-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .pick-sel-t { font-family: var(--font-serif); font-size: 14.5px; font-weight: 600; color: var(--gold-bright); }
@@ -144,14 +144,14 @@
   background: rgba(255,255,255,.03); border: 1px solid var(--border);
   transition: .2s var(--ease);
 }
-.sp-pick-row:hover { border-color: rgba(230,193,120,.5); transform: translateY(-1px); background: rgba(230,193,120,.05); }
+.sp-pick-row:hover { border-color: rgba(245,212,139,.5); transform: translateY(-1px); background: rgba(245,212,139,.05); }
 .sp-pick-row.sel {
-  background: rgba(230,193,120,.1); border-color: var(--gold);
+  background: rgba(245,212,139,.1); border-color: var(--gold);
   box-shadow: 0 0 0 1px var(--gold), 0 0 20px -6px var(--gold-glow);
 }
 .sp-pick-ico {
   flex: none; width: 44px; height: 54px; border-radius: 9px; display: grid; place-items: center;
-  font-size: 21px; background: radial-gradient(circle at 35% 28%, rgba(230,193,120,.3), rgba(167,139,250,.12));
+  font-size: 21px; background: radial-gradient(circle at 35% 28%, rgba(245,212,139,.3), rgba(167,139,250,.12));
   border: 1px solid var(--border-strong); box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
 }
 .sp-pick-main { flex: 1; min-width: 0; }
@@ -159,10 +159,10 @@
 .sp-pick-desc { font-size: 12px; color: var(--text-dim); margin-top: 3px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .sp-pick-meta { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .sp-pick-cards { font-size: 10px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.sp-pick-check { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; color: #1c1430; background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep)); box-shadow: 0 4px 12px -4px var(--gold-glow); }
+.sp-pick-check { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; color: var(--color-on-accent); background: var(--grad-primary); box-shadow: 0 4px 12px -4px var(--gold-glow); }
 .sp-pick-radio { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border-strong); }
-.sp-pick-lock { font-size: 10px; color: var(--gold); border: 1px solid rgba(230,193,120,.35); border-radius: 99px; padding: 2px 7px; white-space: nowrap; }
+.sp-pick-lock { font-size: 10px; color: var(--gold); border: 1px solid rgba(245,212,139,.35); border-radius: 99px; padding: 2px 7px; white-space: nowrap; }
 /* плитка-схема: мини-карта с точками расклада (вместо громоздких эмодзи) */
 .sp-pick-scheme { display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 3px; height: auto; margin: 0; opacity: 1; }
-.sp-pick-scheme .dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(230,193,120,.22); border: 1px solid rgba(230,193,120,.4); box-shadow: none; flex: none; }
+.sp-pick-scheme .dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(245,212,139,.22); border: 1px solid rgba(245,212,139,.4); box-shadow: none; flex: none; }
 .sp-pick-scheme .dot.active { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 6px var(--gold-glow); }

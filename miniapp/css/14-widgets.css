@@ -23,16 +23,16 @@
 .dc-mean { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-top: 6px; }
 .dc-moon {
   display: flex; gap: 12px; align-items: center; margin-top: 14px; padding: 10px 12px;
-  background: rgba(230,193,120,.06); border: 1px solid rgba(230,193,120,.18); border-radius: 14px;
+  background: rgba(245,212,139,.06); border: 1px solid rgba(245,212,139,.18); border-radius: 14px;
 }
 .dc-moon-orb { width: 40px; height: 40px; flex: none; display: grid; place-items: center; animation: moonGlow 3.2s ease-in-out infinite; }
 .dc-moon-orb svg { width: 34px; height: 34px; }
-@keyframes moonGlow { 0%,100% { opacity: .8; } 50% { opacity: 1; filter: drop-shadow(0 0 14px rgba(230,193,120,.5)); } }
+@keyframes moonGlow { 0%,100% { opacity: .8; } 50% { opacity: 1; filter: drop-shadow(0 0 14px rgba(245,212,139,.5)); } }
 .dc-moon-txt { font-size: 13px; color: var(--text); }
 .dc-moon-adv { font-size: 12px; color: var(--text-dim); line-height: 1.5; margin-top: 3px; }
 .dc-sphere {
   display: inline-flex; margin-top: 12px; padding: 5px 12px; border-radius: 99px;
-  background: linear-gradient(135deg, rgba(167,139,250,.2), rgba(230,193,120,.14));
+  background: linear-gradient(135deg, rgba(167,139,250,.2), rgba(245,212,139,.14));
   border: 1px solid rgba(167,139,250,.35); color: var(--gold-bright); font-size: 12px; font-weight: 600;
 }
 .dc-forecast { font-size: 13.5px; line-height: 1.65; color: var(--text); margin-top: 12px; white-space: pre-wrap; }
@@ -56,7 +56,7 @@
   border-radius: 99px; border: 1px solid var(--border); background: rgba(255,255,255,.03);
   cursor: pointer; transition: .2s var(--ease);
 }
-.m-ln:hover, .m-ln.on { color: #16122f; border-color: var(--lc, var(--gold)); background: var(--lc, var(--gold)); }
+.m-ln:hover, .m-ln.on { color: var(--color-on-accent); border-color: var(--lc, var(--gold)); background: var(--lc, var(--gold)); }
 .m-hint { font-size: 12px; color: var(--text-faint); text-align: center; margin-top: 10px; }
 .m-card {
   margin-top: 10px; padding: 13px; border-radius: var(--r-s);
@@ -85,11 +85,11 @@
   transition: .18s var(--ease); user-select: none;
 }
 .cw-cell:hover { transform: translateY(-1px); }
-.cw-cell.sel { background: var(--lc, var(--gold)); color: #16122f; }
+.cw-cell.sel { background: var(--lc, var(--gold)); color: var(--color-on-accent); }
 .cw-dn { font-size: 11px; font-weight: 700; }
 .cw-e { font-size: 14px; }
 .cw-t { font-size: 8px; line-height: 1.2; text-align: center; color: var(--text-dim); }
-.cw-cell.sel .cw-t { color: #16122f; }
+.cw-cell.sel .cw-t { color: var(--color-on-accent); }
 .cw-hint { font-size: 11.5px; color: var(--text-faint); margin-top: 10px; }
 .cw-detail { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--border); }
 .cw-dt { font-size: 12.5px; color: var(--text); }
@@ -120,7 +120,7 @@
 .dy-streak { font-size: 12.5px; color: var(--text-faint); font-weight: 600; }
 .dy-streak.on { color: var(--gold-bright); }
 .dy-count { font-size: 11.5px; color: var(--text-faint); }
-.dy-prompt { padding: 10px 12px; border-radius: 12px; background: linear-gradient(160deg, rgba(167,139,250,.12), rgba(230,193,120,.06)); border: 1px solid rgba(167,139,250,.3); margin-bottom: 10px; }
+.dy-prompt { padding: 10px 12px; border-radius: 12px; background: linear-gradient(160deg, rgba(167,139,250,.12), rgba(245,212,139,.06)); border: 1px solid rgba(167,139,250,.3); margin-bottom: 10px; }
 .dy-prompt.done { border-color: rgba(127,212,168,.4); }
 .dy-pq { font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); }
 .dy-pt { font-size: 13.5px; color: var(--text); line-height: 1.55; margin-top: 4px; }
@@ -130,7 +130,7 @@
 .dy-row { display: flex; gap: 8px; font-size: 12px; line-height: 1.5; padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.03); }
 .dy-date { color: var(--text-faint); font-size: 10.5px; flex: none; padding-top: 1px; }
 .dy-txt { color: var(--text-dim); min-width: 0; }
-.dy-sum { margin-top: 10px; padding: 12px; border-radius: var(--r-s); background: linear-gradient(165deg, rgba(230,193,120,.10), rgba(167,139,250,.08)); border: 1px solid rgba(230,193,120,.25); animation: popIn .3s var(--ease); }
+.dy-sum { margin-top: 10px; padding: 12px; border-radius: var(--r-s); background: linear-gradient(165deg, rgba(245,212,139,.10), rgba(167,139,250,.08)); border: 1px solid rgba(245,212,139,.25); animation: popIn .3s var(--ease); }
 .dy-sum-title { font-family: var(--font-serif); font-size: 13.5px; color: var(--gold); font-weight: 600; }
 .dy-nums { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .dy-nums span { font-size: 11.5px; color: var(--text); padding: 3px 9px; border-radius: 99px; background: rgba(255,255,255,.05); }
@@ -142,7 +142,7 @@
 /* лунная неделя в чате: раскрытый совет фазы (изолировано от .planet-line на Сегодня) */
 .pw-mline { flex-wrap: wrap; }
 .moon-adv { flex: 1 1 100%; font-size: 12.5px; color: var(--gold); line-height: 1.55; margin-top: 4px; padding-left: 40px; }
-.pw-mline.exp { background: rgba(230,193,120,.05); border-radius: 10px; padding-left: 8px; padding-right: 8px; }
+.pw-mline.exp { background: rgba(245,212,139,.05); border-radius: 10px; padding-left: 8px; padding-right: 8px; }
 
 /* таро: перевёрнутая карта показывается прямо, статус — только значком ↺ */
 

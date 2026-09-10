@@ -41,7 +41,9 @@
 }
 .main-nav::before {
   border-radius: 17px;
-  background: linear-gradient(135deg, var(--color-accent-strong), var(--color-accent-deep));
+  /* BUS-741 (P0 §3.1): индикатор активного таба навигации — primary-действие,
+     переведён с ручного алиасного градиента на единый --grad-primary. */
+  background: var(--grad-primary);
   box-shadow:
     0 10px 22px -10px rgba(245, 212, 139, .75),
     inset 0 1px 0 rgba(255, 255, 255, .35);

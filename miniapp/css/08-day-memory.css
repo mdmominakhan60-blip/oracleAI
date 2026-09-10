@@ -19,15 +19,15 @@
 .tb-front { background: url("/static/img/card-face.jpg") center / cover no-repeat; }
 .tb-front::before {
   content: ""; position: absolute; inset: 6px; border-radius: 11px; z-index: 3;
-  border: 1px solid rgba(230,193,120,.4); pointer-events: none;
+  border: 1px solid rgba(245,212,139,.4); pointer-events: none;
 }
 .tb-front::after {
   content: ""; position: absolute; inset: 6px; border-radius: 11px; z-index: 0; pointer-events: none;
   background-image:
-    radial-gradient(1.5px 1.5px at 20% 15%, rgba(230,193,120,.8), transparent),
+    radial-gradient(1.5px 1.5px at 20% 15%, rgba(245,212,139,.8), transparent),
     radial-gradient(1.5px 1.5px at 80% 18%, rgba(167,139,250,.7), transparent),
     radial-gradient(1.5px 1.5px at 30% 85%, rgba(255,255,255,.5), transparent),
-    radial-gradient(1.5px 1.5px at 72% 82%, rgba(230,193,120,.6), transparent);
+    radial-gradient(1.5px 1.5px at 72% 82%, rgba(245,212,139,.6), transparent);
 }
 .tb-scrim {
   position: absolute; left: 0; right: 0; bottom: 0; height: 54%; z-index: 1; pointer-events: none;
@@ -42,7 +42,7 @@
   position: absolute; inset: 0; z-index: 2;
   display: flex; align-items: center; justify-content: center;
   font-size: 40px; line-height: 1; padding-bottom: 14%;
-  filter: drop-shadow(0 0 12px rgba(230,193,120,.55)); text-shadow: 0 2px 8px rgba(0,0,0,.9);
+  filter: drop-shadow(0 0 12px rgba(245,212,139,.55)); text-shadow: 0 2px 8px rgba(0,0,0,.9);
 }
 .tb-namepath { position: absolute; left: 4px; right: 4px; bottom: 8px; height: 36px; z-index: 2; }
 .tb-namepath text {
@@ -110,8 +110,8 @@
 .fc-desc b { color: var(--gold-bright); font-weight: 700; }
 .fc-planets-grid { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 6px; }
 .fc-planet { flex: 1 1 150px; min-width: 0; max-width: 210px; padding: 9px 11px; border-radius: var(--r-s); background: rgba(255,255,255,.03); border: 1px solid var(--border); transition: .15s var(--ease); display: flex; gap: 8px; align-items: center; }
-.fc-planet:hover { background: rgba(230,193,120,.06); border-color: var(--gold); transform: translateY(-1px); }
-.fc-planet .pl-ico { width: 32px; height: 32px; border-radius: 9px; flex: none; display: grid; place-items: center; font-size: 16px; background: radial-gradient(circle at 35% 28%, rgba(230,193,120,.25), rgba(167,139,250,.12)); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+.fc-planet:hover { background: rgba(245,212,139,.06); border-color: var(--gold); transform: translateY(-1px); }
+.fc-planet .pl-ico { width: 32px; height: 32px; border-radius: 9px; flex: none; display: grid; place-items: center; font-size: 16px; background: radial-gradient(circle at 35% 28%, rgba(245,212,139,.25), rgba(167,139,250,.12)); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
 .fc-planet .pl-info { flex: 1; min-width: 0; }
 .fc-planet .pl-t { font-size: 11.5px; font-weight: 700; color: var(--text); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fc-planet .pl-d { font-variant-numeric: tabular-nums; font-size: 11px; color: var(--text-faint); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
