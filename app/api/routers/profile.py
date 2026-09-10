@@ -89,11 +89,12 @@ async def public_config(db=Depends(get_db)):
     }
 
 
-@router.get("/me")
-async def me(user=Depends(touched_user), db=Depends(get_db),
-             x_session_id: str | None = Header(default=None, max_length=64),
-             x_start_param: str | None = Header(default=None, max_length=64)):
-    """Всё, что нужно интерфейсу на старте: профиль, лимиты, тариф, фичи."""
+async def _me_state(user, db, *, x_session_id, x_start_param) -> dict:
+    """Единый сбор состояния для /api/me и /api/me/v2 (BUS-807).
+
+    Сайд-эффекты (miniapp_open, session-link) выполняются в обоих вариантах:
+    v2 — полноценная замена, а не облегчённый дубль.
+    """
     chart = users.chart_of(user)
     allowance = await limits.allowance(db, user, check_followup=False)
     canonical_entitlements = await entitlements.snapshot(db, user)
@@ -106,7 +107,19 @@ async def me(user=Depends(touched_user), db=Depends(get_db),
     # сервер; заголовок только предлагает sid, tg_id из клиента не берётся.
     await analytics.track_session_link(db, session_id=x_session_id,
                                        tg_id=user["tg_id"])
-    flags = {f["code"]: bool(f["is_on"]) for f in await content.list_flags(db)}
+    return {
+        "chart": chart,
+        "allowance": allowance,
+        "canonical_entitlements": canonical_entitlements,
+        "flags": {f["code"]: bool(f["is_on"]) for f in await content.list_flags(db)},
+    }
+
+
+async def _me_payload(user, db, *, state) -> dict:
+    """Плоский монолитный ответ /api/me — контракта не менять (BUS-807)."""
+    chart = state["chart"]
+    allowance = state["allowance"]
+    canonical_entitlements = state["canonical_entitlements"]
     return {
         "tg_id": user["tg_id"],
         "name": user["name"],
@@ -150,11 +163,98 @@ async def me(user=Depends(touched_user), db=Depends(get_db),
             "grace_until": canonical_entitlements["grace_until"],
         },
         "agents": await agents.agent_list(db, user),
-        "flags": flags,
+        "flags": state["flags"],
         "feedback_pending": bool(user["onboarded"]) and await feedback.pending(
             db, user["tg_id"]),
         "webapp_url": settings.webapp_url,
     }
+
+
+async def _me_payload_v2(user, db, *, state) -> dict:
+    """Нормированный ответ /api/me/v2 (R07 G-2, BUS-807): profile + subscription.
+
+    Поля те же, что в /api/me, но сгруппированы; сами значения не пересчитываются.
+    """
+    chart = state["chart"]
+    allowance = state["allowance"]
+    canonical_entitlements = state["canonical_entitlements"]
+    return {
+        "profile": {
+            "tg_id": user["tg_id"],
+            "name": user["name"],
+            "username": user["username"],
+            "oracle_name": user["oracle_name"],
+            "persona": user["persona"],
+            "tz": user["tz"],
+            "birth_date": user["birth_date"],
+            "birth_city": user["birth_city"],
+            "birth_time_known": bool(user["birth_time_known"]),
+            "onboarded": bool(user["onboarded"]),
+            "morning_push": bool(user["morning_push"]),
+            "memory_enabled": bool(user["memory_enabled"]),
+            "lang": user["lang"] or "ru",
+            "gender": user["gender"],
+            "crystals": user["crystals"],
+        },
+        "chart": {
+            "sun": chart.get("sun"),
+            "ascendant": chart.get("ascendant"),
+            "mode": chart.get("mode"),
+            "precision": chart.get("precision", "sun_only"),
+            "note": chart.get("note"),
+            "planets": chart.get("planets", []),
+        },
+        "subscription": {
+            "plan": allowance.plan,
+            "allowance": allowance.as_dict(),
+            "questions_left": allowance.left,
+            "questions_total": allowance.limit,
+            "sub_active": users.sub_active(user),
+            "sub_days_left": users.sub_days_left(user),
+            "entitlements": await billing.list_entitlements(db, user["tg_id"]),
+            "canonical_entitlements": canonical_entitlements,
+            "lifecycle": {
+                "status": canonical_entitlements["status"],
+                "period_end": canonical_entitlements["period_end"],
+                "cancel_at_period_end": canonical_entitlements["cancel_at_period_end"],
+                "grace_until": canonical_entitlements["grace_until"],
+            },
+        },
+        "activity": {
+            "memories": (await dialog.get_memories(db, user["tg_id"], limit=8)
+                         if bool(user["memory_enabled"]) else []),
+            "diary_streak": await dialog.diary_streak(db, user["tg_id"]),
+            "global_streak": await _global_streak(db, user["tg_id"]),
+            "feedback_pending": bool(user["onboarded"]) and await feedback.pending(
+                db, user["tg_id"]),
+        },
+        "agents": await agents.agent_list(db, user),
+        "reports": await readings.list_reports(db, user["tg_id"]),
+        "flags": state["flags"],
+        "webapp_url": settings.webapp_url,
+    }
+
+
+@router.get("/me")
+async def me(user=Depends(touched_user), db=Depends(get_db),
+             x_session_id: str | None = Header(default=None, max_length=64),
+             x_start_param: str | None = Header(default=None, max_length=64)):
+    """Всё, что нужно интерфейсу на старте: профиль, лимиты, тариф, фичи."""
+    state = await _me_state(user, db, x_session_id=x_session_id,
+                            x_start_param=x_start_param)
+    return await _me_payload(user, db, state=state)
+
+
+@router.get("/me/v2")
+async def me_v2(user=Depends(touched_user), db=Depends(get_db),
+                x_session_id: str | None = Header(default=None, max_length=64),
+                x_start_param: str | None = Header(default=None, max_length=64)):
+    """Нормированный /api/me/v2 (R07 G-2) за флагом r07_api_v2 (BUS-807)."""
+    if not await content.is_on(db, "r07_api_v2", user["tg_id"]):
+        raise HTTPException(status_code=404, detail="endpoint is not available")
+    state = await _me_state(user, db, x_session_id=x_session_id,
+                            x_start_param=x_start_param)
+    return await _me_payload_v2(user, db, state=state)
 
 
 class ExperimentExposureIn(BaseModel):
