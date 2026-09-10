@@ -1,0 +1,41 @@
+# Алерты бэкап-цикла прода (BUS-833, SLO D4, план BUS-642).
+# Источник метрик: infra/host/bin/backup-metrics.sh → textfile node-exporter.
+# Стиль и severity — как в oracleai-availability (BUS-603/BUS-270-паттерны).
+groups:
+- name: oracleai-backup
+  rules:
+  - alert: OracleAIBackupStale
+    expr: oracleai_backup_stale == 1
+    for: 30m
+    labels:
+      severity: critical
+      stack: oracleai
+    annotations:
+      summary: Свежего зашифрованного дампа прода нет >26ч (SLO D4 нарушен)
+      description: 'Возраст свежайшего oracle-*.dump.enc в /srv/oracle/backups превышает 26ч.
+        Первое действие: journalctl --user -u oracleai-backup-metrics; docker logs infra-backup-1 --since 26h;
+        docker inspect infra-backup-1 (restart count). Частые причины: backup-контейнер не стартован
+        (профиль backup), postgres unhealthy, ключ /etc/oracle/backup.key нечитаем.'
+  - alert: OracleAIBackupJobFailed
+    expr: oracleai_backup_last_status_ok == 0
+    for: 10m
+    labels:
+      severity: critical
+      stack: oracleai
+    annotations:
+      summary: Последняя попытка бэкапа завершилась ошибкой pg_dump/шифрования
+      description: 'backup-status.json: local_backup_ok=false. Первое действие: docker logs infra-backup-1 --since 2h
+        (pg_dump retry-ветка, BACKUP_RETRY_MAX=5). Дамп мог не состояться из-за рестарта postgres —
+        проверить health postgres и дождаться следующего суточного прохода либо рестартовать infra-backup-1.'
+  - alert: OracleAIBackupOffsiteStale
+    expr: oracleai_backup_offsite_stale == 1
+    for: 1h
+    labels:
+      severity: warning
+      stack: oracleai
+    annotations:
+      summary: Offsite-выгрузка бэкапов не подтверждена (BACKUP_REQUIRE_OFFSITE=1)
+      description: 'backup-status.json: offsite_required=true, offsite_ok=false. Локальные зашифрованные
+        дампы продолжают создаваться — данные не в опасности, но offsite-копия отстаёт.
+        Первое действие: docker logs infra-backup-1 --since 6h | grep -i "off-site";
+        проверить BACKUP_S3_URL/ключи в .env и достижимость endpoint из контейнера (R2: /verify изнутри).'

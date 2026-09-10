@@ -12,6 +12,9 @@ alerting:
 
 rule_files:
   - /etc/prometheus/alerts.yml
+  # BUS-833: алерты бэкап-цикла прода (SLO D4, offsite) — файл
+  # infra/observability/backup-alerts.yml монтируется рядом (см. docker-compose.yml).
+  - /etc/prometheus/backup-alerts.yml
 
 scrape_configs:
   - job_name: prometheus

@@ -1,0 +1,18 @@
+# BUS-833: экспорт метрик бэкап-цикла в node-exporter textfile (на VPS).
+# Установка: ubuntu@VPS, systemd --user (linger включён для ubuntu —
+# cutover BUS-704 уже использует --user юниты).
+#   cp /opt/oracleAI/infra/systemd/vps/oracleai-backup-metrics.{service,timer} \
+#      ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now oracleai-backup-metrics.timer
+[Unit]
+Description=OracleAI backup metrics -> node-exporter textfile (BUS-833)
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/sudo -n /opt/oracleAI/infra/host/bin/backup-metrics.sh
+# Дампы root-owned (600) — скрипт должен читать /srv/oracle/backups как root.
+SyslogIdentifier=oracleai-backup-metrics
+
+[Install]
+WantedBy=default.target
