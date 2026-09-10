@@ -17,35 +17,15 @@ import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
 
 from ...data.session import transaction
 from ...services import analytics, monetization
 from ...services.repo_gateway import feedback as feedback_repo
 from ...services.eligibility import require_eligible_user
+from ..contracts.wave_a import FeedbackAnswerIn, FeedbackIn
 from ..deps import confirmed_age_user, get_db, rate_limit
 
 router = APIRouter(prefix="/api", tags=["feedback"])
-
-
-class FeedbackAnswerIn(BaseModel):
-    """Один ответ: категориальный код или score; текст — опционален.
-
-    Нормализация по allowlist'у — в repo (константы схемы); здесь отсекаем
-    заведомый мусор и размер на границе.
-    """
-    question_code: str = Field(min_length=1, max_length=32,
-                               pattern=r"^[a-z0-9_]+$")
-    choice: str | None = Field(default=None, max_length=32,
-                               pattern=r"^[a-z0-9_]*$")
-    score: int | None = Field(default=None, ge=0, le=10)
-    text: str | None = Field(default=None, max_length=4000)
-
-
-class FeedbackIn(BaseModel):
-    answers: list[FeedbackAnswerIn] = Field(min_length=1, max_length=5)
-    survey_code: str = Field(default=feedback_repo.SURVEY_CODE,
-                             pattern=r"^day7_v\d+$")
 
 
 @router.post("/feedback", dependencies=[Depends(rate_limit("write"))])
