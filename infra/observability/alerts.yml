@@ -97,7 +97,7 @@ groups:
 - name: oracleai-availability
   rules:
   - alert: OracleAIObservabilityTargetDown
-    expr: up{job=~"prometheus|cadvisor|alloy|oracleai-api|oracleai-bot|oracleai-staging-api|oracleai-staging-bot"} == 0
+    expr: up{job=~"prometheus|cadvisor|alloy|oracleai-api|oracleai-bot"} == 0
     for: 2m
     labels:
       severity: critical
