@@ -1,0 +1,38 @@
+# OCI VPS override для прода oracleAI — BUS-704 (план BUS-642 r2, фаза 1, drift-фиксы D1–D2).
+# База: infra/docker-compose.yml. Применение на VPS:
+#   docker compose -f infra/docker-compose.yml -f infra/docker-compose.oci.yml up -d
+#
+# D1: прод-стек больше не требует external-сеть staging (oracle_staging_internal).
+#     На ПК сеть существовала физически (staging-стек), на чистом VPS её нет —
+#     прод не стартовал бы. Staging на VPS (r2 §4) — изолированный проект,
+#     скрейп staging подключается отдельным override после G1 (план r2 §5 фаза 1).
+#
+# D2: host.docker.internal:host-gateway на prometheus остаётся безвредным
+#     (host-gateway = сам VPS), но скрейп-таргеты omniroute/ПК в конфиге нет —
+#     override-файл задаёт extra_hosts явно пустым, чтобы resolved-конфиг VPS
+#     не зависел от ПК-специфики BUS-270.
+#
+# D3 (LLM-канал a_tunnel): ssh-туннель ПК->VPS биндит omniroute на loopback VPS
+#     (127.0.0.1:20128), контейнеры его не видят. Bridge oracleai-llm-bridge
+#     (user-systemd на VPS, ~/.local/bin/oracleai-llm-bridge.py) слушает
+#     172.17.0.1:20128 и 172.18.0.1:20128 (docker0 + gateway oracle_internal).
+#     host.docker.internal:host-gateway у api/bot резолвит в 172.17.0.1 —
+#     цепочка контейнер -> host -> INPUT(fw-ACCEPT docker-подсетей:20128) ->
+#     bridge -> tunnel -> ПК-omniroute. OCI-дефолтный INPUT REJECT (icmp-host-
+#     prohibited) режет host-порты кроме 22/80/443 — обход через fw-скрипт
+#     ~/.local/bin/oracleai-llm-bridge-fw.sh (docker-privileged, idempotent,
+#     вставляет ACCEPT перед REJECT; без sudo на VPS иначе не поставить).
+#     В .env VPS: CUSTOM_LLM_BASE_URL=http://host.docker.internal:20128/v1
+#     Верифицировано 2026-09-10 00:55Z: chat-вызов из infra-api-1 через
+#     host.docker.internal -> 200 OK за 2.1s (oc/claude-sonnet-5).
+services:
+  prometheus:
+    networks: !override
+      - oracle_internal
+    extra_hosts: !override []
+  api:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  bot:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

@@ -1,0 +1,16 @@
+[Unit]
+Description=TCP bridge docker0:20128 -> loopback:20128 for oracleAI prod LLM channel (BUS-704, a_tunnel)
+# Обоснование: ssh-туннель ПК->VPS биндит 127.0.0.1:20128 (GatewayPorts выключен
+# на VPS), контейнеры oracle_internal не видят host-loopback. Bridge на docker0
+# (172.17.0.1) открывает туннель контейнерам. Слушает ТОЛЬКО docker0 — не публичный.
+# Скрипт: infra/systemd/oracleai-llm-bridge.py (кладётся в ~/.local/bin на VPS).
+# Требует: loginctl enable-linger deploy (иначе юнит умирает при logout).
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 %h/.local/bin/oracleai-llm-bridge.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
