@@ -55,6 +55,23 @@ def test_disabled_memory_prompt_contains_no_recalled_content():
     assert "в памяти нет подходящих фактов" in prompt
 
 
+def test_prompt_demands_chart_positions_citation():
+    """BUS-648: агент обязан цитировать градусы/дома/орбы конкретной карты."""
+    prompt = build_system_prompt(
+        get("astro"),
+        user=_user(),
+        agent_name="Urania",
+        chart_brief="Луна в Рак, 14.3°, 4 дом",
+        matrix_brief="-",
+        memories=[],
+        profile_summary="",
+        allowance_line="",
+    )
+    assert "градус" in prompt
+    assert "орб" in prompt
+    assert "общий текст без привязки к этим позициям недопустим" in prompt
+
+
 def test_specialist_tools_are_domain_scoped():
     assert {tool["name"] for tool in skills.tools_for(get("tarot").skills)} == {
         "activate_skill", "draw_tarot", "save_memory", "recall_memory"

@@ -50,6 +50,9 @@ def compact_natal_summary(chart: dict | None, *, time_known: bool = False) -> di
             "sign": item.get("sign"),
             "element": item.get("element"),
         }
+        # Долгота планеты не зависит от времени рождения — как в chart_evidence.
+        if item.get("deg") is not None:
+            value["deg"] = item.get("deg")
         if exact and item.get("house") is not None:
             value["house"] = item.get("house")
         planets[name] = value
@@ -62,6 +65,8 @@ def compact_natal_summary(chart: dict | None, *, time_known: bool = False) -> di
         key = "rahu" if "раху" in name.lower() or "north" in name.lower() else "ketu" if "кету" in name.lower() or "south" in name.lower() else ""
         if key:
             nodes[key] = {"sign": item.get("sign")}
+            if item.get("deg") is not None:
+                nodes[key]["deg"] = item.get("deg")
             if exact and item.get("house") is not None:
                 nodes[key]["house"] = item.get("house")
 
@@ -79,6 +84,8 @@ def compact_natal_summary(chart: dict | None, *, time_known: bool = False) -> di
             point = chart.get(key) or {}
             if point.get("sign"):
                 result[key] = {"sign": point.get("sign"), "element": point.get("element")}
+                if point.get("deg") is not None:
+                    result[key]["deg"] = point.get("deg")
     return result
 
 
