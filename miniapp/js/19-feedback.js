@@ -27,6 +27,8 @@
       q_nps: 'Насколько вероятно, что ты порекомендуешь Оракула подруге (0–10)?',
       q_dream: 'Чего не хватает? О чём мечтаешь, когда думаешь про Оракула?',
       q_next: 'Что добавить в первую очередь?',
+      ariaStep: 'Шаг 1 из 5: опрос «Неделя с Оракулом»',
+      ariaStepName: 'Шаг {n} из {m}',
     },
     en: {
       head: 'A Week with Oracle 🌙',
@@ -46,6 +48,8 @@
       q_nps: 'How likely are you to recommend Oracle to a friend (0–10)?',
       q_dream: 'What\'s missing? What do you dream of when you think of Oracle?',
       q_next: 'What should we add first?',
+      ariaStep: 'Step 1 of 5: Week with Oracle survey',
+      ariaStepName: 'Step {n} of {m}',
     }
   };
 
@@ -106,7 +110,7 @@
   // из /api/me уже после script-загрузки
   const langKey = () => (oracleLang() === 'en' ? 'en' : 'ru');
   function fb(key) { return FB_I18N[langKey()][key] || key; }
-
+  function fbFormat(key, vars) { return fb(key).replace(/\{(\w+)\}/g, (_, k) => vars[k] !== undefined ? vars[k] : `{${k}}`); }
   // ── state ──────────────────────────────────────────────────────────
 
   app._surveyOpen = false;
@@ -198,8 +202,8 @@
     return `
       <div class="fb-header">
         <h3 class="fb-title">${esc(fb('head'))}</h3>
-        <div class="fb-progress" aria-hidden="true">
-          ${FB_QUESTIONS.map((_, k) => `<span class="fb-dot${k <= i ? ' done' : ''}${k === i ? ' active' : ''}"></span>`).join('')}
+        <div class="seg-progress fb-progress" aria-label="${esc(fbFormat('ariaStepName', { n: i + 1, m: FB_QUESTIONS.length }))}">
+          ${FB_QUESTIONS.map((_, k) => `<i${k <= i ? ' class="is-on"' : ''}></i>`).join('')}
         </div>
       </div>
       ${i === 0 ? `<p class="fb-step-intro">${esc(fb('intro'))}</p>` : ''}
