@@ -152,7 +152,7 @@ async def test_entitlements_normalized_shape_and_consumed_excluded(client, db,
     ent_id = await _grant(db, free_user["tg_id"], kind="spread", code="three", qty=2)
     await billing_svc.consume_entitlement(db, free_user["tg_id"], "spread", "three")
     # Исчерпанное право (qty_used == qty_total) не входит в агрегат
-    cur = await db.execute(
+    await db.execute(
         "UPDATE entitlements SET qty_used=qty_total WHERE id=:id", {"id": ent_id})
     res = await client.get("/api/entitlements", params=as_user(free_user))
     assert res.status_code == 200

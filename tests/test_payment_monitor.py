@@ -105,6 +105,92 @@ async def test_monitor_fallback_recipient_warning_is_once_per_process(monkeypatc
     monkeypatch.setattr(payment_monitor.settings, "payment_alert_chat_id", 777000)
     payment_monitor._warn_fallback_recipient()
     assert len(warnings) == 1
+async def test_monitor_dead_channel_caps_delivery_attempts(db, monkeypatch):
+    """BUS-850: мёртвый канал не ретрит алерт на каждом тике — cooldown идёт
+    от попытки доставки, а бюджет из MAX попыток закрывает ретраи совсем."""
+    from app.repo import content
+
+    now = datetime(2026, 8, 27, 12, 0, tzinfo=timezone.utc)
+    await users.ensure(db, 1, "Владелец")
+    await content.set_setting(db, "system.payment_notifications",
+                              {"degraded_cooldown_hours": 1, "critical_cooldown_hours": 1})
+    await db.execute(
+        "INSERT INTO orders(tg_id, kind, sku, title, amount_stars, status, payload, "
+        "created_at) VALUES(?,?,?,?,?,?,?,?)",
+        (1001, "product", "demo", "Demo", 100, "pending", "monitor-payload",
+         (now - timedelta(hours=3)).isoformat()),
+    )
+    attempts: list[str] = []
+
+    async def dead_send(_tg_id, text, *, html=True):
+        attempts.append(text)
+        return False
+
+    monkeypatch.setattr(payment_monitor.telegram, "send_message", dead_send)
+    max_attempts = payment_monitor.MAX_ALERT_DELIVERY_ATTEMPTS
+    first = await payment_monitor.run(None, db, now=now)
+    assert first["last_alert_at"] == first["checked_at"]
+    await payment_monitor.run(None, db, now=now + timedelta(hours=1, minutes=10))
+    third = await payment_monitor.run(
+        None, db, now=now + timedelta(hours=2, minutes=20))
+    assert len(attempts) == max_attempts
+    assert third["alert_failed_attempts"] == max_attempts
+    # Бюджет проверяется ДО попытки: третий тик ещё разрешён, исчерпание
+    # вступает в силу со следующего.
+    assert third["alert_attempts_exhausted"] is False
+    assert third["last_alert_delivered"] is False
+    assert third["last_alert_delivery_failed_at"] == third["checked_at"]
+
+    # Бюджет исчерпан: даже с прошедшим cooldown новых попыток нет.
+    after = await payment_monitor.run(None, db, now=now + timedelta(hours=3, minutes=30))
+    assert len(attempts) == max_attempts
+    assert after["alert_attempts_exhausted"] is True
+
+    # Восстановление канала + переход в ok открывает новый период: алерт
+    # доставляется, бюджет сбрасывается.
+    async def alive_send(_tg_id, text, *, html=True):
+        return True
+
+    monkeypatch.setattr(payment_monitor.telegram, "send_message", alive_send)
+    await db.execute("DELETE FROM orders WHERE sku='demo'")
+    recovered = await payment_monitor.run(None, db, now=now + timedelta(hours=4, minutes=40))
+    assert recovered["status"] == "ok"
+    assert recovered["last_alert_delivered"] is True
+    assert recovered["alert_failed_attempts"] == 0
+    assert recovered["alert_attempts_exhausted"] is False
+
+
+@pytest.mark.asyncio
+async def test_monitor_attempt_budget_resets_on_status_change(db, monkeypatch):
+    """Смена status-периода (degraded → critical) открывает новый бюджет."""
+    from app.repo import content
+
+    now = datetime(2026, 8, 27, 12, 0, tzinfo=timezone.utc)
+    await users.ensure(db, 1, "Владелец")
+    await content.set_setting(db, "system.payment_notifications",
+                              {"degraded_cooldown_hours": 1, "critical_cooldown_hours": 1})
+    await db.execute(
+        "INSERT INTO orders(tg_id, kind, sku, title, amount_stars, status, payload, "
+        "created_at) VALUES(?,?,?,?,?,?,?,?)",
+        (1001, "product", "demo", "Demo", 100, "pending", "monitor-payload",
+         (now - timedelta(hours=3)).isoformat()),
+    )
+
+    async def dead_send(_tg_id, text, *, html=True):
+        return False
+
+    monkeypatch.setattr(payment_monitor.telegram, "send_message", dead_send)
+    for offset in (0, 70, 140):  # три попытки: 12:00, 13:10, 14:20
+        await payment_monitor.run(None, db, now=now + timedelta(minutes=offset))
+    assert (await payment_monitor.run(
+        None, db, now=now + timedelta(minutes=210)))["alert_attempts_exhausted"] is True
+
+    # Аномалия сверки → critical: свежий период, попытка снова делается.
+    await db.execute("UPDATE users SET crystals=999 WHERE tg_id=1")
+    state = await payment_monitor.run(None, db, now=now + timedelta(minutes=280))
+    assert state["status"] == "critical"
+    assert state["alert_attempts_exhausted"] is False
+    assert state["alert_failed_attempts"] == 1
 
 
 @pytest.mark.asyncio
