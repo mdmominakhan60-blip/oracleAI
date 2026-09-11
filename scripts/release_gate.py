@@ -5,6 +5,7 @@ import argparse
 import os
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
@@ -87,8 +88,70 @@ def check_production_env() -> list[str]:
     return errors
 
 
+def check_log_secrets() -> list[str]:
+    """BUS-847: *.log в репо не должны содержать значений секретов из .env.
+
+    Утечка BUS-776 (170 вхождений прод-POSTGRES_PASSWORD в make-test.log)
+    была поймана человеком; этот гейт делает проверку fail-closed перед
+    релизом. Fail-open на недоступном .env: без .env проверять нечего.
+    """
+    env_file = ROOT / ".env"
+    if not env_file.is_file():
+        return []
+    needles: list[str] = []
+    for line in env_file.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        value = value.strip().strip("'\"")
+        if not value or value.startswith("$"):
+            continue
+        # URL-переменные (DATABASE_URL и т.п.) — берём только пароль из netloc;
+        # сам URL как needle был бы ложным срабатыванием на не-секретную часть.
+        if key.endswith("_URL") or key.endswith("_DSN"):
+            password = urlsplit(value).password or ""
+            if len(password) >= 8:
+                needles.append(password)
+        elif key in _LOG_SECRET_KEYS and len(value) >= 8:
+            needles.append(value)
+    if not needles:
+        return []
+    errors: list[str] = []
+    skip_parts = {".git", "node_modules", ".venv"}
+    for log_path in sorted(ROOT.rglob("*.log")):
+        if skip_parts & set(log_path.parts):
+            continue
+        try:
+            content = log_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            errors.append(f"{log_path.relative_to(ROOT)}: unreadable")
+            continue
+        for needle in needles:
+            if needle in content:
+                # Печатаем только имя файла и имя переменной, не значение.
+                errors.append(
+                    f"{log_path.relative_to(ROOT)}: contains a secret value "
+                    f"(length {len(needle)}); scrub or delete the log")
+                break
+    return errors
+
+
+_LOG_SECRET_KEYS = frozenset({
+    "POSTGRES_PASSWORD",
+    "ORACLEAI_MCP_ROLE_PASSWORD",
+    "GRAFANA_ADMIN_PASSWORD",
+    "BOT_TOKEN",
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "CUSTOM_LLM_API_KEY",
+    "PADDLE_WEBHOOK_SECRET",
+    "PADDLE_API_KEY",
+})
+
+
 def run(*, production: bool = False) -> list[str]:
-    errors = check_docs() + check_static_contract()
+    errors = check_docs() + check_static_contract() + check_log_secrets()
     if production:
         errors.extend(check_production_env())
     return errors

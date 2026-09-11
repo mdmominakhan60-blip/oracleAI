@@ -66,7 +66,9 @@ backup-drill:
 	bash -n infra/backup-postgres.sh infra/restore-postgres.sh
 
 ensure-test-role:
-	$(COMPOSE) run --rm --entrypoint "" \
+# BUS-847: @ гасит echo recipe-строки (xtrace-export векторы закрыты в BUS-845,
+# а тут пароль в URL раскрывается под set -x сцена­риями и в make -n отладке).
+	@$(COMPOSE) run --rm --entrypoint "" \
 		-e POSTGRES_ADMIN_DATABASE_URL=postgresql://oracle:$$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)@postgres:5432/postgres \
 		api python scripts/ensure_test_role.py
 
@@ -76,7 +78,7 @@ ensure-test-role:
 ensure-mcp-role:
 	@test -f .env && grep -q '^ORACLEAI_MCP_ROLE_PASSWORD=' .env || \
 		{ echo "ORACLEAI_MCP_ROLE_PASSWORD не задан в .env (сгенерируй: openssl rand -hex 24)"; exit 1; }
-	$(COMPOSE) run --rm --entrypoint "" \
+	@$(COMPOSE) run --rm --entrypoint "" \
 		-e POSTGRES_ADMIN_DATABASE_URL=postgresql://$${POSTGRES_USER:-oracle}:$$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)@postgres:5432/postgres \
 		-e ORACLEAI_MCP_ROLE_PASSWORD=$$(grep '^ORACLEAI_MCP_ROLE_PASSWORD=' .env | cut -d= -f2-) \
 		api python scripts/ensure_mcp_role.py
@@ -103,8 +105,10 @@ test:
 	flock -w 900 /tmp/oracleai-make-test.lock $(MAKE) _test
 .PHONY: _test
 _test:
-	$(COMPOSE) up -d --wait postgres
-	$(COMPOSE) run --rm --no-deps --entrypoint "" -e APP_ENV=test \
+# BUS-847: @ гасит echo recipe-строк — TEST/DATABASE/ADMIN_URL с паролем из .env
+# печатались make'ом дословно (раскрывались под xtrace-сценариями).
+	@$(COMPOSE) up -d --wait postgres
+	@$(COMPOSE) run --rm --no-deps --entrypoint "" -e APP_ENV=test \
 		-e DEV_MODE=1 -e DEV_KEY=test-dev-key \
 		-e ALLOW_DB_RESET=1 \
 		-e TEST_DATABASE_URL=postgresql+asyncpg://oracle_test:$$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)@postgres:5432/oracle_test \

@@ -19,6 +19,21 @@ sys.path.insert(0, str(ROOT))
 # (наследие .env в агентских ранах) роняет pytest сразу, не на первом тесте.
 from scripts.test_env_guard import ensure_test_environment  # noqa: E402
 
+# BUS-847: маскирование секретов (repr asyncpg ConnectionParameters печатает
+# password). Ставится до импортов app — коннекты могут случиться в фикстурах.
+from scripts.test_secret_scrub import make_scrubber  # noqa: E402
+
+_needs, _scrub = make_scrubber()
+_scrub_installed = None
+
+
+def _ensure_scrub_installed():
+    global _scrub_installed
+    if _scrub_installed is None:
+        from scripts.test_secret_scrub import install
+        _scrub_installed = install(_scrub)
+    return _scrub_installed
+
 # Allow an isolated test database to override a developer’s default DATABASE_URL.
 if os.getenv("TEST_DATABASE_URL"):
     os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
@@ -51,6 +66,29 @@ os.environ["DEV_KEY"] = "test-dev-key"
 #: Эмуляция заголовка X-Dev-Key из локального compose-стека разработчика.
 TEST_DEV_KEY = "test-dev-key"
 os.environ["AUTO_TRIAL"] = "1"
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """BUS-847: последняя линия обороны — scrub отчёта перед записью в лог.
+
+    longrepr (traceback c repr ConnectionParameters) и sections (captured
+    stdout/log) могут содержать пароль; репродукция BUS-776 была именно тут.
+    Замена на строку теряет терминальную раскраску traceback — осознанный
+    размен в пользу гарантированно чистого текста.
+    """
+    _ensure_scrub_installed()
+    outcome = yield
+    report = outcome.get_result() if outcome is not None else None
+    if report is None:
+        return
+    if _needs:
+        longrepr = getattr(report, "longrepr", None)
+        if longrepr is not None and longrepr != "":
+            report.longrepr = _scrub(str(longrepr))
+        sections = getattr(report, "sections", None)
+        if sections:
+            report.sections = [(name, _scrub(content)) for name, content in sections]
 
 
 @pytest.fixture
