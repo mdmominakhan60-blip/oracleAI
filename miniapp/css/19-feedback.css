@@ -39,19 +39,10 @@
   letter-spacing: .2px;
 }
 .fb-progress {
-  display: flex;
-  gap: 5px;
-  flex-shrink: 0;
+  flex: 1;
+  max-width: 120px;
+  margin-left: auto;
 }
-.fb-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .14);
-  transition: background .25s, transform .25s;
-}
-.fb-dot.done { background: var(--gold); }
-.fb-dot.active { transform: scale(1.35); background: var(--gold-bright); }
 
 /* ── question text ── */
 .fb-step-intro {
