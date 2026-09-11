@@ -117,6 +117,13 @@
     gender: () => call('openGender'),
     'set-gender': (el, data) => call('setGender', data.gender),
     language: () => call('openLanguage'),
+    // R05 E18: переключение «Анимация фона» — bg-paused на root+html,
+    // перерисовка строки в Профиле (кнопка живёт только там).
+    'bg-anim': (el) => {
+      tactile('select');
+      call('setBgAnimation', !app.bgAnimationEnabled());
+      if (app.view === 'profile') call('renderProfile', document.getElementById('app-main'));
+    },
     'set-lang': (el, data) => call('setLanguage', data.lang),
     'ask-chart': () => call('askChart'),
     'share-chart': () => call('shareChart'),

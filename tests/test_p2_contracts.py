@@ -27,8 +27,10 @@ def test_payment_locale_dictionaries_have_matching_keys() -> None:
         re.S,
     )
     assert match
-    key_pattern = r"(?:^|,)\s*([A-Za-z][A-Za-z0-9_]*)\s*:"
+    # Ключи стоят в начале строк после \n, а не только после запятой; '//'
+    # комментарии (BUS-635) не должны ломать парсер — вырезаем их до поиска.
+    key_pattern = r"(?:\n|,)\s*(?://[^\n]*\n\s*)?([A-Za-z][A-Za-z0-9_]*)\s*:"
     ru_keys = set(re.findall(key_pattern, match.group(1)))
     en_keys = set(re.findall(key_pattern, match.group(2)))
     assert ru_keys == en_keys
-    assert {"heroCopy", "paid", "paymentFailed", "pay"} <= ru_keys
+    assert {"heroCopy", "paid", "paymentFailed", "pay", "includes"} <= ru_keys

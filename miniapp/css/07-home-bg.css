@@ -23,7 +23,8 @@
     radial-gradient(circle at 70% 70%, rgba(245,212,139,.13), transparent 50%);
   animation: nebulaDrift 32s ease-in-out infinite alternate-reverse; }
 @keyframes nebulaDrift { from { transform: translate(0,0) scale(1); } to { transform: translate(4vmax, 3vmax) scale(1.08); } }
-@media (prefers-reduced-motion: reduce) { .nebula { animation: none; } }
+/* BUS-993 (R05 §3.3): локальный reduced-motion блок удалён — единый
+   authoritative-блок живёт в 00-tokens.css. */
 
 /* ── скроллбары: тонкие, в теме ── */
 .chat-messages::-webkit-scrollbar, .screen::-webkit-scrollbar,

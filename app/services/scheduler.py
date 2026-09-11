@@ -152,6 +152,7 @@ async def _audience(db, zones: set[str]) -> list:
         cur = await db.execute(
             f"SELECT * FROM users WHERE onboarded=1 AND status='active' "
             f"AND tg_id>:last_id AND COALESCE(tz,'Europe/Moscow') = ANY(:zones) "
+            f"AND {not_synthetic_tg_sql('users')} "
             f"ORDER BY tg_id LIMIT {AUDIENCE_CAP}",
             {"last_id": last_id, "zones": zones_list})
         batch = await cur.fetchall()
@@ -171,6 +172,7 @@ async def _crm_post_limit_audience(db, now_utc: datetime) -> list:
         cur = await db.execute(
             "SELECT * FROM users WHERE onboarded=1 AND status='active' "
             "AND tg_id>:last_id AND (sub_until IS NULL OR sub_until <= :now) "
+            f"AND {not_synthetic_tg_sql('users')} "
             "AND EXISTS (SELECT 1 FROM events e "
             "  WHERE e.tg_id=users.tg_id AND e.name='limit_reached' "
             "    AND e.created_at >= :cut_48 AND e.created_at <= :cut_24) "
@@ -199,6 +201,7 @@ async def _crm_low_balance_audience(db, now_utc: datetime) -> list:
         cur = await db.execute(
             "SELECT * FROM users WHERE onboarded=1 AND status='active' "
             "AND tg_id>:last_id AND (sub_until IS NULL OR sub_until <= :now) "
+            f"AND {not_synthetic_tg_sql('users')} "
             "AND NOT EXISTS (SELECT 1 FROM events e "
             "  WHERE e.tg_id=users.tg_id AND e.name IN ("
             "    'payment_success','credit_pack_paid') "
@@ -241,13 +244,14 @@ async def _expiring_audience(db, now_utc: datetime) -> list:
         cur = await db.execute(
             "SELECT * FROM users WHERE onboarded=1 AND status='active' AND tg_id>:last_id "
             "AND sub_until IS NOT NULL AND ("
-            "  (sub_until > :now AND sub_until <= :soon AND COALESCE(expiry_notified,0) = 0)"
+            f"  {not_synthetic_tg_sql('users')} "
+            "  AND ((sub_until > :now AND sub_until <= :soon AND COALESCE(expiry_notified,0) = 0)"
             "  OR (sub_until <= :now2 AND COALESCE(expiry_notified,0) <> 2)"
             "  OR (sub_until <= :wb2_cut AND COALESCE(expiry_notified,0) = 2 "
             "      AND NOT EXISTS (SELECT 1 FROM deliveries d "
             "        WHERE d.tg_id=users.tg_id AND d.kind='winback2' "
             "        AND d.key=users.sub_until))"
-            f") ORDER BY tg_id LIMIT {AUDIENCE_CAP}",
+            f")) ORDER BY tg_id LIMIT {AUDIENCE_CAP}",
             {"last_id": last_id, "now": now_iso, "soon": soon, "now2": now_iso,
              "wb2_cut": wb2_cutoff})
         batch = await cur.fetchall()
@@ -752,6 +756,7 @@ async def _onboard_audience(db, now_utc: datetime) -> list:
         cur = await db.execute(
             "SELECT * FROM users WHERE onboarded=0 AND status='active' "
             "AND tg_id>:last_id "
+            f"AND {not_synthetic_tg_sql('users')} "
             "AND EXISTS (SELECT 1 FROM events e "
             "  WHERE e.tg_id=users.tg_id AND e.name='start' "
             "  AND e.created_at <= :cutoff) "
@@ -866,6 +871,7 @@ async def _revoke_audience(db) -> list[dict]:
         "JOIN users u ON u.tg_id=o.tg_id "
         "WHERE o.status='refund_pending' "
         "AND o.tg_id IS NOT NULL "
+        f"AND {not_synthetic_tg_sql('o')} "
         "AND o.meta_json LIKE :flag "
         "AND o.paid_at IS NOT NULL "
         "ORDER BY o.paid_at DESC",
@@ -935,6 +941,7 @@ async def _reactivate_audience(db, now_utc: datetime) -> list:
             "AND morning_push=1 AND last_seen IS NOT NULL "
             "AND last_seen >= :sleep_from AND last_seen < :sleep_to "
             "AND tg_id>:last_id "
+            f"AND {not_synthetic_tg_sql('users')} "
             f"ORDER BY tg_id LIMIT {AUDIENCE_CAP}",
             {"sleep_from": sleep_from, "sleep_to": sleep_to, "last_id": last_id})
         batch = await cur.fetchall()
