@@ -28,7 +28,10 @@ def test_payment_locale_dictionaries_have_matching_keys() -> None:
     )
     assert match
     key_pattern = r"(?:^|,)\s*([A-Za-z][A-Za-z0-9_]*)\s*:"
-    ru_keys = set(re.findall(key_pattern, match.group(1)))
-    en_keys = set(re.findall(key_pattern, match.group(2)))
+    # re.M: ключи в начале строки внутри блока; без него межключевая
+    # строка-комментарий ломала разбор (BUS-981: комментарий BUS-635
+    # перед includes давал ложный en-only).
+    ru_keys = set(re.findall(key_pattern, match.group(1), re.M))
+    en_keys = set(re.findall(key_pattern, match.group(2), re.M))
     assert ru_keys == en_keys
     assert {"heroCopy", "paid", "paymentFailed", "pay"} <= ru_keys

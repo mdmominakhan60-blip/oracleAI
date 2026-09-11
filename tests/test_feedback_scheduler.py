@@ -120,6 +120,13 @@ def _patch_scheduler_env(monkeypatch):
     from app.services import scheduler as s
     monkeypatch.setattr(s, "settings", type("S", (), {"webapp_url": "https://t.me"}))
     monkeypatch.setattr(s, "datetime", FixedDatetime)
+    # BUS-981: activity_gate() в роутере вызывается без now → repo.feedback
+    # берёт реальный datetime.now(), а события e2e-теста прибиты к FIXED_NOW.
+    # Окно «7 дней назад» протухало: после 12:00 UTC шестых суток события
+    # граничного дня выпадали (строковое сравнение с временем) →
+    # bonus_granted=false. Замораживаем и его часы.
+    from app.repo import feedback as repo_feedback
+    monkeypatch.setattr(repo_feedback, "datetime", FixedDatetime)
 
 
 FIXED_NOW = _make_fixed_now(12)
