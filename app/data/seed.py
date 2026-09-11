@@ -144,6 +144,7 @@ FLAGS = [
     ("beta_invite_gate", 1, 100, "Гейт онбординга беты: вход только по инвайт-коду"),
     ("subscription_sync", 0, 100,
      "G-10: users.sub_level следует за subscription_state.tier_code (включать после reconciliation)"),
+    ("r07_api_v2", 0, 100, "R07 G-2: /api/me/v2 — нормированный ответ profile+subscription"),
 ]
 
 # ─────────────────────────── настройки ────────────────────────────────────────
