@@ -25,6 +25,18 @@
 #     В .env VPS: CUSTOM_LLM_BASE_URL=http://host.docker.internal:20128/v1
 #     Верифицировано 2026-09-10 00:55Z: chat-вызов из infra-api-1 через
 #     host.docker.internal -> 200 OK за 2.1s (oc/claude-sonnet-5).
+#
+# BUS-833 (бэкап-цикл прода, SLO D4):
+#  - node-exporter: textfile-коллектор перепривязан на VPS-каталог
+#    /var/lib/oracleai/textfile (базовый compose указывает ПК-путь
+#    engineering-platform — на VPS его нет). Пишет backup-metrics.sh
+#    (systemd --user oracleai-backup-metrics.timer на VPS).
+#  - backup: включён профиль backup с VPS-путями (см. ниже) — pg_dump -Fc
+#    (custom = zlib-6 в PG16), шифрование AES-256-CBC ключом
+#    /etc/oracle/backup.key (создан BUS-84, хэш отличен от ПК-ключа —
+#    сверено sha256 2026-09-10), retention 14, статус backup-status.json.
+#    Требование -Z 6 выполняется по умолчанию: custom-формат жмёт zlib-6
+#    (флаг --compress=6 задан явно для прозрачности).
 services:
   prometheus:
     networks: !override
@@ -36,3 +48,12 @@ services:
   bot:
     extra_hosts:
       - "host.docker.internal:host-gateway"
+  node-exporter:
+    volumes: !override
+      - /:/host:ro,rslave
+      - /var/lib/oracleai/textfile:/textfile:ro
+  backup:
+    volumes: !override
+      - /srv/oracle/backups:/backups
+      - /etc/oracle/backup.key:/run/secrets/oracle-backup-key:ro
+      - ./backup-postgres.sh:/usr/local/bin/backup-postgres.sh:ro

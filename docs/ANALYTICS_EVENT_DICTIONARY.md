@@ -15,6 +15,7 @@
 | `day` | UTC `YYYY-MM-DD` для агрегирования; не является датой рождения или пользовательским событием. |
 | Retention | Детальные `events`, `llm_usage` и `product_cost_events` — rolling 120 дней; дневные агрегаты — отдельно после проверки юридической retention policy. |
 | Deletion | Удаление аккаунта удаляет или анонимизирует связанные event rows в соответствии с утверждённой deletion policy. |
+| Anti-test filter | Все воронки, retention, DAU и KPI-агрегаты по `tg_id` обязаны исключать синтетику: `tg_id NOT BETWEEN 999000000 AND 999999999` и явные smoke-ID 10001/10002 (см. ниже). События с этими ID — артефакты smoke-верификаций и benchmark'ов, не пользовательская активность. |
 
 ## Activation and retention funnel
 
@@ -148,7 +149,7 @@ Monetization events are emitted only from authenticated server-owned transitions
 | Survey claim rate | Unique users with `survey_grant_issued` divided by users who received the survey invitation. | Responses without bonus (anti-abuse gates, BUS-170 §5) are not claims. |
 | Claim→spend (90d) | Users spending the granted lot within 90d of `survey_grant_issued`, divided by grant recipients. | Only the granted `review_bonus` lot counts, not user's own crystals. |
 | Fallback rate | `llm_fallback` operational records divided by successful provider completions, segmented by purpose/provider/language outside event table. | Never attach prompt, answer or memory. |
-| Beta wave DAU | COUNT DISTINCT tg_id с любым событием за UTC-день среди пользователей волны (вход в когорту волны: `promo_redeemed` с `batch='BETA1'` ИЛИ `start` с `source='promo:BETA1'`-семейство / инвайт-лист). Базовая поверхность — daily-агрегаты, не сырые events. | Синтетические tg_id 10001/10002 исключать всегда. |
+| Beta wave DAU | COUNT DISTINCT tg_id с любым событием за UTC-день среди пользователей волны (вход в когорту волны: `promo_redeemed` с `batch='BETA1'` ИЛИ `start` с `source='promo:BETA1'`-семейство / инвайт-лист). Базовая поверхность — daily-агрегаты, не сырые events. | Синтетические tg_id 10001/10002 и весь диапазон 999000000–999999999 исключать всегда (Anti-test filter выше). |
 | Beta activation rate | Уникальные пользователи когорты волны с `first_ritual` или `first_question` (в памяти о D1-окне) / уникальные вошедшие в когорту волны. | Активация = first-value milestone, не `miniapp_open`. |
 | Beta funnel visit→signup→activation | Когортная воронка EXP-004 по `session_id` (funnel-trace) — только для web-сессий; ботовая воронка считается отдельно от `start`. | Не смешивать session-воронку (анонимную) с tg_id-воронкой. |
 | Survey response rate (beta) | Определение выше («Survey response rate»); для беты — когорта волны, survey_code=`day7_v1`. | Reminder-касания схлопываются в получателя (COUNT DISTINCT tg_id). |
@@ -158,6 +159,17 @@ Monetization events are emitted only from authenticated server-owned transitions
 | p50/p95 latency | `percentile_cont` по `llm_usage.latency_ms` за день по purpose/provider. **Реализация — BUS-230 п.3 (F-3)**: owner Backend Engineer, PostgreSQL-only с деградацией на SQLite. Дашборд беты потребляет это, дублирование агрегации не создаёт. | Агрегация — не Analytics-зона; Analytics владеет определением KPI и порогами. |
 
 **Стык BUS-230 ↔ дашборд беты (согласовано BUS-271):** BUS-230 F-3 даёт перцентили p50/p95 как SQL-агрегат в admin-агрегате; дашборд беты (Analytics) потребляет этот агрегат и добавляет DAU волны / activation rate / error rate / llm ok=0 share / redemption rate как KPI-определения из этой таблицы. Отдельного второго перцентиль-агрегата не создаём.
+
+## Anti-test filter: синтетические tg_id (BUS-315 DoD п.3)
+
+События от синтетических ID попадают в `events` штатным путём сервера (smoke-верификации прода, benchmark'и) и обязаны исключаться из всех продуктовых агрегатов и воронок:
+
+| Диапазон | Происхождение | Правило фильтрации |
+|---|---|---|
+| `10001`, `10002` | Синтетика окружений (BUS-183, `SYNTHETIC_TG_IDS`) | `tg_id NOT IN (10001, 10002)` |
+| `999000000`–`999999999` | Smoke-верификации прода (например, ран BUS-270 после restore BUS-294) и benchmark'и; константа — см. `ltv_constants.py` (BUS-315 п.2, имплементация BUS-387) | `tg_id NOT BETWEEN 999000000 AND 999999999` |
+
+**Зафиксированный инцидент:** событие `first_question` от `tg_id=999000002` (2026-09-06 06:25 UTC, props `{agent: oracle}`) — синтетическое: это smoke-чат верификации LLM-канала рана BUS-270 («ответь 1 словом: да», messages 06:24–06:25 UTC), записанный штатным путём `chat_svc.ask()`. В воронках активации/первого вопроса НЕ считать. Вердикт-расследование: BUS-315 (комментарий Backend Engineer от 2026-09-07) — restore целостен, сироты = 2 events + 2 messages этого ID.
 
 ## Review and ownership
 
