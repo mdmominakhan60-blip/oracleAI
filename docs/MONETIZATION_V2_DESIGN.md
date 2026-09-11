@@ -58,6 +58,10 @@ The entitlement engine exposes typed, declarative capabilities:
 
 Every decision returns effective tier, capability, quota, remaining compute budget, Crystal balance, expiry, cancellation/grace state, and an explanation suitable for a contextual paywall. Bot and Mini App call the same backend service and catalog.
 
+## Entitlement canon (BUS-809 / G-10)
+
+The canonical source of entitlement truth is `subscription_state.tier_code` (wave-A canon, BUS-735 r2; the earlier BUS-411 «canon = users.sub_level» decision applied to wave-2 reporting and is superseded for wave A). The legacy `users.sub_level` column remains only for pre-existing read paths (`runtime.py`, `ltv_tier.py`) and is kept consistent with `tier_code` in the same transaction that changes `subscription_state` (`app/repo/subscription_sync.py`, feature flag `subscription_sync`). Refund revocation clears both sides (`app/repo/billing.py: complete_refund_revoke`). Legacy users without a `subscription_state` row keep the legacy canon until the MVP-6 migration; the reconciliation pass (`/api/admin/subscription-sync/status`, `/reconcile`, owner-only) reports and fixes divergences, state-wins, only where a state row exists.
+
 ## Feature matrix
 
 | Feature | Free | VIP | VIP Plus | Pro | Concierge | Crystal path |
