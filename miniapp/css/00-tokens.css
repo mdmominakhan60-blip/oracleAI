@@ -44,6 +44,9 @@
      Все primary-действия ссылаются сюда — ручные объявления запрещены. */
   --grad-primary: linear-gradient(135deg, var(--champagne-300), var(--champagne-500));
   --shadow-primary: 0 12px 23px -15px rgba(245, 212, 139, .9);
+  /* BUS-741 (P0 §3.3): единый сегментный прогресс для всех многошаговых сценариев.
+     Сегменты — <i>, подписи — <span>; включённые состояния — .is-on. */
+  --seg-line: rgba(255, 255, 255, .13);
 
   /* 4px spacing scale: every layout value should be one of these steps. */
   --space-1: 4px;
@@ -159,7 +162,32 @@
   --tarot-progress: var(--color-accent-secondary);
 }
 
+/* BUS-741 P0 §3.3: единый сегментный прогресс для многошаговых экранов (≥3 шагов).
+   Сегменты визуальные — aria-hidden; текст шага и aria-label задаёт вызывающий код. */
+.seg-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-faint);
+  font-size: var(--font-size-label);
+}
+.seg-progress span.is-on { color: var(--champagne-300); }
+.seg-progress i {
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, .13);
+}
+.seg-progress i.is-on { background: var(--champagne-400); }
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* BUS-741 (P0 §3.3): единый сегментный прогресс — все многошаговые сценарии
+   (palm, feedback, онбординг-профиль) рендерят этот класс; сегменты aria-hidden,
+   шаг озвучивается aria-label на контейнере. */
+.seg-progress { display: flex; align-items: center; gap: 6px; color: var(--text-faint); font-size: var(--font-size-label); }
+.seg-progress span.is-on { color: var(--champagne-300); }
+.seg-progress i { flex: 1; height: 1px; background: var(--seg-line); }
+.seg-progress i.is-on { background: var(--champagne-400); }
 
 html { -webkit-text-size-adjust: 100%; }
 

@@ -210,8 +210,55 @@ const styleOf = (page, sel, props) => page.evaluate(({ sel, props }) => {
   const ptab = await styleOf(page, '.ptab.active', ['background-image', 'color']);
   ok('§3.1: ptab.active — градиент из токена', ptab && ptab['background-image'] === GRAD_EXPECT, JSON.stringify(ptab));
   ok('§3.1: ptab.active текст — on-accent', ptab && ptab.color === ON_ACCENT, JSON.stringify(ptab));
-  await page.screenshot({ path: path.join(OUT, 'bus741-profile.png'), fullPage: false });
+
+  // ── Инкремент 2 (§3.3): онбординг-профиль без birth_date рендерит .seg-progress
+  const ME_EMPTY = () => JSON.stringify({ id: 1, name: 'Тест Тестов', lang: 'ru', flags: {}, chart_mode: 'manual' });
+  await page.route('**/api/me', async (route) => { await route.fulfill({ status: 200, contentType: 'application/json', body: ME_EMPTY() }); });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
+  await page.evaluate(() => app.go && app.go('profile'));
+  await page.waitForTimeout(500);
+  const seg = await page.evaluate(() => {
+    const el = document.querySelector('.profile-empty-steps');
+    if (!el) return null;
+    const cs = getComputedStyle(el);
+    const segs = [...el.querySelectorAll('i')].map((i) => ({ h: getComputedStyle(i).height, flex: getComputedStyle(i).flexGrow }));
+    return { display: cs.display, segs, aria: el.getAttribute('aria-label'), onSeg: el.querySelector('span.is-on') ? getComputedStyle(el.querySelector('span.is-on')).color : null };
+  });
+  ok('§3.3: онбординг-профиль — .seg-progress компонент', seg && seg.display === 'flex', JSON.stringify(seg && seg.display));
+  ok('§3.3: онбординг-профиль — 2 сегмента-линии 1px', seg && seg.segs.length === 2 && seg.segs.every((s) => s.h === '1px'), JSON.stringify(seg && seg.segs));
+  ok('§3.3: онбординг-профиль — aria-label с шагом', seg && /Шаг 1 из 3/.test(seg.aria || ''), JSON.stringify(seg && seg.aria));
+  const champagne300 = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--champagne-300').trim());
+  ok('§3.3: онбординг-профиль — включённый шаг champagne-300', seg && seg.onSeg && champagne300 && `rgb(${champagne300})` !== '', JSON.stringify(seg && seg.onSeg));
   await context.close();
+}
+
+/* ── §3.3: palm-progress и fb-progress → seg-progress (грейпфрут-проба по исходникам) ── */
+{
+  const palmSrc = fs.readFileSync(path.join(MINIAPP, 'js', '13-palm.js'), 'utf8');
+  ok('§3.3: palm-progress рендерится классом seg-progress', /class="seg-progress palm-progress"/.test(palmSrc));
+  ok('§3.3: palm-progress имеет aria-label шага', /aria-label="\$\{esc\(pt\('ariaStep'\)\)\}"/.test(palmSrc));
+  const cssRitual = fs.readFileSync(path.join(MINIAPP, 'css', '15-ritual-redesign.css'), 'utf8');
+  ok('§3.3: palm-progress не дублирует flex-базу seg-progress (только посадка)', !/\.palm-progress \{ display:flex/.test(cssRitual));
+  const fbSrc = fs.readFileSync(path.join(MINIAPP, 'js', '19-feedback.js'), 'utf8');
+  ok('§3.3: fb-progress рендерится классом seg-progress (5 вопросов)', /class="seg-progress fb-progress"/.test(fbSrc));
+  ok('§3.3: fb-progress aria-label "Шаг N из M"', /ariaStepName/.test(fbSrc));
+  const cssFb = fs.readFileSync(path.join(MINIAPP, 'css', '19-feedback.css'), 'utf8');
+  ok('§3.3: fb-dot удалён из css', !cssFb.includes('.fb-dot'));
+  const cssTokens = fs.readFileSync(path.join(MINIAPP, 'css', '00-tokens.css'), 'utf8');
+  ok('§3.3: .seg-progress определён в 00-tokens.css', /\.seg-progress \{/.test(cssTokens));
+  ok('§3.3: seg-line = rgba(255,255,255,.13) через токен --seg-line', /--seg-line:\s*rgba\(255, 255, 255, \.13\)/.test(cssTokens));
+}
+
+/* ── §3.5: CI-guard версий фоновых ассетов ── */
+{
+  const guard = path.join(ROOT, 'scripts', 'check_cache_busting.py');
+  ok('§3.5: check_cache_busting.py проверяет bg-cosmos*', fs.readFileSync(guard, 'utf8').includes('BG_ASSETS'));
+  const sky = fs.readFileSync(path.join(MINIAPP, 'css', '01-sky-shell.css'), 'utf8');
+  const ritual = fs.readFileSync(path.join(MINIAPP, 'css', '15-ritual-redesign.css'), 'utf8');
+  const indexHtml = fs.readFileSync(path.join(MINIAPP, 'index.html'), 'utf8');
+  const cosmosRefs = [...`${indexHtml}\n${sky}\n${ritual}`.matchAll(/bg-cosmos[^"'\s)]*/g)].map((m) => m[0]);
+  ok('§3.5: все ссылки bg-cosmos с ?v=108 и синхронны', cosmosRefs.length >= 3 && cosmosRefs.every((u) => u.includes('?v=108')), cosmosRefs.join(' | '));
 }
 
 await browser.close();
