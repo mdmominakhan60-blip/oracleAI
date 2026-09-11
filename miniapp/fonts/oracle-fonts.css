@@ -1,4 +1,39 @@
-/* Oracle self-hosted fonts (Cinzel + Plus Jakarta Sans). Vendor для prod-CSP style-src 'self'. */
+/* Oracle self-hosted fonts (Manrope + Cinzel + Plus Jakarta Sans). Vendor для prod-CSP font-src 'self'.
+   R03 §3.1 (BUS-969): Manrope 400/500/600/700 — основной шрифт новой дизайн-системы.
+   Один variable-файл на субсет покрывает все веса (ось wght 200–800); font-display: swap;
+   unicode-range по кириллице; preload главного RU-начертания в index.html (?v=N). */
+
+/* === Manrope (variable, wght 200–800) — R03 §3.1 === */
+
+@font-face{
+  font-family:'Manrope';
+  font-style:normal;
+  font-weight:200 800;
+  font-display:swap;
+  src:url('manrope-cyrillic.woff2') format('woff2-variations');
+  unicode-range:U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face{
+  font-family:'Manrope';
+  font-style:normal;
+  font-weight:200 800;
+  font-display:swap;
+  src:url('manrope-cyrillic-ext.woff2') format('woff2-variations');
+  unicode-range:U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+@font-face{
+  font-family:'Manrope';
+  font-style:normal;
+  font-weight:200 800;
+  font-display:swap;
+  src:url('manrope-latin.woff2') format('woff2-variations');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* === Cinzel + Plus Jakarta Sans — выводятся по графику замены R03 (§3.1);
+   существующие экраны не ломаем. === */
 
 @font-face{
   font-family:'Cinzel';
