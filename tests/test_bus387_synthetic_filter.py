@@ -208,7 +208,8 @@ async def test_tick_audience_excludes_synthetic(db):
 
 async def test_pregen_audience_excludes_synthetic(db):
     """Преген прогноза не генерируется для синтетики (BUS-976)."""
-    from app.repo import readings, users as users_repo
+    from app.repo import readings
+    from app.repo import users as users_repo
     from app.services import scheduler
 
     await _seed_synthetic_users(db)
@@ -259,7 +260,6 @@ async def test_reactivate_audience_excludes_synthetic(db):
 
     now = datetime.now(timezone.utc)
     await _seed_synthetic_users(db)
-    from app.repo import users as users_repo
     for tg_id in (10001, 10002):
         await db.execute(
             "UPDATE users SET last_seen=:ls WHERE tg_id=:tg",
@@ -286,9 +286,8 @@ async def test_crm_post_limit_audience_excludes_synthetic(db):
 
 async def test_real_user_reaches_tick_audience(db):
     """Фильтр не ест живых: реальный юзер в аудитории тика (BUS-976)."""
-    from app.services import scheduler
-
     from app.repo import users as users_repo
+    from app.services import scheduler
     await users_repo.ensure(db, 424242, "Real")
     await users_repo.update(db, 424242, onboarded=1, status="active",
                             morning_push=1, tz="Europe/Moscow")
