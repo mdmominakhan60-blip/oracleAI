@@ -5,7 +5,8 @@
  *    — rgb(37, 29, 57) (var(--color-on-accent)).
  * §3.2: body фон = #0a0920 (var(--ink-950) = --color-bg-primary); все url(bg-cosmos*)
  *    в computed starfield содержат ?v=108.
- * §3.4: в computed стилях ключевых модулей нет rgb(230, 193, 120) (legacy-золото).
+ * §3.4: в computed стилях ключевых модулей нет rgb(230, 193, 120) (legacy-золото);
+ *    в исходниках miniapp/js legacy-золото rgba(230,193,120)/#E6C178 отсутствует (BUS-960).
  * Smoke: скриншоты home/hub(payment)/profile — визуальных регрессий нет (ручная
  * сверка по файлам), console чист.
  * Запуск: node scripts/qa_bus741_smoke.mjs
@@ -248,6 +249,18 @@ const styleOf = (page, sel, props) => page.evaluate(({ sel, props }) => {
   const cssTokens = fs.readFileSync(path.join(MINIAPP, 'css', '00-tokens.css'), 'utf8');
   ok('§3.3: .seg-progress определён в 00-tokens.css', /\.seg-progress \{/.test(cssTokens));
   ok('§3.3: seg-line = rgba(255,255,255,.13) через токен --seg-line', /--seg-line:\s*rgba\(255, 255, 255, \.13\)/.test(cssTokens));
+}
+
+/* ── §3.4 (инкремент 3, BUS-960): legacy-золото отсутствует в источниках JS ── */
+{
+  const jsDir = path.join(MINIAPP, 'js');
+  const jsFiles = fs.readdirSync(jsDir).filter((f) => f.endsWith('.js'));
+  const offenders = [];
+  for (const f of jsFiles) {
+    const src = fs.readFileSync(path.join(jsDir, f), 'utf8');
+    if (/230,\s*193,\s*120|e6c178/i.test(src)) offenders.push(f);
+  }
+  ok('§3.4: legacy-золото rgba(230,193,120)/#E6C178 в miniapp/js = 0', offenders.length === 0, offenders.join(', '));
 }
 
 /* ── §3.5: CI-guard версий фоновых ассетов ── */

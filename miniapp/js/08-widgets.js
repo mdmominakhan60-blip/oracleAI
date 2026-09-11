@@ -75,7 +75,7 @@ const widgetShell = (p, { title, body, tail = '' }) => {
   app.matrixWidget = function(p) {
     const d = p.data || {};
     const sel = p.selected;
-    const colors = { love: '#ff8fa3', money: '#e6c178', rod: '#7fd4a8', destiny: '#a78bfa' };
+    const colors = { love: '#ff8fa3', money: '#f5d48b', rod: '#7fd4a8', destiny: '#a78bfa' };
     const nodeGroup = { personal: 'love', spirit: 'love', love: 'love', family: 'rod', money: 'money', destiny: 'destiny', center: 'destiny' };
     const nodes = [
       ['personal', 120, 30], ['spirit', 206, 120], ['family', 34, 120],
@@ -234,7 +234,7 @@ const widgetShell = (p, { title, body, tail = '' }) => {
   app.careerWidget = function(p) {
     const days = p.days || [];
     const sel = p.sel != null ? days[p.sel] : null;
-    const legend = [['#7fd4a8', 'Действие · старт'], ['#e6c178', 'Решение'], ['#ff8fa3', 'Осторожно'], ['#8b86a3', 'Пауза']];
+    const legend = [['#7fd4a8', 'Действие · старт'], ['#f5d48b', 'Решение'], ['#ff8fa3', 'Осторожно'], ['#8b86a3', 'Пауза']];
     return widgetShell(p, {
       title: t => '💼 Карьерные окна' + (t.loading ? '' : ' · ' + fmtDate()),
       body: `

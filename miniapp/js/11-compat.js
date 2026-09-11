@@ -94,7 +94,7 @@
       family: { label: 'вашей семьи', symbol: '◌', title: 'Ритм вашей связи' },
     }[ctx.relation] || { label: 'вашей связи', symbol: '✦', title: 'Ритм вашей связи' };
     const partnerLabel = ctx.partner_name ? esc(ctx.partner_name) : 'этим человеком';
-    const colors = ['#e6c178', '#a78bfa', '#ff9e9e', '#7fd4a8', '#8ab6ff'];
+    const colors = ['#f5d48b', '#a78bfa', '#ff9e9e', '#7fd4a8', '#8ab6ff'];
     const n = Math.max(1, spheres.length);
     const cx = 110, cy = 110, R = 84, sw = 15;
     const seg = 360 / n;

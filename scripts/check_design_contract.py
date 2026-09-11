@@ -9,6 +9,9 @@ TOKENS = ROOT / "miniapp" / "css" / "00-tokens.css"
 STYLES = ROOT / "miniapp" / "styles.css"
 INVENTORY = ROOT / "docs" / "DESIGN_COMPONENT_INVENTORY.md"
 VISUAL_QA = ROOT / "miniapp" / "css" / "16-visual-qa.css"
+# BUS-960 (§3.4): legacy-золотая палитра #E6C178 запрещена и в JS миниаппа.
+JS_DIR = ROOT / "miniapp" / "js"
+LEGACY_GOLD_RE = re.compile(r"230,\s*193,\s*120|e6c178", re.IGNORECASE)
 
 REQUIRED_TOKENS = {
     "--bg-0", "--bg-1", "--bg-2", "--gold", "--gold-bright", "--violet",
@@ -63,7 +66,11 @@ def main() -> int:
     missing_components = [item for item in required_components if item not in inventory]
     touch_target_ok = bool(re.search(r"--touch-target\s*:\s*44px", tokens))
     focus_contract_ok = all(marker in visual_qa for marker in (":focus-visible", "outline: 2px", "outline-offset: 3px"))
-    if missing or not import_order_ok or not reduced_motion or missing_components or not touch_target_ok or not focus_contract_ok:
+    legacy_gold_js = sorted(
+        path.name for path in JS_DIR.glob("*.js")
+        if LEGACY_GOLD_RE.search(path.read_text(encoding="utf-8"))
+    )
+    if missing or not import_order_ok or not reduced_motion or missing_components or not touch_target_ok or not focus_contract_ok or legacy_gold_js:
         print({
             "missing_tokens": missing,
             "import_order_ok": import_order_ok,
@@ -71,9 +78,10 @@ def main() -> int:
             "missing_components": missing_components,
             "touch_target_ok": touch_target_ok,
             "focus_contract_ok": focus_contract_ok,
+            "legacy_gold_js": legacy_gold_js,
         })
         return 1
-    print("design contract ok: tokens, import order, reduced motion, component inventory, touch target, focus ring")
+    print("design contract ok: tokens, import order, reduced motion, component inventory, touch target, focus ring, no legacy gold in js")
     return 0
 
 
