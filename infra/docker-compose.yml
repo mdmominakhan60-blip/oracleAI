@@ -248,6 +248,8 @@ services:
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+      # BUS-833: правила бэкап-цикла прода (OracleAIBackupStale/JobFailed/OffsiteStale).
+      - ./observability/backup-alerts.yml:/etc/prometheus/backup-alerts.yml:ro
       - prometheus_data:/prometheus
     networks:
       - oracle_internal

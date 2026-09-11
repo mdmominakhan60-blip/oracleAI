@@ -1,0 +1,12 @@
+# BUS-833: таймер экспорта метрик бэкапа. Каждые 10 минут достаточно для
+# RPO D4 (алерт OracleAIBackupStale стейлится 30м на фоне 26ч-окна).
+[Unit]
+Description=Run oracleai-backup-metrics every 10 minutes (BUS-833)
+
+[Timer]
+OnCalendar=*:0/10
+RandomizedDelaySec=30
+Persistent=true
+
+[Install]
+WantedBy=timers.target
