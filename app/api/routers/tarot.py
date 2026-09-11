@@ -3,16 +3,14 @@ from __future__ import annotations
 
 import json
 
-from typing import Literal
-
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
 
 from ...core import tarot
 from ...services.repo_gateway import readings
 from ...services import catalog
 from ...services import chat as chat_svc
 from ..common.errors import access_denied
+from ..contracts.wave_a import DrawIn, OutcomeIn
 from ..deps import confirmed_age_user, get_db, rate_limit
 
 router = APIRouter(prefix="/api/tarot", tags=["tarot"])
@@ -34,11 +32,6 @@ async def spreads_full(user=Depends(confirmed_age_user)):
     fields = ("title", "positions", "tier", "emoji", "hint", "guide")
     return [{"code": code, **{f: item.get(f) for f in fields}}
             for code, item in tarot.SPREADS.items()]
-
-
-class DrawIn(BaseModel):
-    question: str | None = None
-    deck: str | None = None
 
 
 @router.post("/draw", dependencies=[Depends(rate_limit("write"))])
@@ -101,11 +94,6 @@ async def history_item(reading_id: int, user=Depends(confirmed_age_user), db=Dep
 async def stats(user=Depends(confirmed_age_user), db=Depends(get_db)):
     """Что сбывалось: счётчик отметок «сбылось / частично / нет»."""
     return await readings.outcome_stats(db, user["tg_id"])
-
-
-class OutcomeIn(BaseModel):
-    # Аудит API-012: исход — закрытое множество, а не произвольная строка.
-    outcome: Literal["came_true", "partly", "no"]
 
 
 @router.post("/outcome/{reading_id}", dependencies=[Depends(rate_limit("write"))])

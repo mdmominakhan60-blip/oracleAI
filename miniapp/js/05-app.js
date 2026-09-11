@@ -11,6 +11,48 @@ app.state = window.OracleRuntime
     };
 if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
 
+/* ═══ BUS-993 (R05 §1.3): система состояний фона data-bg ═══
+   Одна точка переключения — syncBg(); компоненты фон не выставляют.
+   Атрибут живёт на #app-root (спека §1.3) и зеркалится на <html> —
+   селекторы CSS идут от html: .starfield — sibling #app-root, а не потомок.
+   Состояния: welcome (дефолт) / chat / tarot (чат Таролога, S13) / work. */
+app.bgAnimationEnabled = function () {
+  try { return localStorage.getItem('oracle.bgAnimation') !== 'off'; } catch (e) { return true; }
+};
+
+app.syncBg = function () {
+  const root = document.getElementById('app-root');
+  if (!root) return;
+  let bg = 'welcome';
+  if (this.chat && this.chat.key) bg = this.chat.key === 'tarot' ? 'tarot' : 'chat';
+  else if (this.view === 'profile' || this.view === 'payment') bg = 'work';
+  if (root.dataset.bg !== bg) root.dataset.bg = bg;
+  document.documentElement.dataset.bg = bg;
+  const paused = !this.bgAnimationEnabled();
+  root.classList.toggle('bg-paused', paused);
+  document.documentElement.classList.toggle('bg-paused', paused);
+};
+
+/* E18 (R05 §3.2): toggle «Анимация фона» в Профиле. localStorage
+   oracle.bgAnimation = 'on'/'off'. Паттерн локальных настроек миниаппа;
+   синхронизация с аккаунтом — вне скоупа A (спека §7.6). */
+app.setBgAnimation = function (on) {
+  try { localStorage.setItem('oracle.bgAnimation', on ? 'on' : 'off'); } catch (e) {}
+  this.syncBg();
+};
+
+/* E18: автопауза при скрытой вкладке (W3C 2.2.2): html/root.bg-hidden ставит
+   animation-play-state: paused на слои (22-background-states.css). */
+app.initBgControls = function () {
+  if (this._bgControlsBound) return;
+  this._bgControlsBound = true;
+  document.addEventListener('visibilitychange', () => {
+    document.documentElement.classList.toggle('bg-hidden', document.hidden);
+    const root = document.getElementById('app-root');
+    if (root) root.classList.toggle('bg-hidden', document.hidden);
+  });
+};
+
   app.boot = async function() {
     const qaParams = new URLSearchParams(location.search);
     const qaMode = qaParams.get('qa') === '1';
@@ -86,6 +128,7 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
     }
     this.initSwipe();
     this.initViewport();
+    this.initBgControls();
   };
   // При первом запуске язык выбирается первым — до /api/me и до первого рендера
   // контента. Повторный запуск: на устройстве язык уже сохранён (localStorage) —
@@ -501,6 +544,9 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
     if (v === 'chat') v = 'hub';
     if (v !== 'hub') this.chat.key = null;
     this.view = v;
+    // R05 (BUS-733 §1.3): состояние фона объявляется в одном месте —
+    // на маршруте; компоненты не выставляют фон сами.
+    this.syncBg();
     this.renderNav();
     this.syncBackButton();
     const main = document.getElementById('app-main');

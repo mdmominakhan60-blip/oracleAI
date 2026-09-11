@@ -69,6 +69,5 @@
   0%, 100% { opacity: .6; }
   50%      { opacity: 1; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .meteor, .twinkle { animation: none !important; display: none; }
-}
+/* BUS-993 (R05 §3.3): локальный reduced-motion блок удалён — единый
+   authoritative-блок живёт в 00-tokens.css. */

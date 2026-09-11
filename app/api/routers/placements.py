@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field
 
 from ...core import palm as palm_core
 from ...core import placements
 from ...core.geo import resolve_city_async
 from ..common.validation import parse_birth_date
+from ..contracts.wave_a import PlacementIn
 from ..deps import confirmed_age_user, get_db, rate_limit
 
 router = APIRouter(prefix="/api", tags=["placements"])
@@ -22,13 +22,6 @@ async def _read_limited_body(request: Request, limit: int) -> bytes:
             raise HTTPException(413, "фото слишком большое; максимум 8 МБ")
         chunks.append(chunk)
     return b"".join(chunks)
-
-
-class PlacementIn(BaseModel):
-    placement: str = Field(min_length=2, max_length=40)
-    birth_date: str | None = None
-    birth_time: str | None = Field(default=None, max_length=5)
-    birth_city: str | None = Field(default=None, max_length=60)
 
 
 @router.get("/placements")
