@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OracleAI R06 — пакет 3: Сегодня · Библиотека · Профиль · Paywall (макеты)</title>
+<link rel="stylesheet" href="styles.css">
+<style>/* Инлайн-пометки верстальщика макета — не для прод-кода */
+.mock-note { font-size: 12px; color: var(--color-text-muted); }
+.proto-label {
+  position: fixed; right: 12px; top: 8px; z-index: 100;
+  padding: 4px 10px; border-radius: 999px;
+  background: rgba(28,34,51,.92); border: 1px solid var(--color-border-control);
+  color: var(--color-text-muted); font-size: 11px;
+}
+</style>
+</head>
+<body>
+
+<!-- Фон-система R05: состояния через data-bg -->
+<div class="sky" data-bg="chat" id="sky">
+  <div class="sky__cosmos"></div>
+  <div class="sky__stars" aria-hidden="true"></div>
+  <img class="sky__silhouette" src="img/lilith-sil.png" alt="" aria-hidden="true">
+</div>
+
+<!-- Переключатель экранов прототипа (не входит в прод) -->
+<nav class="proto-nav" aria-label="Навигация по макетам прототипа">
+  <button type="button" data-view="today" class="is-active">Сегодня</button>
+  <button type="button" data-view="library">Библиотека</button>
+  <button type="button" data-view="profile">Профиль</button>
+  <button type="button" data-view="plan">Тариф</button>
+  <button type="button" data-view="orders">Заказы</button>
+  <button type="button" data-view="paywall">Paywall</button>
+  <button type="button" data-view="pay-pending">Ожидание</button>
+  <button type="button" data-view="tarot-grid">Крест</button>
+  <button type="button" data-view="states">Состояния</button>
+</nav>
+<div class="proto-label">R06 · пакет 3 · в разработке</div>
+
+<!-- ========================================================
+     S15 СЕГОДНЯ (план §9.2): дата, один открытый прогноз,
+     «Обсудить день», три компактных блока. Без paywall-ленты.
+     ======================================================== -->
+<div class="screen-view is-active" id="view-today" role="region" aria-label="Сегодня">
+<div class="screen">
+  <main class="today">
+    <header class="section-head">
+      <span class="section-head__date">Четверг, 11 сентября</span>
+      <h1 class="section-head__title">Сегодня</h1>
+    </header>
+
+    <section class="today__forecast" aria-label="Прогноз дня">
+      <div class="today__forecast-kicker">
+        <img src="img/agents/astro.jpg" alt="" style="width:18px;height:18px;border-radius:999px;object-fit:cover">
+        Прогноз дня · Урания
+      </div>
+      <p class="today__forecast-text today__forecast--clamped" id="today-fc">Луна в Тельце мягко заземляет утро — день для тихих дел и завершения начатого. К вечеру Меркурий напомнит о недописанном: вернись к письму, которое откладывала.</p>
+      <button type="button" class="today__expand" aria-expanded="false" aria-controls="today-fc" id="today-expand">Развернуть <span aria-hidden="true">▾</span></button>
+      <button type="button" class="btn btn--primary btn--block today__ask" data-goto-view="states">Обсудить день</button>
+    </section>
+
+    <div class="today__blocks">
+      <button type="button" class="today-card" data-goto-view="states">
+        <span class="today-card__icon" aria-hidden="true">🃏</span>
+        <span class="today-card__title">Карта дня</span>
+        <span class="today-card__meta">Восьмёрка Пентаклей · ремесло и шаг за шагом</span>
+        <span class="today-card__go">Открыть карту →</span>
+      </button>
+      <button type="button" class="today-card">
+        <span class="today-card__icon" aria-hidden="true">🌙</span>
+        <span class="today-card__title">Луна недели</span>
+        <span class="today-card__meta">Растущая, 4 лунный день · 14° Тельца</span>
+        <span class="today-card__go">Полный инструмент →</span>
+      </button>
+      <button type="button" class="today-card today-card--empty">
+        <span class="today-card__icon" aria-hidden="true">📖</span>
+        <span class="today-card__title">Дневник</span>
+        <span class="today-card__meta">Сегодня ещё не записано. Две минуты вечером — и день останется с тобой.</span>
+        <span class="today-card__go">Записать →</span>
+      </button>
+    </div>
+
+    <p class="mock-note" style="margin-top:var(--space-4)">Счётчики практик — только при реальном состоянии пользователя (§9.2); блок «Дневник» показывает честный empty, не ноль-заглушку. Состояние «нет данных рождения» и сбой загрузки — на виде «Состояния».</p>
+  </main>
+  <nav class="bottomnav" aria-label="Разделы">
+    <div class="bottomnav__tabs">
+      <button type="button" class="bottomnav__tab" data-goto-view="states"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 5h14M4 11h14M4 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Чат</button>
+      <button type="button" class="bottomnav__tab" aria-current="page"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 7v4l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Сегодня</button>
+      <button type="button" class="bottomnav__tab" data-goto-view="library"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M5 4v14m4-14v14M13 5l5 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Библиотека</button>
+      <button type="button" class="bottomnav__tab" data-goto-view="profile"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 18c1.4-3 3.9-4.5 6.5-4.5s5.1 1.5 6.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Профиль</button>
+    </div>
+  </nav>
+</div>
+</div>
+
+<!-- ========================================================
+     S20 БИБЛИОТЕКА (план §9.3): вкладки Разборы · Диалоги ·
+     Дневник, поиск, строки с источником и статусом.
+     ======================================================== -->
+<div class="screen-view" id="view-library" role="region" aria-label="Библиотека">
+<div class="screen">
+  <main class="library">
+    <header class="section-head">
+      <h1 class="section-head__title">Библиотека</h1>
+      <p class="section-head__sub">Всё, что ты уже получила: разборы, диалоги и записи дневника.</p>
+    </header>
+
+    <div class="seg-tabs" role="tablist" aria-label="Вкладки библиотеки">
+      <button type="button" class="seg-tabs__tab" role="tab" aria-selected="true" id="tab-readings" aria-controls="pane-readings">Разборы</button>
+      <button type="button" class="seg-tabs__tab" role="tab" aria-selected="false" id="tab-sessions" aria-controls="pane-sessions">Диалоги</button>
+      <button type="button" class="seg-tabs__tab" role="tab" aria-selected="false" id="tab-diary" aria-controls="pane-diary">Дневник</button>
+    </div>
+
+    <div class="library__search field">
+      <label class="visually-hidden" for="lib-q">Поиск по библиотеке</label>
+      <input class="field__input" id="lib-q" type="search" placeholder="Поиск по названию и тексту">
+    </div>
+
+    <div role="tabpanel" id="pane-readings" aria-labelledby="tab-readings" style="margin-top:var(--space-2)">
+      <button type="button" class="lib-row" data-goto-view="states">
+        <span class="lib-row__icon" aria-hidden="true">🃏</span>
+        <span class="lib-row__body">
+          <span class="lib-row__top"><span class="lib-row__name">Расклад «Прошлое · Настоящее · Будущее»</span><span class="lib-row__time">10 сентября</span></span>
+          <span class="lib-row__preview">Колесо Фортуны говорит о повороте: то, что казалось застоем…</span>
+          <span class="lib-row__src">Мадам Ленорман · Таролог <span class="badge badge--accent">оплачен</span></span>
+        </span>
+      </button>
+      <button type="button" class="lib-row">
+        <span class="lib-row__icon" aria-hidden="true">✳️</span>
+        <span class="lib-row__body">
+          <span class="lib-row__top"><span class="lib-row__name">Натальная карта</span><span class="lib-row__time">3 сентября</span></span>
+          <span class="lib-row__preview">Солнце в Рыбах в 12 доме — дар к сопереживанию и тихой силе…</span>
+          <span class="lib-row__src">Урания · Астролог</span>
+        </span>
+      </button>
+      <button type="button" class="lib-row">
+        <span class="lib-row__icon" aria-hidden="true">💞</span>
+        <span class="lib-row__body">
+          <span class="lib-row__top"><span class="lib-row__name">Синастрия с Даниилом</span><span class="lib-row__time">28 августа</span></span>
+          <span class="lib-row__preview">Венера-Марс в квадрате: притяжение через трение, о чём важно договориться…</span>
+          <span class="lib-row__src">Урания · Астролог</span>
+        </span>
+      </button>
+
+      <!-- Устаревшая ссылка: ясное состояние с возвратом, не тупик (§9.3) -->
+      <div class="lib-stale" style="margin-top:var(--space-4)" role="status">
+        <span class="lib-stale__icon" aria-hidden="true">🕰️</span>
+        <div class="lib-stale__text">
+          <strong>Этот разбор был построен на старых данных рождения.</strong> После изменения профиля история не переписывается: можно открыть как есть или построить заново.
+          <div class="lib-stale__actions">
+            <button type="button" class="btn btn--secondary" style="min-height:40px">Открыть как есть</button>
+            <button type="button" class="btn btn--primary" style="min-height:40px">Построить заново</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="mock-note">Открытие записи не пересчитывает и не списывает (E15). Диалоги — те же данные, что и в sidebar Чата; редактирование/удаление дневника — по реальным возможностям сервера (§9.3). Состояние «запись не найдена» — на виде «Состояния».</p>
+    </div>
+    <div role="tabpanel" id="pane-sessions" aria-labelledby="tab-sessions" hidden style="margin-top:var(--space-2)"><p class="mock-note" style="padding:var(--space-4)">В макете показана вкладка «Разборы»; вкладки «Диалоги» и «Дневник» используют ту же строку-карточку (lib-row) — модель данных одна.</p></div>
+    <div role="tabpanel" id="pane-diary" aria-labelledby="tab-diary" hidden style="margin-top:var(--space-2)"></div>
+  </main>
+  <nav class="bottomnav" aria-label="Разделы">
+    <div class="bottomnav__tabs">
+      <button type="button" class="bottomnav__tab" data-goto-view="states"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 5h14M4 11h14M4 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Чат</button>
+      <button type="button" class="bottomnav__tab" data-goto-view="today"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 7v4l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Сегодня</button>
+      <button type="button" class="bottomnav__tab" aria-current="page"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M5 4v14m4-14v14M13 5l5 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Библиотека</button>
+      <button type="button" class="bottomnav__tab" data-goto-view="profile"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 18c1.4-3 3.9-4.5 6.5-4.5s5.1 1.5 6.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Профиль</button>
+    </div>
+  </nav>
+</div>
+</div>
+
+<!-- ========================================================
+     S21 ПРОФИЛЬ (план §9.4): группы настроек строками,
+     значение справа, подраздел — push с «Назад» (R02 §2.1).
+     ======================================================== -->
+<div class="screen-view" id="view-profile" role="region" aria-label="Профиль">
+<div class="screen">
+  <main class="profile">
+    <header class="section-head">
+      <h1 class="section-head__title">Профиль</h1>
+    </header>
+
+    <div class="profile-card">
+      <img class="profile-card__avatar" src="img/agents/oracle.jpg" alt="">
+      <div class="profile-card__body">
+        <div class="profile-card__name">Мария</div>
+        <div class="profile-card__meta">05.03.1994 · 14:20 · Москва</div>
+      </div>
+      <span class="profile-card__plan badge badge--accent">VIP</span>
+    </div>
+
+    <section class="profile-group" aria-label="Основное">
+      <h2 class="profile-group__title">Данные и память</h2>
+      <div class="profile-list">
+        <button type="button" class="profile-row" data-goto-view="states"><span class="profile-row__icon" aria-hidden="true">🌍</span><span class="profile-row__label">Данные рождения</span><span class="profile-row__value">05.03.1994 · Москва</span><span class="profile-row__chev" aria-hidden="true">›</span></button>
+        <button type="button" class="profile-row" data-goto-view="memory"><span class="profile-row__icon" aria-hidden="true">🧠</span><span class="profile-row__label">Контекст и память</span><span class="profile-row__value">12 факта</span><span class="profile-row__chev" aria-hidden="true">›</span></button>
+        <button type="button" class="profile-row" data-goto-view="states"><span class="profile-row__icon" aria-hidden="true">💞</span><span class="profile-row__label">Сохранённые партнёры</span><span class="profile-row__value">1</span><span class="profile-row__chev" aria-hidden="true">›</span></button>
+      </div>
+    </section>
+
+    <section class="profile-group" aria-label="Тариф и оплата">
+      <h2 class="profile-group__title">Тариф и оплата</h2>
+      <div class="profile-list">
+        <button type="button" class="profile-row" data-goto-view="plan"><span class="profile-row__icon" aria-hidden="true">✦</span><span class="profile-row__label">Тариф и баланс</span><span class="profile-row__value">VIP · 120 ✦</span><span class="profile-row__chev" aria-hidden="true">›</span></button>
+        <button type="button" class="profile-row" data-goto-view="orders"><span class="profile-row__icon" aria-hidden="true">🧾</span><span class="profile-row__label">История заказов</span><span class="profile-row__chev" aria-hidden="true">›</span></button>
+      </div>
+    </section>
+
+    <section class="profile-group" aria-label="Настройки">
+      <h2 class="profile-group__title">Настройки</h2>
+      <div class="profile-list">
+        <button type="button" class="profile-row" data-goto-view="notifications"><span class="profile-row__icon" aria-hidden="true">🔔</span><span class="profile-row__label">Уведомления</span><span class="profile-row__value">19:00 · Москва</span><span class="profile-row__chev" aria-hidden="true">›</span></button>
+        <button type="button" class="profile-row"><span class="profile-row__icon" aria-hidden="true">🌐</span><span class="profile-row__label">Язык</span><span class="profile-row__value">Русский</span><span class="profile-row__chev" aria-hidden="true">›</span></button>
+        <button type="button" class="profile-row"><span class="profile-row__icon" aria-hidden="true">✨</span><span class="profile-row__label">Анимация фона</span><span class="profile-row__value">Вкл</span><span class="profile-row__chev" aria-hidden="true">›</span></button>
+      </div>
+    </section>
+
+    <section class="profile-group" aria-label="Помощь и данные">
+      <h2 class="profile-group__title">Помощь и данные</h2>
+      <div class="profile-list">
+        <button type="button" class="profile-row" data-goto-view="states"><span class="profile-row__icon" aria-hidden="true">💬</span><span class="profile-row__label">Помощь и поддержка</span><span class="profile-row__chev" aria-hidden="true">›</span></button>
+        <button type="button" class="profile-row"><span class="profile-row__icon" aria-hidden="true">🎁</span><span class="profile-row__label">Пригласить подругу</span><span class="profile-row__value">+50 ✦</span><span class="profile-row__chev" aria-hidden="true">›</span></button>
+        <button type="button" class="profile-row" data-goto-view="states"><span class="profile-row__icon" aria-hidden="true">📦</span><span class="profile-row__label">Мои данные</span><span class="profile-row__chev" aria-hidden="true">›</span></button>
+        <button type="button" class="profile-row profile-row--danger"><span class="profile-row__icon" aria-hidden="true">⚠️</span><span class="profile-row__label">Удалить аккаунт</span><span class="profile-row__chev" aria-hidden="true">›</span></button>
+      </div>
+    </section>
+
+    <p class="mock-note">Приглашения и отзывы — только реально существующие функции (§9.6). «Удалить аккаунт» — отдельная опасная зона с финальным подтверждением (S29); экспорт и приватность — в «Мои данные». Неопределённые функции не рисуем кнопками (S30-принцип).</p>
+  </main>
+  <nav class="bottomnav" aria-label="Разделы">
+    <div class="bottomnav__tabs">
+      <button type="button" class="bottomnav__tab" data-goto-view="states"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 5h14M4 11h14M4 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Чат</button>
+      <button type="button" class="bottomnav__tab" data-goto-view="today"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 7v4l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Сегодня</button>
+      <button type="button" class="bottomnav__tab" data-goto-view="library"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M5 4v14m4-14v14M13 5l5 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Библиотека</button>
+      <button type="button" class="bottomnav__tab" aria-current="page"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 18c1.4-3 3.9-4.5 6.5-4.5s5.1 1.5 6.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Профиль</button>
+    </div>
+  </nav>
+</div>
+</div>
+
+<!-- ========================================================
+     S22 ПАМЯТЬ (подраздел профиля): сохранённые сведения,
+     удаление с объяснением последствий (§9.4).
+     ======================================================== -->
+<div class="screen-view" id="view-memory" role="region" aria-label="Контекст и память">
+<div class="screen">
+  <main class="subpage">
+    <header class="screenheader" style="margin:0 -16px;width:calc(100% + 32px);min-width:0">
+      <button type="button" class="screenheader__back" data-goto-view="profile" aria-label="Назад в профиль">
+        <svg viewBox="0 0 20 20" aria-hidden="true" style="width:18px;height:18px"><path d="M12 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Профиль
+      </button>
+      <span class="screenheader__title">Контекст и память</span>
+      <span class="screenheader__spacer"></span>
+    </header>
+    <p class="subpage__lede" style="margin-top:var(--space-2)">Лилит помнит то, чем ты поделилась. Удаление факта — навсегда; он больше не будет влиять на разборы.</p>
+
+    <div class="profile-list">
+      <div class="memory-row">
+        <span class="memory-row__text">«Работаю с людьми, после смены нет сил разговаривать»<span class="memory-row__src">из разговора · 2 сентября</span></span>
+        <button type="button" class="memory-row__del" data-mem-del="mem-1">Удалить</button>
+      </div>
+      <div class="memory-row">
+        <span class="memory-row__text">«Тревожусь перед звонками с мамой — хочу научиться мягче»<span class="memory-row__src">из разговора · 20 августа</span></span>
+        <button type="button" class="memory-row__del" data-mem-del="mem-2">Удалить</button>
+      </div>
+      <div class="memory-row">
+        <span class="memory-row__text">«Пью кофе после 16:00 — плохо сплю»<span class="memory-row__src">дневник · 12 августа</span></span>
+        <button type="button" class="memory-row__del" data-mem-del="mem-3">Удалить</button>
+      </div>
+    </div>
+
+    <p class="mock-note" style="margin-top:var(--space-3)">Подтверждение удаления появляется под фактом (не модалка): «Удалить факт? Лилит перестанет его учитывать. Это нельзя отменить». Удаление памяти ≠ удаление диалога ≠ удаление аккаунта — три разные операции с разным объяснением (§9.4).</p>
+  </main>
+</div>
+</div>
+
+<!-- ========================================================
+     S23 УВЕДОМЛЕНИЯ (подраздел): реальный канал, время
+     уведомлений ≠ город рождения (§9.4).
+     ======================================================== -->
+<div class="screen-view" id="view-notifications" role="region" aria-label="Уведомления">
+<div class="screen">
+  <main class="subpage">
+    <header class="screenheader" style="margin:0 -16px;width:calc(100% + 32px);min-width:0">
+      <button type="button" class="screenheader__back" data-goto-view="profile" aria-label="Назад в профиль">
+        <svg viewBox="0 0 20 20" aria-hidden="true" style="width:18px;height:18px"><path d="M12 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Профиль
+      </button>
+      <span class="screenheader__title">Уведомления</span>
+      <span class="screenheader__spacer"></span>
+    </header>
+    <p class="subpage__lede" style="margin-top:var(--space-2)">Приходят в Telegram. Время доставки считается по твоему текущему часовому поясу — он может отличаться от города рождения.</p>
+
+    <div class="profile-list">
+      <div class="notif-demo-row">
+        <div class="notif-demo-row__body">
+          <div class="notif-demo-row__name">Прогноз дня</div>
+          <div class="notif-demo-row__hint">Каждое утро в 09:00 · время: Москва (UTC+3)</div>
+        </div>
+        <label class="switch"><input type="checkbox" checked aria-label="Прогноз дня"><span class="switch__track" aria-hidden="true"></span><span class="switch__thumb" aria-hidden="true"></span></label>
+      </div>
+      <div class="notif-demo-row">
+        <div class="notif-demo-row__body">
+          <div class="notif-demo-row__name">Лунный ритм</div>
+          <div class="notif-demo-row__hint">Начало фазы · раз в несколько дней</div>
+        </div>
+        <label class="switch"><input type="checkbox" checked aria-label="Лунный ритм"><span class="switch__track" aria-hidden="true"></span><span class="switch__thumb" aria-hidden="true"></span></label>
+      </div>
+      <div class="notif-demo-row">
+        <div class="notif-demo-row__body">
+          <div class="notif-demo-row__name">Пауза всех уведомлений</div>
+          <div class="notif-demo-row__hint">До 20 сентября · включается и снимается здесь же</div>
+        </div>
+        <label class="switch"><input type="checkbox" aria-label="Пауза всех уведомлений"><span class="switch__track" aria-hidden="true"></span><span class="switch__thumb" aria-hidden="true"></span></label>
+      </div>
+    </div>
+
+    <p class="mock-note" style="margin-top:var(--space-3)">Язык и «Анимация фона» — соседний подраздел; reduced-motion уважает системную настройку (R05 §3.3). Часовой пояс уведомлений — отдельное поле, не привязано к городу рождения молча (§9.1).</p>
+  </main>
+</div>
+</div>
+
+<!-- ========================================================
+     S24 ТАРИФ И БАЛАНС (план §9.5): серверные цены, состав,
+     текущий план, Кристаллы обычной фразой, способы оплаты.
+     ======================================================== -->
+<div class="screen-view" id="view-plan" role="region" aria-label="Тариф и баланс">
+<div class="screen">
+  <main class="subpage">
+    <header class="screenheader" style="margin:0 -16px;width:calc(100% + 32px);min-width:0">
+      <button type="button" class="screenheader__back" data-goto-view="profile" aria-label="Назад в профиль">
+        <svg viewBox="0 0 20 20" aria-hidden="true" style="width:18px;height:18px"><path d="M12 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Профиль
+      </button>
+      <span class="screenheader__title">Тариф и баланс</span>
+      <span class="screenheader__spacer"></span>
+    </header>
+
+    <div class="balance-box" style="margin-top:var(--space-3)">
+      <span class="balance-box__icon" aria-hidden="true">✦</span>
+      <span><span class="balance-box__label">Твои Кристаллы</span><br><span class="balance-box__amount">120 ✦</span></span>
+      <button type="button" class="btn btn--secondary balance-box__buy">Пополнить</button>
+    </div>
+
+    <section class="plan-card plan-card--current" aria-label="Текущий тариф">
+      <span class="plan-card__badge">Текущий</span>
+      <div class="plan-card__top"><span class="plan-card__name">VIP</span><span class="plan-card__price">490 ₽<small>/мес</small></span></div>
+      <p class="plan-card__tagline">Личный AI-проводник, память и регулярная глубина.</p>
+      <ul class="plan-card__list">
+        <li>Неограниченные разговоры с Лилит</li>
+        <li>3 прогноза дня и карта дня</li>
+        <li>Расклады Таро — включены, личный смысл отдельно</li>
+        <li>Списание 11 октября · продление автоматическое</li>
+      </ul>
+    </section>
+
+    <p class="mock-note" style="margin:var(--space-3) 0 var(--space-2)">Цены и состав — только из серверных данных (§9.5); при смене тарифа показывается разница и дата. Способы оплаты — одна форма ниже:</p>
+
+    <div class="pay-methods" role="group" aria-label="Способ оплаты">
+      <button type="button" class="pay-method" aria-pressed="true"><span class="pay-method__icon" aria-hidden="true">⭐</span><span class="pay-method__name">Telegram Stars</span><span class="pay-method__hint">в окне Telegram</span></button>
+      <button type="button" class="pay-method" aria-pressed="false"><span class="pay-method__icon" aria-hidden="true">💎</span><span class="pay-method__name">Криптоплатёж</span><span class="pay-method__hint">TON · USDT</span></button>
+    </div>
+
+    <button type="button" class="btn btn--primary btn--block" style="margin-top:var(--space-4)">Перейти на VIP Plus · 890 ₽/мес</button>
+    <button type="button" class="promo-link" aria-expanded="false" id="promo-toggle">Есть промокод?</button>
+
+    <p class="mock-note">Кристаллы объяснены одной фразой и стоимостью конкретного действия; без баланса в шапках и без рекламной ленты (§9.5). Состояния оплаты: выбор → счёт → переход к провайдеру → ожидание → оплачено/отклонено/неизвестно — виды «Заказы», «Paywall», «Ожидание».</p>
+  </main>
+</div>
+</div>
+
+<!-- ========================================================
+     S26 ЗАКАЗЫ (план §9.5): статусы честные, pending ≠ failed,
+     «Проверить статус» — для неопределённых.
+     ======================================================== -->
+<div class="screen-view" id="view-orders" role="region" aria-label="История заказов">
+<div class="screen">
+  <main class="subpage">
+    <header class="screenheader" style="margin:0 -16px;width:calc(100% + 32px);min-width:0">
+      <button type="button" class="screenheader__back" data-goto-view="plan" aria-label="Назад к тарифу">
+        <svg viewBox="0 0 20 20" aria-hidden="true" style="width:18px;height:18px"><path d="M12 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Тариф
+      </button>
+      <span class="screenheader__title">История заказов</span>
+      <span class="screenheader__spacer"></span>
+    </header>
+
+    <div class="profile-list" style="margin-top:var(--space-3)">
+      <div class="order-row">
+        <div class="order-row__body">
+          <div class="order-row__name">VIP · подписка, месяц</div>
+          <div class="order-row__meta">10 сентября · 490 ₽ · Telegram Stars</div>
+        </div>
+        <span class="order-row__status status-chip status-chip--paid">Оплачен</span>
+      </div>
+      <div class="order-row">
+        <div class="order-row__body">
+          <div class="order-row__name">Личный смысл расклада</div>
+          <div class="order-row__meta">8 сентября · 80 ✦</div>
+        </div>
+        <span class="order-row__status status-chip status-chip--paid">Оплачен</span>
+      </div>
+      <div class="order-row">
+        <div class="order-row__body">
+          <div class="order-row__name">VIP Plus · подписка, месяц</div>
+          <div class="order-row__meta">7 сентября · 890 ₽</div>
+        </div>
+        <span class="order-row__status status-chip status-chip--pending">Ожидает</span>
+      </div>
+      <div class="order-row">
+        <div class="order-row__body">
+          <div class="order-row__name">100 ✦ Кристаллов</div>
+          <div class="order-row__meta">5 сентября · 350 ₽</div>
+        </div>
+        <span class="order-row__status status-chip status-chip--unknown">Неизвестно</span>
+        <button type="button" class="btn btn--ghost order-row__check">Проверить статус</button>
+      </div>
+      <div class="order-row">
+        <div class="order-row__body">
+          <div class="order-row__name">Синастрия с Даниилом</div>
+          <div class="order-row__meta">1 сентября · 120 ✦</div>
+        </div>
+        <span class="order-row__status status-chip status-chip--failed">Отменён</span>
+      </div>
+    </div>
+
+    <p class="mock-note" style="margin-top:var(--space-3)">«Неизвестно» не прячется под «ошибка, купите ещё раз» (S26): действие — сверка на сервере, без повторного списания. Pending не отменяется Back'ом (H7).</p>
+  </main>
+</div>
+</div>
+
+<!-- ========================================================
+     S24 PAYWALL = sheet из ограничения доступа (R02 §1.1):
+     return_to сохранён, «Не сейчас» — путь назад, без тупика.
+     ======================================================== -->
+<div class="screen-view" id="view-paywall" role="region" aria-label="Paywall">
+<div class="screen">
+  <div class="tool-view" style="max-width:560px">
+    <header class="screenheader" style="margin:0 -16px;width:calc(100% + 32px);min-width:0">
+      <button type="button" class="screenheader__back" aria-label="Вернуться к инструменту">
+        <svg viewBox="0 0 20 20" aria-hidden="true" style="width:18px;height:18px"><path d="M12 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Назад
+      </button>
+      <span class="screenheader__title">Тариф VIP</span>
+      <span class="screenheader__spacer"></span>
+    </header>
+
+    <div class="paywall__return-note" role="status">
+      <span aria-hidden="true">↩</span>
+      <span>После оплаты вернёшься к <strong>разбору синастрии</strong> — черновик и вопрос сохранены.</span>
+    </div>
+
+    <div class="plan-card plan-card--current">
+      <div class="plan-card__top"><span class="plan-card__name">VIP</span></div>
+      <div class="paywall__price-row"><span class="paywall__price">490 ₽</span><span class="paywall__period">в месяц · отмена в любой момент</span></div>
+      <ul class="paywall__what">
+        <li>Неограниченные разговоры с Лилит</li>
+        <li>Натальная карта и разборы Урании</li>
+        <li>Расклады Таро — включены</li>
+      </ul>
+      <button type="button" class="btn btn--primary btn--block">Оплатить через Telegram Stars</button>
+      <p class="paywall__legal">Оплата проходит в окне Telegram. Мы не видим и не храним данные карты.</p>
+      <button type="button" class="btn btn--ghost btn--block paywall__no">Не сейчас</button>
+    </div>
+
+    <button type="button" class="promo-link" aria-expanded="false">Есть промокод?</button>
+    <p class="mock-note">«Не сейчас» возвращает к тому же инструменту и черновику (H6, E16) — paywall не ловушка. Промокод раскрывается по короткой ссылке, не отдельным экраном (§9.5).</p>
+  </div>
+</div>
+</div>
+
+<!-- ========================================================
+     S25 ОЖИДАНИЕ ОПЛАТЫ (план §9.5): после перехода к
+     провайдеру. Pending ≠ failed; повтор не списывает дважды.
+     ======================================================== -->
+<div class="screen-view" id="view-pay-pending" role="region" aria-label="Ожидание оплаты">
+<div class="screen">
+  <main class="subpage">
+    <header class="screenheader" style="margin:0 -16px;width:calc(100% + 32px);min-width:0">
+      <button type="button" class="screenheader__back" data-goto-view="plan" aria-label="Назад к тарифу">
+        <svg viewBox="0 0 20 20" aria-hidden="true" style="width:18px;height:18px"><path d="M12 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Тариф
+      </button>
+      <span class="screenheader__title">Ожидание оплаты</span>
+      <span class="screenheader__spacer"></span>
+    </header>
+
+    <div class="pay-pending" role="status" style="margin-top:var(--space-3)">
+      <div class="tool-run__spinner" aria-hidden="true"></div>
+      <div class="pay-pending__title">Проверяем оплату</div>
+      <p class="pay-pending__text">Это занимает обычно меньше минуты. Счёт уже создан — не оплачивай повторно, даже если окно закрылось.</p>
+      <button type="button" class="btn btn--secondary">Проверить статус</button>
+    </div>
+
+    <p class="mock-note" style="margin-top:var(--space-3)">Закрытие окна провайдера ≠ оплата и ≠ отмена (§9.5, E17): статус сверяется на сервере при возврате; intent и форма переживают внешний провайдер. «Оплачено» открывает исходное намерение — тот же инструмент и вопрос (E16).</p>
+  </main>
+</div>
+</div>
+
+<!-- ========================================================
+     S13 БОЛЬШОЙ РАСКЛОД (план §6): Кельтский крест 10 — сетка
+     позиций на тех же картах, выбор также списком, zoom отдельной картой.
+     ======================================================== -->
+<div class="screen-view" id="view-tarot-grid" role="region" aria-label="Кельтский крест">
+<div class="screen">
+  <div class="tool-view" style="max-width:640px">
+    <header class="screenheader" style="margin:0 -16px;width:calc(100% + 32px);min-width:0">
+      <button type="button" class="screenheader__back" aria-label="Назад">
+        <svg viewBox="0 0 20 20" aria-hidden="true" style="width:18px;height:18px"><path d="M12 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Назад
+      </button>
+      <span class="screenheader__title">Кельтский крест · 10 карт</span>
+      <span class="screenheader__spacer"></span>
+    </header>
+
+    <p class="tarot-scene__status" style="margin-bottom:var(--space-3)">Открыто 4 из 10 · открывай по порядку позиций</p>
+
+    <div class="tarot-grid" role="group" aria-label="Позиции расклада">
+      <button type="button" class="tarot-grid__cell is-open" aria-pressed="true" aria-label="Позиция 1, Суть. Карта открыта"><span class="tarot-grid__cell-num" aria-hidden="true">1</span><img class="tarot-grid__cell-img" src="img/tarot/m00.jpg" alt="Шут, позиция 1"></button>
+      <button type="button" class="tarot-grid__cell is-open" aria-pressed="true" aria-label="Позиция 2, Пересечение. Карта открыта"><span class="tarot-grid__cell-num" aria-hidden="true">2</span><img class="tarot-grid__cell-img" src="img/tarot/m01.jpg" alt="Маг, позиция 2"></button>
+      <button type="button" class="tarot-grid__cell is-open" aria-pressed="true" aria-label="Позиция 3, Основание. Карта открыта"><span class="tarot-grid__cell-num" aria-hidden="true">3</span><img class="tarot-grid__cell-img" src="img/tarot/m02.jpg" alt="Жрица, позиция 3"></button>
+      <button type="button" class="tarot-grid__cell is-open" aria-pressed="true" aria-label="Позиция 4, Недавнее прошлое. Карта открыта"><span class="tarot-grid__cell-num" aria-hidden="true">4</span><img class="tarot-grid__cell-img" src="img/tarot/pents09.jpg" alt="Девятка Пентаклей, позиция 4"></button>
+      <button type="button" class="tarot-grid__cell" aria-pressed="false" aria-label="Позиция 5, Возможное"><span class="tarot-grid__cell-num" aria-hidden="true">5</span><img class="tarot-grid__cell-img" src="img/tarot/wands03.jpg" alt=""></button>
+      <button type="button" class="tarot-grid__cell" aria-pressed="false" aria-label="Позиция 6, Ближайшее будущее"><span class="tarot-grid__cell-num" aria-hidden="true">6</span><img class="tarot-grid__cell-img" src="img/tarot/swords10.jpg" alt=""></button>
+      <button type="button" class="tarot-grid__cell" aria-pressed="false" aria-label="Позиция 7, Ты сам"><span class="tarot-grid__cell-num" aria-hidden="true">7</span><img class="tarot-grid__cell-img" src="img/tarot/cups02.jpg" alt=""></button>
+      <button type="button" class="tarot-grid__cell" aria-pressed="false" aria-label="Позиция 8, Окружение"><span class="tarot-grid__cell-num" aria-hidden="true">8</span><img class="tarot-grid__cell-img" src="img/tarot/m17.jpg" alt=""></button>
+      <button type="button" class="tarot-grid__cell" aria-pressed="false" aria-label="Позиция 9, Надежды и страхи"><span class="tarot-grid__cell-num" aria-hidden="true">9</span><img class="tarot-grid__cell-img" src="img/tarot/m19.jpg" alt=""></button>
+      <button type="button" class="tarot-grid__cell" aria-pressed="false" aria-label="Позиция 10, Итог"><span class="tarot-grid__cell-num" aria-hidden="true">10</span><img class="tarot-grid__cell-img" src="img/tarot/m04.jpg" alt=""></button>
+    </div>
+
+    <div class="tarot-grid__list">
+      <details class="result-details">
+        <summary class="result-details__summary">Позиции списком — для выбора без попадания в клетку</summary>
+        <div class="result-details__body">
+          <p style="margin:0">1 · Суть — Шут · начало пути без гарантий<br>2 · Пересечение — Маг · чем владеешь<br>3 · Основание — Жрица · что уже знаешь<br>4 · Недавнее — Девятка Пентаклей · опора на себя<br>5–10 · закрыты</p>
+        </div>
+      </details>
+      <p class="tarot-grid__note tarot-scene__note">Клетка и список ведут к одному увеличенному просмотру; подписи позиций — в списке, не поверх схемы (§11.3).</p>
+    </div>
+
+    <p class="mock-note">Карты — существующая колода (md5-сверка). На mobile сетка сжимается до 5 колонок ≥360px, ниже — 3; на desktop ≥1280 — центральная расширенная сцена (R02 §2.3). Reduced motion: появление карт без анимации.</p>
+  </div>
+</div>
+</div>
+
+<!-- ========================================================
+     МАТРИЦА СОСТОЯНИЙ §11.2 (S01–S30): кадры для FE по одному
+     экрану-носителю; неприменимость отмечена явно.
+     ======================================================== -->
+<div class="screen-view" id="view-states" role="region" aria-label="Матрица состояний">
+<div class="screen">
+  <main class="today">
+    <header class="section-head">
+      <h1 class="section-head__title">Матрица состояний §11.2</h1>
+      <p class="section-head__sub">Кадры состояний для переноса в разработку. Полная матрица по 30 экранам — в SPEC.md §2.8; здесь — образцы каждого класса.</p>
+    </header>
+
+    <section class="profile-group" aria-label="Loading">
+      <h2 class="profile-group__title">Loading (skeleton)</h2>
+      <div class="state-cell">
+        <p class="today__forecast-text" style="margin-bottom:var(--space-2)">Сегодня</p>
+        <span class="skeleton skeleton--w60"></span>
+        <span class="skeleton" style="margin-top:6px"></span>
+        <span class="skeleton skeleton--w80" style="margin-top:6px"></span>
+      </div>
+      <p class="mock-note" style="margin-top:var(--space-2)">S15, S20, S26: skeleton сохраняет каркас экрана; кнопки не активны до данных.</p>
+    </section>
+
+    <section class="profile-group" aria-label="Empty">
+      <h2 class="profile-group__title">Empty (нет данных — не ноль)</h2>
+      <div class="state-cell">
+        <div class="empty-state">
+          <span class="empty-state__icon" aria-hidden="true">✳️</span>
+          <div class="empty-state__title">Разборов пока нет</div>
+          <p class="empty-state__text">Построй натальную карту или вытяни расклад — они появятся здесь.</p>
+          <button type="button" class="btn btn--secondary">Открыть инструменты</button>
+        </div>
+      </div>
+      <p class="mock-note" style="margin-top:var(--space-2)">S20-Библиотека, S07-История: empty объясняет следующий шаг, не «0 записей».</p>
+    </section>
+
+    <section class="profile-group" aria-label="Нет доступа">
+      <h2 class="profile-group__title">Нет доступа → paywall (H6)</h2>
+      <div class="state-cell">
+        <div class="status-banner status-banner--info">
+          <span class="status-banner__icon" aria-hidden="true">✦</span>
+          <div>
+            <div class="status-banner__title">Разбор синастрии входит в VIP</div>
+            <p class="status-banner__text">Черновик сохранён — вернёшься к нему после оплаты.</p>
+            <div class="status-banner__actions">
+              <button type="button" class="btn btn--primary" style="min-height:40px">Смотреть тариф</button>
+              <button type="button" class="btn btn--ghost" style="min-height:40px">Не сейчас</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="mock-note" style="margin-top:var(--space-2)">Ограничение доступа → sheet paywall с return_to (S24, E16); черновик не теряется.</p>
+    </section>
+
+    <section class="profile-group" aria-label="Ошибка сети">
+      <h2 class="profile-group__title">Ошибка сети / offline</h2>
+      <div class="state-cell">
+        <div class="status-banner status-banner--error" role="alert">
+          <span class="status-banner__icon" aria-hidden="true">⚠️</span>
+          <div>
+            <div class="status-banner__title">Нет соединения</div>
+            <p class="status-banner__text">Прогноз не загрузился. Проверь интернет и повтори.</p>
+            <div class="status-banner__actions"><button type="button" class="btn btn--secondary" style="min-height:40px">Повторить</button></div>
+          </div>
+        </div>
+      </div>
+      <p class="mock-note" style="margin-top:var(--space-2)">S15, S06, S20: сбой загрузки предлагает «Повторить», не изображает пустоту (§9.2).</p>
+    </section>
+
+    <section class="profile-group" aria-label="Сессия истекла">
+      <h2 class="profile-group__title">Session expired (не исчезает)</h2>
+      <div class="state-cell">
+        <div class="status-banner status-banner--error" role="alert">
+          <span class="status-banner__icon" aria-hidden="true">🔐</span>
+          <div>
+            <div class="status-banner__title">Сессия истекла</div>
+            <p class="status-banner__text">Войди заново, чтобы продолжить. Данные и черновики сохранены.</p>
+            <div class="status-banner__actions">
+              <button type="button" class="btn btn--primary" style="min-height:40px">Войти заново</button>
+              <button type="button" class="btn btn--ghost" style="min-height:40px">Помощь</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="mock-note" style="margin-top:var(--space-2)">Критическое состояние входа не исчезает через 3 секунды (§11.2); session не перезаписывается при каждом render (S01).</p>
+    </section>
+
+    <section class="profile-group" aria-label="Сессия истекла в списке">
+      <h2 class="profile-group__title">Запись не найдена (deep link, H10)</h2>
+      <div class="state-cell">
+        <div class="lib-stale" role="status">
+          <span class="lib-stale__icon" aria-hidden="true">🔍</span>
+          <div class="lib-stale__text">
+            <strong>Разбор не найден</strong> — возможно, он удалён или ссылка устарела.
+            <div class="lib-stale__actions"><button type="button" class="btn btn--secondary" style="min-height:40px">В библиотеку</button></div>
+          </div>
+        </div>
+      </div>
+      <p class="mock-note" style="margin-top:var(--space-2)">Deep link на missing/deleted id → понятное состояние с возвратом, не тупик (E15, H10).</p>
+    </section>
+
+    <section class="profile-group" aria-label="Некорректный ввод">
+      <h2 class="profile-group__title">Ошибка поля (у поля, не тостом)</h2>
+      <div class="state-cell">
+        <div class="field" style="max-width:360px">
+          <label class="field__label" for="st-city">Город рождения</label>
+          <input class="field__input" id="st-city" value="Москв" aria-invalid="true" aria-describedby="st-city-err">
+          <p class="field__error" id="st-city-err"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v3.5M8 10.6v.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Выбери город из подсказок — так часовой пояс будет верным</p>
+        </div>
+      </div>
+      <p class="mock-note" style="margin-top:var(--space-2)">S04/S11: ошибка поля живёт у поля; ошибка запуска — в рабочем пространстве; критическое — баннером (§11.2).</p>
+    </section>
+
+    <p class="mock-note">Элементные состояния (hover/focus-visible/pressed/selected/disabled/loading) — в базовых компонентах всех пакетов. Toast — только краткие подтверждения («Скопировано»), закрытие тоста никогда не единственный путь (§11.2).</p>
+  </main>
+  <nav class="bottomnav" aria-label="Разделы">
+    <div class="bottomnav__tabs">
+      <button type="button" class="bottomnav__tab" aria-current="page"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 5h14M4 11h14M4 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Чат</button>
+      <button type="button" class="bottomnav__tab" data-goto-view="today"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 7v4l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Сегодня</button>
+      <button type="button" class="bottomnav__tab" data-goto-view="library"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M5 4v14m4-14v14M13 5l5 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Библиотека</button>
+      <button type="button" class="bottomnav__tab" data-goto-view="profile"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 18c1.4-3 3.9-4.5 6.5-4.5s5.1 1.5 6.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Профиль</button>
+    </div>
+  </nav>
+</div>
+</div>
+
+<script>
+/* Прототипная логика макета. Не прод-код. */
+(function () {
+  var views = document.querySelectorAll('.screen-view');
+  var navBtns = document.querySelectorAll('.proto-nav button');
+  var sky = document.getElementById('sky');
+
+  function showView(id) {
+    views.forEach(function (v) { v.classList.toggle('is-active', v.id === 'view-' + id); });
+    navBtns.forEach(function (b) { b.classList.toggle('is-active', b.dataset.view === id); });
+    if (sky) { sky.dataset.bg = 'chat'; }
+  }
+
+  navBtns.forEach(function (b) {
+    b.addEventListener('click', function () { showView(b.dataset.view); });
+  });
+
+  function applyHash() {
+    var h = location.hash.replace('#', '');
+    if (h.indexOf('view-') === 0) showView(h.slice(5));
+  }
+  window.addEventListener('hashchange', applyHash);
+  applyHash();
+
+  document.querySelectorAll('[data-goto-view]').forEach(function (b) {
+    b.addEventListener('click', function () { showView(b.dataset.gotoView); });
+  });
+
+  /* Сегодня: «Развернуть» прогноз (§9.2, без обрезания в рамке) */
+  var exp = document.getElementById('today-expand');
+  var fc = document.getElementById('today-fc');
+  if (exp && fc) {
+    exp.addEventListener('click', function () {
+      var open = fc.classList.toggle('today__forecast--clamped');
+      exp.setAttribute('aria-expanded', String(!open));
+      exp.firstChild.textContent = open ? 'Развернуть ' : 'Свернуть ';
+    });
+  }
+
+  /* Библиотека: табы — состояние раздела (R02 §2.1) */
+  var tabs = document.querySelectorAll('.seg-tabs__tab');
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      tabs.forEach(function (x) { x.setAttribute('aria-selected', String(x === t)); });
+      document.querySelectorAll('#view-library [role="tabpanel"]').forEach(function (p) {
+        p.hidden = p.getAttribute('aria-labelledby') !== t.id;
+      });
+    });
+  });
+
+  /* Тариф: промокод по короткой ссылке (§9.5) */
+  document.querySelectorAll('.promo-link').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var row = document.createElement('div');
+      row.className = 'promo-row';
+      row.innerHTML = '<label class="visually-hidden" for="promo-in">Промокод</label><input class="field__input" id="promo-in" placeholder="Например, LUNA50"><button type="button" class="btn btn--secondary">Применить</button>';
+      b.replaceWith(row);
+    });
+  });
+
+  /* Память: подтверждение удаления под фактом (не модалка) */
+  document.querySelectorAll('[data-mem-del]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var row = b.closest('.memory-row');
+      if (!row || row.nextElementSibling && row.nextElementSibling.classList.contains('memory-confirm')) return;
+      var conf = document.createElement('div');
+      conf.className = 'memory-confirm';
+      conf.setAttribute('role', 'alertdialog');
+      conf.innerHTML = '<strong>Удалить факт?</strong> Лилит перестанет его учитывать. Это нельзя отменить.<div class="memory-confirm__actions"><button type="button" class="btn btn--primary" style="min-height:36px">Удалить</button><button type="button" class="btn btn--ghost" style="min-height:36px">Оставить</button></div>';
+      row.after(conf);
+      conf.querySelector('.btn--ghost').addEventListener('click', function () { conf.remove(); });
+      conf.querySelector('.btn--primary').addEventListener('click', function () { row.remove(); conf.remove(); });
+    });
+  });
+
+  /* Кельтский крест: открытие по порядку позиций (§6.4-правило) */
+  var cells = Array.prototype.slice.call(document.querySelectorAll('#view-tarot-grid .tarot-grid__cell'));
+  var gridOpened = cells.filter(function (c) { return c.classList.contains('is-open'); }).length;
+  cells.forEach(function (cell) {
+    cell.addEventListener('click', function () {
+      if (cell.classList.contains('is-open')) return;
+      var i = Number(cell.querySelector('.tarot-grid__cell-num').textContent);
+      if (i !== gridOpened + 1) { cell.setAttribute('data-warn', 'Открывай позиции по порядку'); return; }
+      cell.classList.add('is-open');
+      cell.setAttribute('aria-pressed', 'true');
+      gridOpened += 1;
+    });
+  });
+})();
+</script>
+</body>
+</html>

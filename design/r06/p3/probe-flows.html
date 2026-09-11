@@ -1,0 +1,95 @@
+<!DOCTYPE html><html><body style="margin:0">
+<pre id="out">PENDING</pre>
+<script>
+const base = 'http://127.0.0.1:8743/index.html';
+const out = document.getElementById('out');
+const results = [];
+function check(name, cond, detail) { results.push({name, ok: !!cond, detail: detail || ''}); }
+
+fetch(base).then(r => r.text()).then(html => {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'width:400px;height:800px;border:0';
+  document.body.appendChild(iframe);
+  iframe.srcdoc = html;
+  iframe.onload = () => setTimeout(() => {
+    const w = iframe.contentWindow, d = iframe.contentDocument;
+    const $ = s => d.querySelector(s);
+    const $$ = s => Array.from(d.querySelectorAll(s));
+
+    // 1. Hash-навигация: все 9 видов активируются
+    const ids = ['today','library','profile','memory','notifications','plan','orders','paywall','pay-pending','tarot-grid','states'];
+    ids.forEach(id => {
+      const el = d.getElementById('view-' + id);
+      check('view-exists:' + id, !!el, el ? '' : 'no element');
+    });
+
+    // 2. Сегодня: «Развернуть» переключает clamp и aria-expanded
+    w.location.hash = '#view-today';
+    w.dispatchEvent(new Event('hashchange'));
+    const expBtn = $('#today-expand'), fc = $('#today-fc');
+    const clampedBefore = fc.classList.contains('today__forecast--clamped');
+    expBtn.click();
+    const clampedAfter = fc.classList.contains('today__forecast--clamped');
+    check('today-expand', clampedBefore && !clampedAfter && expBtn.getAttribute('aria-expanded') === 'true', 'before=' + clampedBefore + ' after=' + clampedAfter);
+
+    // 3. Библиотека: табы переключают панели
+    w.location.hash = '#view-library';
+    w.dispatchEvent(new Event('hashchange'));
+    const tabDiary = $('#tab-diary');
+    tabDiary.click();
+    const diarySel = tabDiary.getAttribute('aria-selected') === 'true';
+    const diaryHidden = $('#pane-diary').hidden === false;
+    const readingsHidden = $('#pane-readings').hidden === true;
+    check('library-tabs', diarySel && diaryHidden && readingsHidden, 'sel=' + diarySel + ' paneShown=' + diaryHidden + ' oldHidden=' + readingsHidden);
+
+    // 4. Память: «Удалить» → подтверждение под фактом → «Оставить» закрывает
+    w.location.hash = '#view-memory';
+    w.dispatchEvent(new Event('hashchange'));
+    const delBtn = $('[data-mem-del="mem-1"]');
+    delBtn.click();
+    const conf = $('.memory-confirm');
+    check('memory-confirm-appears', !!conf, '');
+    if (conf) {
+      conf.querySelector('.btn--ghost').click();
+      check('memory-cancel-removes', !$('.memory-confirm'), '');
+    }
+
+    // 5. Память: «Удалить» → «Удалить» убирает факт
+    delBtn.click();
+    const conf2 = $('.memory-confirm');
+    if (conf2) {
+      conf2.querySelector('.btn--primary').click();
+      check('memory-delete-removes-fact', !$('[data-mem-del="mem-1"]'), '');
+    } else check('memory-delete-removes-fact', false, 'no confirm');
+
+    // 6. Кельтский крест: открытие по порядку (позиция 6 при открытых 1-4 — блок, позиция 5 — ок)
+    w.location.hash = '#view-tarot-grid';
+    w.dispatchEvent(new Event('hashchange'));
+    const cells = $$('#view-tarot-grid .tarot-grid__cell');
+    const pos6 = cells[5], pos5 = cells[4];
+    pos6.click();
+    const blocked6 = !pos6.classList.contains('is-open');
+    pos5.click();
+    const opened5 = pos5.classList.contains('is-open') && pos5.getAttribute('aria-pressed') === 'true';
+    check('grid-order-block', blocked6, '');
+    check('grid-order-open', opened5, '');
+
+    // 7. Промокод: ссылка раскрывает поле ввода
+    w.location.hash = '#view-plan';
+    w.dispatchEvent(new Event('hashchange'));
+    const promo = $('#promo-toggle');
+    promo.click();
+    check('promo-reveal', !!d.getElementById('promo-in'), '');
+
+    // 8. Interactivity essentials: switch доступен с клавиатуры (focusable input)
+    w.location.hash = '#view-notifications';
+    w.dispatchEvent(new Event('hashchange'));
+    const swInput = $('#view-notifications .switch input');
+    check('switch-focusable', !!swInput && swInput.type === 'checkbox' && swInput.getAttribute('aria-label'), '');
+
+    out.textContent = 'RESULT ' + JSON.stringify(results);
+  }, 600);
+});
+</script>
+</body></html>
