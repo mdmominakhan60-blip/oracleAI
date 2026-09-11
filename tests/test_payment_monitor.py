@@ -65,7 +65,7 @@ async def test_monitor_dead_channel_caps_delivery_attempts(db, monkeypatch):
     max_attempts = payment_monitor.MAX_ALERT_DELIVERY_ATTEMPTS
     first = await payment_monitor.run(None, db, now=now)
     assert first["last_alert_at"] == first["checked_at"]
-    second = await payment_monitor.run(None, db, now=now + timedelta(hours=1, minutes=10))
+    await payment_monitor.run(None, db, now=now + timedelta(hours=1, minutes=10))
     third = await payment_monitor.run(
         None, db, now=now + timedelta(hours=2, minutes=20))
     assert len(attempts) == max_attempts
