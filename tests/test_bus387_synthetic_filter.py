@@ -182,3 +182,116 @@ def test_not_synthetic_tg_sql_shape():
     assert "999000000" in frag and "999999999" in frag
     assert "NOT IN (10001, 10002)" in frag
     assert "e.tg_id IS NULL" in frag
+
+
+# ─────────────────── scheduler-аудитории (BUS-976) ──────────────────────────
+
+async def _seed_synthetic_users(db):
+    """Синтетика как в проде: onboarded=1, active, morning_push=1, МСК."""
+    from app.repo import users as users_repo
+    for tg_id in (10001, 10002):
+        await users_repo.ensure(db, tg_id, f"Synthetic {tg_id}")
+        await users_repo.update(db, tg_id, onboarded=1, status="active",
+                                morning_push=1, tz="Europe/Moscow")
+
+
+async def test_tick_audience_excludes_synthetic(db):
+    """Главный отбор тика не даёт синтетике forecast/weekly/feedback (BUS-976)."""
+    from app.services import scheduler
+
+    await _seed_synthetic_users(db)
+    scheduler._KNOWN_ZONES = ["Europe/Moscow"]
+    audience = await scheduler._audience(db, {"Europe/Moscow"})
+    ids = {u["tg_id"] for u in audience}
+    assert 10001 not in ids and 10002 not in ids
+
+
+async def test_pregen_audience_excludes_synthetic(db):
+    """Преген прогноза не генерируется для синтетики (BUS-976)."""
+    from app.repo import readings, users as users_repo
+    from app.services import scheduler
+
+    await _seed_synthetic_users(db)
+    scheduler._KNOWN_ZONES = ["Europe/Moscow"]
+    now = datetime(2026, 8, 3, 5, 0, tzinfo=timezone.utc)  # 8:00 МСК
+    await scheduler._pregen_forecasts(db, now, {"morning_hour": 9})
+
+    for tg_id in (10001, 10002):
+        day = users_repo.user_today(await users_repo.get(db, tg_id))
+        assert await readings.get_forecast(db, tg_id, day) is None
+
+
+async def test_expiring_audience_excludes_synthetic(db):
+    """Продления/winback не уходят синтетике (BUS-976)."""
+    from app.services import scheduler
+
+    now = datetime.now(timezone.utc)
+    from app.repo import users as users_repo
+    for tg_id in (10001, 10002):
+        await users_repo.ensure(db, tg_id, f"Synthetic {tg_id}")
+        await users_repo.update(db, tg_id, onboarded=1, status="active",
+                                tz="Europe/Moscow",
+                                sub_until=(now + timedelta(days=1)).isoformat())
+    audience = await scheduler._expiring_audience(db, now)
+    ids = {u["tg_id"] for u in audience}
+    assert 10001 not in ids and 10002 not in ids
+
+
+async def test_onboard_audience_excludes_synthetic(db):
+    """Onboard-дожим не трогает синтетику (BUS-976)."""
+    from app.services import scheduler
+
+    now = datetime.now(timezone.utc)
+    from app.repo import users as users_repo
+    for tg_id in (10001, 10002):
+        await users_repo.ensure(db, tg_id, f"Synthetic {tg_id}")
+        await users_repo.update(db, tg_id, onboarded=0, status="active",
+                                tz="Europe/Moscow")
+    await _insert_event(db, 10001, "start", when=now - timedelta(days=2))
+    audience = await scheduler._onboard_audience(db, now)
+    ids = {u["tg_id"] for u in audience}
+    assert 10001 not in ids and 10002 not in ids
+
+
+async def test_reactivate_audience_excludes_synthetic(db):
+    """Reactivate-цепочка не трогает синтетику (BUS-976)."""
+    from app.services import scheduler
+
+    now = datetime.now(timezone.utc)
+    await _seed_synthetic_users(db)
+    from app.repo import users as users_repo
+    for tg_id in (10001, 10002):
+        await db.execute(
+            "UPDATE users SET last_seen=:ls WHERE tg_id=:tg",
+            {"ls": (now - timedelta(days=16)).isoformat(), "tg": tg_id})
+    await db.commit()
+    audience = await scheduler._reactivate_audience(db, now)
+    ids = {u["tg_id"] for u in audience}
+    assert 10001 not in ids and 10002 not in ids
+
+
+async def test_crm_post_limit_audience_excludes_synthetic(db):
+    """free→paid post_limit не уходит синтетике (BUS-976)."""
+    from app.services import scheduler
+
+    now = datetime.now(timezone.utc)
+    await _seed_synthetic_users(db)
+    for tg_id in (10001, 10002):
+        await _insert_event(db, tg_id, "limit_reached",
+                            when=now - timedelta(hours=30))
+    audience = await scheduler._crm_post_limit_audience(db, now)
+    ids = {u["tg_id"] for u in audience}
+    assert 10001 not in ids and 10002 not in ids
+
+
+async def test_real_user_reaches_tick_audience(db):
+    """Фильтр не ест живых: реальный юзер в аудитории тика (BUS-976)."""
+    from app.services import scheduler
+
+    from app.repo import users as users_repo
+    await users_repo.ensure(db, 424242, "Real")
+    await users_repo.update(db, 424242, onboarded=1, status="active",
+                            morning_push=1, tz="Europe/Moscow")
+    scheduler._KNOWN_ZONES = ["Europe/Moscow"]
+    audience = await scheduler._audience(db, {"Europe/Moscow"})
+    assert 424242 in {u["tg_id"] for u in audience}
