@@ -170,6 +170,22 @@
 .seg-progress i { flex: 1; height: 1px; background: var(--seg-line); }
 .seg-progress i.is-on { background: var(--champagne-400); }
 
+/* ============================================================================
+   BUS-993 (R05 §3.3, E23): единый authoritative reduced-motion блок для фона.
+   Покрывает все 9 движений реестра §3.1: starDrift, gPulse, nebulaDrift,
+   meteorFall, twinkle, cstBlink, lilBreathe, кросс-фейд состояний, метеоры.
+   Локальные блоки модулей 04/07 удалены. CSS-спека: .galaxy — статичный кадр
+   (opacity фикс .47, середина диапазона gPulse).
+   ============================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .starfield::before, .starfield::after, .starfield .nebula,
+  .starfield .galaxy, .starfield .lilith-sil, .starfield .twinkle,
+  .meteor, .constellations .cst { animation: none !important; }
+  .meteor { display: none !important; }
+  .starfield, .starfield::before, .starfield::after,
+  .starfield .nebula, .starfield .galaxy, .starfield .lilith-sil { transition: none !important; }
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html { -webkit-text-size-adjust: 100%; }

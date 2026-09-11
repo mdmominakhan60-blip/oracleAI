@@ -111,6 +111,10 @@
             <span class="language-row__copy"><b>${esc(t('language'))}</b><small>${esc((me && me.lang) === 'en' ? t('english') : t('russian'))}</small></span>
             <span class="language-row__chevron" aria-hidden="true">›</span>
           </button>
+          <button class="glass language-row" data-act="bg-anim" type="button" role="switch" aria-checked="${app.bgAnimationEnabled() ? 'true' : 'false'}" aria-label="${esc(t('bgAnim'))}">
+            <span class="language-row__copy"><b>${esc(t('bgAnim'))}</b><small>${esc(t('bgAnimCopy'))}</small></span>
+            <span class="language-row__chevron" aria-hidden="true">${app.bgAnimationEnabled() ? '✓' : '—'}</span>
+          </button>
           <div class="spacer"></div>
           <div id="profile-referral"></div>
           ${me && me.feedback_pending ? `<button class="glass language-row" data-act="survey-open" type="button" aria-label="${esc(oracleLang() === 'en' ? 'Open week survey' : 'Открыть опрос недели')}">
