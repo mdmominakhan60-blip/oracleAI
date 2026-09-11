@@ -65,8 +65,11 @@ backup-drill:
 	python3 scripts/check_p004_infrastructure.py
 	bash -n infra/backup-postgres.sh infra/restore-postgres.sh
 
+# BUS-847/848: тихие цели — make не эхоит команды с кредами (пароль уже
+# в URL-assignments; xtrace/echo раскрывал бы их в логи). Все строки,
+# содержащие $$(grep ...PASSWORD...), — под @.
 ensure-test-role:
-	$(COMPOSE) run --rm --entrypoint "" \
+	@$(COMPOSE) run --rm --entrypoint "" \
 		-e POSTGRES_ADMIN_DATABASE_URL=postgresql://oracle:$$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)@postgres:5432/postgres \
 		api python scripts/ensure_test_role.py
 
@@ -76,7 +79,7 @@ ensure-test-role:
 ensure-mcp-role:
 	@test -f .env && grep -q '^ORACLEAI_MCP_ROLE_PASSWORD=' .env || \
 		{ echo "ORACLEAI_MCP_ROLE_PASSWORD не задан в .env (сгенерируй: openssl rand -hex 24)"; exit 1; }
-	$(COMPOSE) run --rm --entrypoint "" \
+	@$(COMPOSE) run --rm --entrypoint "" \
 		-e POSTGRES_ADMIN_DATABASE_URL=postgresql://$${POSTGRES_USER:-oracle}:$$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)@postgres:5432/postgres \
 		-e ORACLEAI_MCP_ROLE_PASSWORD=$$(grep '^ORACLEAI_MCP_ROLE_PASSWORD=' .env | cut -d= -f2-) \
 		api python scripts/ensure_mcp_role.py
@@ -97,14 +100,14 @@ ensure-mcp-role:
 #    reset чужого рана под живым pytest давал невоспроизводимые asyncpg-ошибки
 #    (инцидент 2026-09-06/07: BUS-330/351/334). Ждём до 15 мин, потом сдаёмся.
 test:
-	flock -w 900 /tmp/oracleai-make-test.lock \
+	@flock -w 900 /tmp/oracleai-make-test.lock \
 		$(CURDIR)/.venv/bin/python scripts/check_test_env.py \
 		|| flock -w 900 /tmp/oracleai-make-test.lock python3 scripts/check_test_env.py
-	flock -w 900 /tmp/oracleai-make-test.lock $(MAKE) _test
+	@flock -w 900 /tmp/oracleai-make-test.lock $(MAKE) _test
 .PHONY: _test
 _test:
-	$(COMPOSE) up -d --wait postgres
-	$(COMPOSE) run --rm --no-deps --entrypoint "" -e APP_ENV=test \
+	@$(COMPOSE) up -d --wait postgres
+	@$(COMPOSE) run --rm --no-deps --entrypoint "" -e APP_ENV=test \
 		-e DEV_MODE=1 -e DEV_KEY=test-dev-key \
 		-e ALLOW_DB_RESET=1 \
 		-e TEST_DATABASE_URL=postgresql+asyncpg://oracle_test:$$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)@postgres:5432/oracle_test \
