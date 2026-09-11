@@ -4,16 +4,12 @@ from __future__ import annotations
 import re
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
 
 from ...services.repo_gateway import notifications, users
+from ..contracts.wave_a import NotificationPreferencesIn
 from ..deps import confirmed_age_user, get_db, rate_limit
 
 router = APIRouter(prefix="/api", tags=["notifications"])
-
-
-class NotificationPreferencesIn(BaseModel):
-    morning_forecast: bool | None = None
 
 
 _TAGS = re.compile(r"</?(?:b|i|strong|em)>", re.IGNORECASE)

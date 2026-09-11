@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -20,6 +19,7 @@ from ...services.repo_gateway import monetization as monetization_repo
 from ...services import analytics
 from ...services import billing as billing_svc
 from ...services import invoices
+from ..contracts.wave_a import CryptoIn, InvoiceIn, SubscriptionCancelIn
 from ..deps import confirmed_age_user, get_db, rate_limit
 
 log = logging.getLogger("oracle.api.shop")
@@ -31,12 +31,6 @@ router = APIRouter(prefix="/api/shop", tags=["shop"])
 async def storefront(user=Depends(confirmed_age_user), db=Depends(get_db)):
     await analytics.track(db, analytics.E_SHOP_VIEW, user["tg_id"], surface="miniapp")
     return await billing_svc.storefront(db, user)
-
-
-class InvoiceIn(BaseModel):
-    sku: str | None = None
-    plan: str | None = None
-    billing_period: Literal["monthly", "annual"] = "monthly"
 
 
 @router.post("/invoice", dependencies=[Depends(rate_limit("write"))])
@@ -95,10 +89,6 @@ async def web_checkout(item: InvoiceIn, user=Depends(confirmed_age_user),
             "price_usd": order["plan"]["price_usd"]}
 
 
-class SubscriptionCancelIn(BaseModel):
-    cancel_at_period_end: bool = True
-
-
 @router.post("/subscription/cancel", dependencies=[Depends(rate_limit("write"))])
 async def cancel_subscription(item: SubscriptionCancelIn, user=Depends(confirmed_age_user), db=Depends(get_db)):
     state = await monetization_repo.set_cancel_at_period_end(
@@ -109,11 +99,6 @@ async def cancel_subscription(item: SubscriptionCancelIn, user=Depends(confirmed
                           props={"action": "cancel_at_period_end" if item.cancel_at_period_end else "resume"},
                           surface="miniapp")
     return {"ok": True, "subscription": state}
-
-
-class CryptoIn(BaseModel):
-    sku: str = Field(min_length=1, max_length=40)
-    asset: str = Field(default="USDT", min_length=2, max_length=8)
 
 
 @router.post("/crypto-invoice", dependencies=[Depends(rate_limit("write"))])

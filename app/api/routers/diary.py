@@ -9,19 +9,14 @@ import re
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, Field
 
 from ...core import astro, memory
 from ...services.repo_gateway import dialog, users
 from ...services import analytics
+from ..contracts.wave_a import DiaryIn
 from ..deps import confirmed_age_user, get_db, rate_limit
 
 router = APIRouter(prefix="/api", tags=["diary"])
-
-
-class DiaryIn(BaseModel):
-    text: str = Field(min_length=1, max_length=1000)
-    mood: str | None = Field(default=None, max_length=20)
 
 
 @router.get("/diary")

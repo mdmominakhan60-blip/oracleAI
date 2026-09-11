@@ -9,7 +9,6 @@ import re
 import time
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from pydantic import BaseModel, Field
 
 from ...core import agent as agent_core
 from ...core import product_cost
@@ -29,6 +28,7 @@ from ...services.repo_gateway import billing, readings, users
 from ...services import analytics, compatibility as compatibility_svc
 from ..common.validation import parse_birth_date
 from ..contracts.compatibility import CompatIn
+from ..contracts.wave_a import ChartBuildIn, PartnerIn, ReportIn
 from ..deps import confirmed_age_user, active_user, get_db, rate_limit
 
 router = APIRouter(prefix="/api", tags=["chart"])
@@ -262,12 +262,6 @@ async def chart(user=Depends(confirmed_age_user), db=Depends(get_db)):
 _TIME_RE = re.compile(r"^\d{1,2}:\d{2}$")
 
 
-class ChartBuildIn(BaseModel):
-    birth_date: str | None = None
-    birth_time: str | None = None
-    birth_city: str | None = Field(default=None, max_length=60)
-
-
 @router.post("/chart", dependencies=[Depends(rate_limit("write"))])
 async def build_chart(item: ChartBuildIn | None = None, user=Depends(confirmed_age_user),
                       db=Depends(get_db)):
@@ -443,14 +437,6 @@ async def compat_full(item: CompatIn, user=Depends(active_user), db=Depends(get_
 
 # ──────────────────────────────── партнёры ────────────────────────────────────
 
-class PartnerIn(BaseModel):
-    name: str = Field(min_length=1, max_length=40)
-    birth_date: str
-    relation: str = Field(default="partner", max_length=20)
-    birth_time: str | None = None
-    birth_city: str | None = Field(default=None, max_length=60)
-
-
 @router.get("/partners")
 async def partners(user=Depends(confirmed_age_user), db=Depends(get_db)):
     return await readings.list_partners(db, user["tg_id"])
@@ -488,11 +474,6 @@ async def delete_partner(partner_id: int, user=Depends(confirmed_age_user),
 
 
 # ───────────────────────────── купленные разборы ──────────────────────────────
-
-class ReportIn(BaseModel):
-    partner_date: str | None = None
-    partner_name: str = Field(default="", max_length=30)
-
 
 @router.get("/reports")
 async def reports(user=Depends(confirmed_age_user), db=Depends(get_db)):

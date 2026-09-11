@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
@@ -33,7 +33,7 @@ from ..core.observability import (
     set_request_id,
 )
 from ..services import analytics as analytics_service
-from .deps import get_db
+from .deps import current_user, get_db
 from .routers import ROUTERS
 
 configure_logging(level=settings.log_level, log_file=settings.log_file)
@@ -146,6 +146,29 @@ app = FastAPI(title="Оракул API", version="1.0.0", lifespan=lifespan,
               docs_url="/api/docs" if settings.dev_mode else None,
               redoc_url=None, openapi_url="/api/openapi.json"
               if settings.dev_mode else None)
+
+
+openapi_router = APIRouter(prefix="/api", tags=["schema"], include_in_schema=False)
+
+
+@openapi_router.get("/openapi.json")
+async def openapi_schema(user=Depends(current_user)) -> JSONResponse:
+    """Схема OpenAPI для фронтенда волны A (BUS-805); только под подписью.
+
+    В DEV_MODE этот роут не регистрируется — схему отдаёт встроенный публичный
+    FastAPI-роут на том же пути, который матчится раньше (первым в порядке
+    регистрации).
+    """
+    return JSONResponse(app.openapi())
+
+
+def _register_production_openapi() -> None:
+    """Подключить auth-гейт схемы, когда встроенный публичный роут выключен."""
+    if not settings.dev_mode:
+        app.include_router(openapi_router)
+
+
+_register_production_openapi()
 
 
 def _server_error_copy(request: Request) -> str:
