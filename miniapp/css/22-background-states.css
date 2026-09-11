@@ -1,0 +1,87 @@
+/* =============================================
+   ОРАКУЛ · модуль 22-background-states — BUS-993 / R05 rev2 (BUS-733, rev c14b5ffc)
+   Состояния фона data-bg: welcome/chat/tarot/work (спека §1.3).
+   Точка переключения одна — app.syncBg() в 05-app.js; компоненты фон не выставляют.
+   Атрибут data-bg живёт на #app-root (спека §1.3) и зеркалится на <html> —
+   селекторы ниже идут от html: поддержка движков без :has и дешёвая инвалидация.
+   Без новых изображений (борд BUS-963).
+   ============================================= */
+
+/* Кросс-фейд состояний: меняется только opacity (спека §1.2) — размер и
+   позиция слоёв не трогаются. Темп — --motion-slow 420 мс (окно 300–480 §1.2). */
+.starfield,
+.starfield::before,
+.starfield::after,
+.starfield .nebula,
+.starfield .galaxy,
+.starfield .lilith-sil {
+  transition: opacity var(--motion-slow, 420ms) var(--ease, ease);
+}
+
+/* Статичный кадр галактик: gPulse перекрывает opacity в живом режиме,
+   база нужна для паузы E18 и reduced-motion (середина диапазона .32–.62). */
+.starfield .galaxy { opacity: .47; }
+
+/* Пульс галактик в чате — тот же gPulse на 60% уровня (реестр §3.1: chat@60%). */
+@keyframes gPulseChat { 0%, 100% { opacity: .19; } 50% { opacity: .37; } }
+
+/* ── bg:welcome — S01–S03, первый вход (дефолт, без атрибута) ──
+   Метеоры вкл, галактики вкл, Лилит дышит, интенсивность 100%. */
+
+/* ── bg:chat — чат S04–S07 ──
+   Метеоры выкл, галактики пульсируют на 60% (gPulseChat), Лилит скрыта
+   (портрет в шапке), интенсивность 70% — абсолютная opacity контейнера. */
+html[data-bg="chat"] .starfield { opacity: .7; }
+html[data-bg="chat"] .starfield .galaxy { animation-name: gPulseChat; }
+html[data-bg="chat"] .starfield .lilith-sil { animation: none; opacity: 0; }
+html[data-bg="chat"] .meteor { animation: none; visibility: hidden; }
+
+/* ── bg:tarot — расклад S13 (чат Таролога) ──
+   Вся динамика выкл, кроме переворота карт; интенсивность 60%.
+   Звёздный дрейф/мерцание замирают на текущем кадре (paused) — композиция живёт. */
+html[data-bg="tarot"] .starfield { opacity: .6; }
+html[data-bg="tarot"] .starfield::before,
+html[data-bg="tarot"] .starfield::after,
+html[data-bg="tarot"] .starfield .twinkle,
+html[data-bg="tarot"] .constellations .cst { animation-play-state: paused; }
+html[data-bg="tarot"] .starfield .galaxy,
+html[data-bg="tarot"] .starfield .nebula { animation: none; opacity: 0; }
+html[data-bg="tarot"] .starfield .lilith-sil { animation: none; opacity: 0; }
+html[data-bg="tarot"] .meteor { animation: none; visibility: hidden; }
+
+/* ── bg:work — формы, библиотека, профиль, оплата ──
+   Интенсивность 50%; по спеке остаются только L0+L2 — вуаль ::after
+   гасит космофото (L1), динамика выключена. */
+html[data-bg="work"] .starfield { opacity: .5; }
+html[data-bg="work"] .starfield::after { opacity: 1; }
+html[data-bg="work"] .starfield::before,
+html[data-bg="work"] .starfield::after,
+html[data-bg="work"] .starfield .twinkle,
+html[data-bg="work"] .constellations .cst { animation-play-state: paused; }
+html[data-bg="work"] .starfield .galaxy,
+html[data-bg="work"] .starfield .nebula { animation: none; opacity: 0; }
+html[data-bg="work"] .starfield .lilith-sil { animation: none; opacity: 0; }
+html[data-bg="work"] .meteor { animation: none; visibility: hidden; }
+
+/* ── Пауза фона E18 (спека §3.2) ──
+   Класс bg-paused на #app-root (зеркало на html для селекторов):
+   все animation слоёв L2–L5 = none, метеоры скрыты. L0/L1/L3 остаются —
+   композиция не «умирает». */
+html.bg-paused .starfield::before,
+html.bg-paused .starfield::after,
+html.bg-paused .starfield .nebula,
+html.bg-paused .starfield .galaxy,
+html.bg-paused .starfield .lilith-sil,
+html.bg-paused .starfield .twinkle,
+html.bg-paused .constellations .cst { animation: none !important; }
+html.bg-paused .meteor { display: none !important; }
+
+/* Автопауза при скрытой вкладке (visibilitychange, §3.2):
+   animation-play-state paused — кадр замирает, при возврате продолжается. */
+html.bg-hidden .starfield::before,
+html.bg-hidden .starfield::after,
+html.bg-hidden .starfield .nebula,
+html.bg-hidden .starfield .galaxy,
+html.bg-hidden .starfield .lilith-sil,
+html.bg-hidden .starfield .twinkle,
+html.bg-hidden .constellations .cst { animation-play-state: paused !important; }

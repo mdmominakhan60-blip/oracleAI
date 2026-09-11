@@ -57,6 +57,7 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
       this.loadThread(key);
     }
     this.view = 'hub';
+    this.syncBg();
     this.renderNav();
     if (typeof this.syncBackButton === 'function') this.syncBackButton();
     // R-8 (BUS-509): в чате вся высота экрана — диалогу. Нижняя навигация
@@ -429,6 +430,9 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
     // R-8 (BUS-509): диалог начался — подсказки не нужны (intro уже не
     // рендерится по тому же условию), композер становится компактнее.
     document.getElementById('app-root').classList.toggle('chat-live', messages.length >= 2);
+    // BUS-993 (R05 §1.3): расклад на столе → bg:tarot, иначе bg:chat.
+    // Вызов после вставки innerHTML не нужен — syncBg не зависит от DOM-контента.
+    this.syncBg();
 
     // R-8 (BUS-509): intro рендерится уже зная viewport — при открытой
     // клавиатуре/малой высоте сразу свёрнут в kicker (не дожидаясь события).
