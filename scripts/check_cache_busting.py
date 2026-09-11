@@ -28,7 +28,7 @@ def check_bg_asset_versions(index_text: str, css_texts: dict[str, str]) -> None:
     for asset in BG_ASSETS:
         refs: dict[str, str] = {}
         for m in re.finditer(re.escape(asset) + r"\?v=(\d+)", index_text):
-            refs[f"index.html"] = m.group(1)
+            refs["index.html"] = m.group(1)
         for name, text in css_texts.items():
             for m in re.finditer(re.escape(asset) + r"\?v=(\d+)", text):
                 refs[name] = m.group(1)
