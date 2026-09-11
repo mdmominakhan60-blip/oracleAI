@@ -5,10 +5,31 @@ import argparse
 import os
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+# BUS-848: ключи, чьи значения не должны попадать в *.log рабочего дерева.
+# DSN-ключи дают пароль из URL; прочие — значение целиком.
+_LOG_SECRET_KEYS = (
+    "POSTGRES_PASSWORD",
+    "ORACLEAI_MCP_ROLE_PASSWORD",
+    "GRAFANA_ADMIN_PASSWORD",
+    "BOT_TOKEN",
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "CUSTOM_LLM_API_KEY",
+    "PADDLE_WEBHOOK_SECRET",
+    "PADDLE_API_KEY",
+    "DEV_KEY",
+)
+_LOG_DSN_KEYS = ("TEST_DATABASE_URL", "DATABASE_URL", "POSTGRES_ADMIN_DATABASE_URL")
+_LOG_MIN_SECRET_LEN = 8
+_LOG_MAX_FILE_SIZE = 64 * 1024 * 1024
+_LOG_SCAN_EXCLUDED_DIRS = {".git", ".venv", "node_modules", ".codegraph", "artifacts"}
+
 REQUIRED_DOCS = (
     ROOT / "docs" / "PRODUCT.md",
     ROOT / "docs" / "SECURITY.md",
@@ -87,8 +108,91 @@ def check_production_env() -> list[str]:
     return errors
 
 
+def _collect_log_needles(env: dict[str, str], env_file: Path) -> list[str]:
+    """Значения секретов для скана логов: пароли из DSN + значения целиком.
+
+    Значения из env и env_file СКЛАДЫВАЮТСЯ (fail-closed): тест-ран может
+    перезаписать DATABASE_URL=TEST_DATABASE_URL, но прод-значение в .env
+    остаётся утечкой, которую надо ловить — поэтому один ключ даёт needles
+    из всех своих значений, а не только из приоритетного.
+    """
+    sources: list[dict[str, str]] = [dict(env), {}]
+    for line in _read_env_file(env_file):
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip().strip('"').strip("'")
+        if key and value and not value.startswith("$"):
+            sources[1][key] = value
+
+    def _secret_values(key: str) -> list[str]:
+        out: list[str] = []
+        for source in sources:
+            value = source.get(key, "").strip()
+            if not value or value.startswith("$"):
+                continue
+            out.append(value)
+        return out
+
+    needles: list[str] = []
+    for key in _LOG_DSN_KEYS:
+        for url in _secret_values(key):
+            parts = urlsplit(url)
+            password = parts.password or ""
+            if len(password) >= _LOG_MIN_SECRET_LEN:
+                needles.append(password)
+    for key in _LOG_SECRET_KEYS:
+        for value in _secret_values(key):
+            if len(value) >= _LOG_MIN_SECRET_LEN:
+                needles.append(value)
+    return sorted(set(needles), key=len, reverse=True)
+
+
+def _read_env_file(path: Path) -> list[str]:
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    return [ln for ln in lines if ln and not ln.startswith("#") and "=" in ln]
+
+
+def check_log_secrets(root: Path | None = None) -> list[str]:
+    """BUS-848: *.log рабочего дерева не должны содержать значений из .env.
+
+    Вектор BUS-374: прод-пароль попал в make-test.log (170 вхождений) через
+    repr asyncpg и xtrace. Гейт fail-closed: любая утечка блокирует релиз.
+    Ошибки не содержат самих значений — вердикт тоже не должен утекать.
+    """
+    root = root or ROOT
+    env: dict[str, str] = dict(os.environ)
+    needles = _collect_log_needles(env, root / ".env")
+    if not needles:
+        return []
+    errors: list[str] = []
+    for path in sorted(root.rglob("*.log")):
+        rel_parts = path.relative_to(root).parts
+        if any(part in _LOG_SCAN_EXCLUDED_DIRS for part in rel_parts[:-1]):
+            continue
+        try:
+            if path.stat().st_size > _LOG_MAX_FILE_SIZE:
+                errors.append(
+                    f"log secret scan: {path.relative_to(root)} skipped "
+                    f"(exceeds size limit) — review manually")
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(f"log secret scan: cannot read "
+                          f"{path.relative_to(root)}: {type(exc).__name__}")
+            continue
+        count = sum(text.count(needle) for needle in needles)
+        if count:
+            errors.append(
+                f"log secret scan: {path.relative_to(root)} contains "
+                f"{count} occurrence(s) of a secret value from .env/env — "
+                f"rotate the value and purge the log")
+    return errors
+
+
 def run(*, production: bool = False) -> list[str]:
-    errors = check_docs() + check_static_contract()
+    errors = check_docs() + check_static_contract() + check_log_secrets()
     if production:
         errors.extend(check_production_env())
     return errors

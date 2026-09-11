@@ -22,6 +22,10 @@ log = logging.getLogger("oracle.payment_monitor")
 SETTING_KEY = "system.payment_monitor"
 STALE_PENDING_HOURS = 2
 ALERT_COOLDOWN_HOURS = 6
+#: BUS-850: сколько раз подряд пробуем доставить алерт в одном status-периоде.
+#: Дальше — только признак недоставленного алерта в settings, без новых попыток,
+#: иначе мёртвый канал даёт TelegramError на каждом тике планировщика.
+MAX_ALERT_DELIVERY_ATTEMPTS = 3
 DEFAULT_NOTIFICATION_PREFS = {
     "degraded_cooldown_hours": 6,
     "critical_cooldown_hours": 1,
@@ -290,15 +294,47 @@ def _alert_text(snapshot: dict, *, recovered: bool = False) -> str:
     )
 
 
+_fallback_notice_shown = False
+
+
+def _warn_fallback_recipient() -> None:
+    """ADR-0005: напоминание о забытой настройке адресата алертов.
+
+    Первый тик scheduler'а — фактическая инициализация платёжного контура
+    (отдельной init-фазы нет), поэтому warning звучит один раз за процесс
+    при старте бота, а не на каждом тике и не в момент инцидента.
+    """
+    global _fallback_notice_shown
+    if settings.payment_alert_chat_id or _fallback_notice_shown or not settings.admin_id:
+        return
+    _fallback_notice_shown = True
+    log.warning(
+        "платёжные алерты уйдут на ADMIN_ID (владельца); "
+        "задайте PAYMENT_ALERT_CHAT_ID — chat_id сотрудника/группы "
+        "(docs/ADR/ADR-0005-payment-alert-recipients.md)")
+
+
 async def run(bot, db, *, now: datetime | None = None) -> dict:
     """Run one bounded check, save only aggregate state and alert on transitions."""
+    _warn_fallback_recipient()
     snapshot = await build_snapshot(db, now=now, external=True)
     previous = await latest(db)
     prefs = await notification_preferences(db)
     previous_status = previous.get("status") if previous else None
     previous_alert_at = previous.get("last_alert_at") if previous else None
     current = dict(snapshot)
+    # BUS-850: last_alert_at ставится в момент ПОПЫТКИ доставки, а не только
+    # при успехе — иначе мёртвый канал никогда не открывает cooldown-окно.
     current["last_alert_at"] = previous_alert_at
+    current["last_alert_delivered"] = previous.get("last_alert_delivered") if previous else None
+    current["last_alert_delivery_failed_at"] = (
+        previous.get("last_alert_delivery_failed_at") if previous else None)
+    # Бюджет попыток живёт в пределах одного status-периода: смена статуса
+    # или успешная доставка сбрасывают счётчик.
+    status_changed = previous_status is not None and previous_status != snapshot["status"]
+    failed_attempts = (0 if status_changed or not previous
+                       else int(previous.get("alert_failed_attempts") or 0))
+    current["alert_failed_attempts"] = failed_attempts
 
     checked = _now(now)
     should_alert = False
@@ -306,7 +342,7 @@ async def run(bot, db, *, now: datetime | None = None) -> dict:
     current["notification_preferences"] = {
         key: value for key, value in prefs.items() if key != "secondary_configured"
     }
-    if previous_status is not None and previous_status != snapshot["status"]:
+    if status_changed:
         should_alert = True
     elif snapshot["status"] in {"critical", "degraded"} and previous_alert_at:
         try:
@@ -320,10 +356,23 @@ async def run(bot, db, *, now: datetime | None = None) -> dict:
         should_alert = True
     if _in_quiet_hours(checked, prefs):
         should_alert = False
+    budget_exhausted = failed_attempts >= MAX_ALERT_DELIVERY_ATTEMPTS
+    if budget_exhausted:
+        if not (previous or {}).get("alert_attempts_exhausted"):
+            log.warning("payment alert delivery exhausted after %d failed attempts "
+                        "(status %s)", failed_attempts, snapshot["status"])
+        should_alert = False
+    current["alert_attempts_exhausted"] = budget_exhausted
 
-    if should_alert and settings.admin_id and settings.bot_token:
+    if should_alert and settings.bot_token:
+        # ADR-0005: клиент (admin_id) — не адресат внутренних алертов; chat_id
+        # сотрудника/группы задаётся PAYMENT_ALERT_CHAT_ID. Оба нуля = не шлём
+        # (legacy-поведение: без сконфигурированного адресата доставки нет).
+        alert_chat_id = settings.payment_alert_chat_id or settings.admin_id
         text = _alert_text(snapshot, recovered=recovered)
-        delivered = await telegram.send_message(settings.admin_id, text, html=False)
+        delivered = False
+        if alert_chat_id:
+            delivered = await telegram.send_message(alert_chat_id, text, html=False)
         if prefs["secondary_enabled"] and settings.payment_alert_secondary_url:
             try:
                 async with ClientSession(timeout=ClientTimeout(total=5)) as session:
@@ -333,8 +382,15 @@ async def run(bot, db, *, now: datetime | None = None) -> dict:
                         delivered = delivered or response.status < 300
             except Exception as exc:  # noqa: BLE001
                 log.warning("secondary payment alert failed: %s", type(exc).__name__)
+        current["last_alert_at"] = snapshot["checked_at"]
         if delivered:
-            current["last_alert_at"] = snapshot["checked_at"]
+            current["last_alert_delivered"] = True
+            current["last_alert_delivery_failed_at"] = None
+            current["alert_failed_attempts"] = 0
+        else:
+            current["last_alert_delivered"] = False
+            current["last_alert_delivery_failed_at"] = snapshot["checked_at"]
+            current["alert_failed_attempts"] = failed_attempts + 1
     await content.set_setting(db, SETTING_KEY, current)
     return current
 
