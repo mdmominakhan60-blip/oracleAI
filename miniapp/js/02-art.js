@@ -21,8 +21,8 @@ function agentSprite(a, cheer) {
   if (!a) return '';
   const ac = a.accent || '#e8c56b';
   const bright = a.accentBright || ac;
-  const glow = a.accentGlow || 'rgba(230,193,120,.34)';
-  const surface = a.surface || 'rgba(230,193,120,.12)';
+  const glow = a.accentGlow || 'rgba(245,212,139,.34)';
+  const surface = a.surface || 'rgba(245,212,139,.12)';
   return `<span class="agent-sprite${cheer ? ' cheer' : ''}" style="--ac:${esc(ac)};--ac-bright:${esc(bright)};--ac-glow:${esc(glow)};--ac-surface:${esc(surface)}" role="img" aria-label="${esc(a.name || '')}">
       <img class="agent-face" src="${esc(a.avatar || `/static/img/agents/${a.code}.jpg`)}" alt="${esc(a.name || '')}" width="60" height="60" loading="eager" fetchpriority="high" decoding="async" onerror="this.onerror=null;this.src='/static/img/oracle-mark.png'">
       <span class="as-prop">${agentSigil(a.code)}</span>
@@ -54,7 +54,7 @@ function moonSvg(emoji, cls) {
       <stop offset="0%" stop-color="#f8edcf"/><stop offset="55%" stop-color="#ddc795"/>
       <stop offset="100%" stop-color="#a9966a"/>
     </radialGradient></defs>
-    <circle cx="50" cy="50" r="${r}" fill="#1d1838" stroke="rgba(230,193,120,.35)" stroke-width="2"/>
+    <circle cx="50" cy="50" r="${r}" fill="#1d1838" stroke="rgba(245,212,139,.35)" stroke-width="2"/>
     ${d ? `<g transform="translate(50,50)${flip}"><path d="${d}" fill="url(#${gid})"/></g>` : ''}</svg>`;
 }
 
@@ -63,11 +63,11 @@ function moonSvg(emoji, cls) {
 const CAREER_WIN = {
   'Новолуние': ['🚀 Старт · планируй', '#7fd4a8'],
   'Растущий серп': ['🚀 Старт · переговоры', '#7fd4a8'],
-  'Первая четверть': ['⚖️ Решение', '#e6c178'],
+  'Первая четверть': ['⚖️ Решение', '#f5d48b'],
   'Растущая Луна': ['⚡ Действие · подпись, рост', '#7fd4a8'],
   'Полнолуние': ['⚠️ Осторожно · не решай судьбоносно', '#ff8fa3'],
-  'Убывающая Луна': ['✅ Завершение · долги, финалы', '#e6c178'],
-  'Последняя четверть': ['✅ Завершение · отпусти лишнее', '#e6c178'],
+  'Убывающая Луна': ['✅ Завершение · долги, финалы', '#f5d48b'],
+  'Последняя четверть': ['✅ Завершение · отпусти лишнее', '#f5d48b'],
   'Старый серп': ['🌙 Пауза · восстановление', '#8b86a3'],
 };
 const careerWindow = d => {
