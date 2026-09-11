@@ -6,6 +6,8 @@
  *  - FPS за 8 с на desktop-viewport и mobile-viewport (DevTools Performance вручную
  *    не доступен в headless, поэтому rAF-проба; порог ≥55 desktop / ≥50 mobile)
  *  - длительность фреймов при скролле чата (jank: >3 подряд фреймов >33 мс)
+ *  - CPU sky-системы: дельта SystemInfo.getCPUUsage на welcome (живой космос)
+ *    и chat (статичный фон), % одного ядра (CDP; при отсутствии метода — available:false)
  * Запуск: node scripts/qa_bus993_perf.mjs
  */
 import { chromium } from 'playwright-core';
@@ -113,6 +115,37 @@ async function measureScrollJank(page) {
   return { jankRuns: worstRun, maxFrame: Math.round(Math.max(...deltas) * 10) / 10, avgFrame: Math.round((deltas.reduce((a, b) => a + b, 0) / deltas.length) * 10) / 10 };
 }
 
+// CPU sky-системы: CDP Performance.getMetrics — дельта TaskDuration (main-thread
+// задачи рендерера) на интервале, % одного ядра. Без синтетического скролла —
+// чистая нагрузка фоном. CSS-анимации opacity/transform идут на композиторе,
+// поэтому ожидание: близко к 0.
+async function measureCpu(page, ms) {
+  const session = await page.context().newCDPSession(page);
+  await session.send('Performance.enable').catch(() => {});
+  const probe = async () => {
+    try {
+      const { metrics } = await session.send('Performance.getMetrics');
+      const get = (n) => metrics.find((m) => m.name === n)?.value ?? null;
+      return { TaskDuration: get('TaskDuration'), ScriptDuration: get('ScriptDuration') };
+    } catch { return null; }
+  };
+  const m0 = await probe();
+  await page.waitForTimeout(ms);
+  const m1 = await probe();
+  await session.detach().catch(() => {});
+  const wall = ms / 1000;
+  if (!m0 || !m1 || m0.TaskDuration === null || m1.TaskDuration === null) return { available: false };
+  const d = m1.TaskDuration - m0.TaskDuration;
+  return {
+    available: true,
+    metric: 'renderer-main TaskDuration (CDP Performance.getMetrics)',
+    taskDurationDeltaSec: Math.round(d * 1000) / 1000,
+    wallSec: wall,
+    mainTaskCpuPercent: Math.max(0, Math.round((d / wall) * 1000) / 10),
+    scriptDurationDeltaSec: Math.round(((m1.ScriptDuration ?? 0) - (m0.ScriptDuration ?? 0)) * 1000) / 1000,
+  };
+}
+
 const report = {};
 for (const vp of [{ label: 'mobile', width: 390, height: 844 }, { label: 'desktop', width: 1440, height: 900 }]) {
   const { context, page } = await freshPage(vp);
@@ -122,12 +155,14 @@ for (const vp of [{ label: 'mobile', width: 390, height: 844 }, { label: 'deskto
   await page.waitForTimeout(300);
   const wAnim = await animCount(page);
   const wFps = await measureFps(page, 8000);
+  const wCpu = await measureCpu(page, 4000);
   // chat
   await page.evaluate(() => app.openChat('oracle'));
   await page.waitForTimeout(400);
   const cAnim = await animCount(page);
   const cFps = await measureFps(page, 8000);
   const jank = await measureScrollJank(page);
+  const cCpu = await measureCpu(page, 4000);
   // work
   await page.evaluate(() => { app.closeChat(); app.go('profile'); });
   await page.waitForTimeout(400);
@@ -137,8 +172,8 @@ for (const vp of [{ label: 'mobile', width: 390, height: 844 }, { label: 'deskto
   await page.waitForTimeout(400);
   const tAnim = await animCount(page);
   report[vp.label] = {
-    welcome: { running: wAnim.running + wAnim.pseudo, details: wAnim.details, fps: wFps.fps },
-    chat: { running: cAnim.running + cAnim.pseudo, details: cAnim.details, fps: cFps.fps, scrollJank: jank },
+    welcome: { running: wAnim.running + wAnim.pseudo, details: wAnim.details, fps: wFps.fps, cpu: wCpu },
+    chat: { running: cAnim.running + cAnim.pseudo, details: cAnim.details, fps: cFps.fps, scrollJank: jank, cpu: cCpu },
     work: { running: kAnim.running + kAnim.pseudo },
     tarot: { running: tAnim.running + tAnim.pseudo },
   };
