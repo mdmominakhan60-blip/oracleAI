@@ -22,7 +22,7 @@ from ...data.session import transaction
 from ...services import analytics, monetization
 from ...services.repo_gateway import feedback as feedback_repo
 from ...services.eligibility import require_eligible_user
-from ..contracts.wave_a import FeedbackAnswerIn, FeedbackIn
+from ..contracts.wave_a import FeedbackIn
 from ..deps import confirmed_age_user, get_db, rate_limit
 
 router = APIRouter(prefix="/api", tags=["feedback"])
