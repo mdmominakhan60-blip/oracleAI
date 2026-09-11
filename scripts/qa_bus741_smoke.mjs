@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /* BUS-741 e2e smoke: P0-унификация визуала (mock API, без бэкенда).
- * §3.1: все primary-элементы рендерятся с вычисленным фоном linear-gradient(135deg,
- *    #ffe9b4, #eabf68) (var(--grad-primary) в computed style); цвет текста на градиенте
- *    — rgb(37, 29, 57) (var(--color-on-accent)).
- * §3.2: body фон = #0a0920 (var(--ink-950) = --color-bg-primary); все url(bg-cosmos*)
+ * BUS-969 (R03 §2.1): ожидания обновлены на семантический слой R03 —
+ * --grad-primary = linear-gradient(180deg, #F1D99F, #E9C982),
+ * --color-on-accent = #1C1820, --color-bg = #0B0D18.
+ * §3.1: все primary-элементы рендерятся с вычисленным фоном var(--grad-primary)
+ *    в computed style; цвет текста на градиенте — var(--color-on-accent).
+ * §3.2: body фон = #0B0D18 (R03 §2.1 --color-bg); все url(bg-cosmos*)
  *    в computed starfield содержат ?v=108.
  * §3.4: в computed стилях ключевых модулей нет rgb(230, 193, 120) (legacy-золото);
  *    в исходниках miniapp/js legacy-золото rgba(230,193,120)/#E6C178 отсутствует (BUS-960).
@@ -93,8 +95,10 @@ async function freshPage() {
 }
 
 /* Вычисленные стили: ожидаемые значения после унификации. */
-const GRAD_EXPECT = 'linear-gradient(135deg, rgb(255, 233, 180), rgb(234, 191, 104))';
-const ON_ACCENT = 'rgb(37, 29, 57)';
+/* Chromium computed-сериализация linear-gradient(180deg,…) опускает угол:
+ * вертикальный градиент печатается как linear-gradient(rgb(...), rgb(...)). */
+const GRAD_EXPECT = 'linear-gradient(rgb(241, 217, 159), rgb(233, 201, 130))';
+const ON_ACCENT = 'rgb(28, 24, 32)';
 
 const styleOf = (page, sel, props) => page.evaluate(({ sel, props }) => {
   const el = document.querySelector(sel);
@@ -109,7 +113,7 @@ const styleOf = (page, sel, props) => page.evaluate(({ sel, props }) => {
 
   // §3.2: база фона = --color-bg-primary
   const bodyBg = await styleOf(page, 'body', ['background-color']);
-  ok('bg: body фон #0a0920 (--ink-950/--color-bg-primary)', bodyBg && bodyBg['background-color'] === 'rgb(10, 9, 32)', JSON.stringify(bodyBg));
+  ok('bg: body фон #0B0D18 (R03 §2.1 --color-bg)', bodyBg && bodyBg['background-color'] === 'rgb(11, 13, 24)', JSON.stringify(bodyBg));
 
   // §3.2: все bg-cosmos url в computed starfield — ?v=108
   // (фоновый градиент-оверлей идёт первым слоем, url может быть вторым слоем)
