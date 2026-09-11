@@ -31,7 +31,6 @@ from ..core.observability import (
     reset_request_id,
     set_request_id,
 )
-from ..services import analytics as analytics_service
 from .deps import current_user, get_db
 from .routers import ROUTERS
 
