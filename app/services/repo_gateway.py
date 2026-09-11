@@ -23,6 +23,7 @@ from ..repo import monetization  # noqa: F401
 from ..repo import notifications  # noqa: F401
 from ..repo import palm  # noqa: F401
 from ..repo import readings  # noqa: F401
+from ..repo import subscription_sync  # noqa: F401
 from ..repo import users  # noqa: F401
 
 # Re-export full repo modules so routers can access module-level constants
@@ -30,4 +31,4 @@ from ..repo import users  # noqa: F401
 # directly. The import path is services.repo_gateway.feedback, not repo.feedback.
 __all__ = ["admin", "analytics", "billing", "comms", "content", "crm",
            "dialog", "feedback", "growth", "jobs", "monetization", "notifications",
-           "palm", "readings", "users"]
+           "palm", "readings", "subscription_sync", "users"]

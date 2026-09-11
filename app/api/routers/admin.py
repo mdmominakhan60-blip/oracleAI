@@ -25,6 +25,7 @@ from ...services import billing as billing_svc
 from ...services import broadcast as broadcast_svc
 from ...services import payment_monitor
 from ...services import telegram
+from ...services.repo_gateway import subscription_sync as subscription_sync_repo
 from ...services.admin import (analytics_repo, billing, comms, content, crm,
                                growth, ltv_tier, users)
 from ...services.admin import admin_repo, feedback_admin
@@ -286,8 +287,7 @@ async def subscription_sync_status(ctx=Depends(current_admin),
     """G-10: сколько клиенток расходятся users.sub_level vs tier_code."""
     if ctx.role != "owner":
         raise HTTPException(403, "сверка подписок доступна только владельцу")
-    from ...repo import subscription_sync
-    divergences = await subscription_sync.find_divergences(db, limit=10_000)
+    divergences = await subscription_sync_repo.find_divergences(db, limit=10_000)
     return {"divergent": len(divergences),
             "sample": divergences[:10]}
 
@@ -301,8 +301,7 @@ async def subscription_sync_reconcile(ctx=Depends(current_admin),
     """
     if ctx.role != "owner":
         raise HTTPException(403, "сверка подписок доступна только владельцу")
-    from ...repo import subscription_sync
-    report = await subscription_sync.reconcile(db, dry_run=False)
+    report = await subscription_sync_repo.reconcile(db, dry_run=False)
     await admin_repo.audit(db, ctx.tg_id, "subscription_sync.reconcile",
                            target="users.sub_level",
                            payload={"divergent": report["divergent"],
