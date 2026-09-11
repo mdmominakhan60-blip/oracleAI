@@ -1,0 +1,126 @@
+/* =============================================
+   ОРАКУЛ · модуль 22-components — библиотека компонентов R03 (BUS-969 инкремент 2)
+   Канон: docs/design/REDESIGN_R03_DESIGN_SYSTEM.md §4, §8.3.
+   Токены — только семантический слой 00-tokens.css (новые hex запрещены §2.1).
+   ============================================= */
+
+/* ── §4.4 Button: primary/secondary/ghost/destructive ────────────────────── */
+/* primary уже существует (.btn-primary в 16-visual-qa: --grad-primary, on-accent).
+   Здесь — три недостающих варианта и единая матрица состояний §8.3. */
+.btn-secondary {
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-control);
+  background: var(--color-surface-raised);
+}
+.btn-secondary:hover:not(:disabled),
+.btn-secondary:focus-visible:not(:disabled) {
+  background: var(--hover-bg);
+  border-color: var(--hover-border);
+}
+.btn-destructive {
+  color: var(--color-on-accent);
+  background: var(--color-error);
+  border: 1px solid transparent;
+}
+.btn-destructive:hover:not(:disabled),
+.btn-destructive:focus-visible:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: var(--focus-ring);
+}
+/* Миграция .btn-danger (12-misc: privacy) на destructive-семантику R03:
+   legacy-класс выведен, JS использует .btn-destructive. */
+/* Состояние loading §8.3: управление остаётся на JS (aria-busy), CSS только знак. */
+.btn[aria-busy="true"] {
+  pointer-events: none;
+  opacity: .72;
+}
+
+/* ── §4.1 BottomNav (mobile): выбранный раздел — спокойная подложка, §7.2 ── */
+/* R03 §7.2: без яркого золотого прямоугольника размером с CTA — скользящая
+   золотая капсула 17-premium-shell (::before/::after) гасится; активный
+   раздел — спокойная подложка hover-bg + маркер-линия цвета акцента. */
+.main-nav::before,
+.main-nav::after { content: none; }
+.main-nav .nav-btn.active {
+  color: var(--color-text-primary);
+  background: var(--hover-bg);
+  box-shadow: inset 0 -2px 0 var(--color-accent);
+}
+.main-nav .nav-btn.active .nav-ico {
+  color: var(--color-accent);
+  filter: none;
+  transform: none;
+}
+.main-nav .nav-btn.active .nav-copy small { opacity: 1; }
+/* focus-visible для навигации (§8.2): единый ring. */
+.main-nav .nav-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ── §4.1 ScreenHeader (модификатор каркаса чата): аватар 32–36, без баланса ── */
+.chat-head { border-bottom: 1px solid var(--color-border); }
+.chat-head .agent-avatar { border: 1px solid var(--color-border-control); }
+.chat-head .cname { color: var(--color-text-primary); }
+.chat-head .tsub { color: var(--color-text-muted); }
+
+/* ── §4.2 Чат-каркас: пузыри на R03-поверхностях, композер §4.2 ──────────── */
+/* user-пузырь — главное действие чата: grad-primary (§2.1, единый градиент). */
+.msg.user {
+  color: var(--color-on-accent);
+  background: var(--grad-primary);
+  border-radius: var(--radius-card) var(--radius-card) var(--radius-control) var(--radius-card);
+}
+.msg.assistant {
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control) var(--radius-card) var(--radius-card) var(--radius-card);
+}
+.msg.assistant b { color: var(--color-accent-hover); }
+.composer-top {
+  border: 1px solid var(--color-border-control);
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+}
+.composer-top:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
+}
+#chat-input { color: var(--color-text-primary); }
+#chat-input::placeholder { color: var(--color-text-muted); }
+.send-btn {
+  color: var(--color-on-accent);
+  background: var(--grad-primary);
+  border: none;
+}
+.send-btn:disabled { opacity: .48; cursor: not-allowed; }
+/* Стриминг/typing-точки не перебивают aria-live чата (§8.2). */
+.typing span { background: var(--color-text-muted); }
+
+/* ── §4.3 ToolCatalogSheet: sheet ≤80% высоты, overlay-поверхность §2.1 ──── */
+.te-sheet {
+  background: var(--color-surface-overlay);
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  max-height: 80vh;
+  box-shadow: var(--shadow-overlay);
+}
+.te-handle { background: var(--color-border-control); }
+.te-title { color: var(--color-text-primary); }
+.te-close { color: var(--color-text-secondary); }
+.te-close:hover,
+.te-close:focus-visible { color: var(--color-text-primary); background: var(--hover-bg); }
+.te-chip {
+  border: 1px solid var(--color-border-control);
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-control);
+}
+.te-chip:hover:not(:disabled),
+.te-chip:focus-visible:not(:disabled) {
+  background: var(--hover-bg);
+  border-color: var(--hover-border);
+}
+.te-chip b { color: var(--color-text-primary); }
+.te-chip small { color: var(--color-text-muted); }

@@ -99,6 +99,8 @@ async function freshPage() {
  * вертикальный градиент печатается как linear-gradient(rgb(...), rgb(...)). */
 const GRAD_EXPECT = 'linear-gradient(rgb(241, 217, 159), rgb(233, 201, 130))';
 const ON_ACCENT = 'rgb(28, 24, 32)';
+// R03 §2.1: --color-text-primary #F4F2ED (BUS-969 инкремент 2: BottomNav §7.2).
+const TEXT_PRIMARY = 'rgb(244, 242, 237)';
 
 const styleOf = (page, sel, props) => page.evaluate(({ sel, props }) => {
   const el = document.querySelector(sel);
@@ -188,13 +190,21 @@ const styleOf = (page, sel, props) => page.evaluate(({ sel, props }) => {
   const { context, page, errors } = await freshPage();
   await page.evaluate(() => app.goPayment());
   await page.waitForTimeout(500);
-  // nav-btn.active: финальный каскад — 17-premium-shell.css (позднее v77-блока
-  // из 15-ritual-redesign.css:2030). Дизайн: скользящая золотая капсула
-  // .main-nav::before (var(--grad-primary), BUS-741), сама кнопка прозрачная,
-  // текст на капсуле — on-accent. Ни ручного градиента, ни hex-дрейфа.
+  // nav-btn.active: финальный каскад — 22-components.css (BUS-969 инкремент 2).
+  // R03 §4.1/§7.2: скользящая золотая капсула .main-nav::before/::after погашена
+  // (content:none); выбранный раздел — спокойная подложка --hover-bg +
+  // маркер-линия inset цвета акцента; текст — text-primary.
   const nav = await styleOf(page, '.nav-btn.active', ['background-image', 'color']);
-  ok('§3.1: nav-btn.active — прозрачная кнопка на капсуле (без ручного градиента)', nav && nav['background-image'] === 'none', JSON.stringify(nav));
-  ok('§3.1: nav-btn.active текст — on-accent (на grad-primary капсуле)', nav && nav.color === ON_ACCENT, JSON.stringify(nav));
+  const navSub = await page.evaluate(() => {
+    const el = document.querySelector('.main-nav .nav-btn.active');
+    return el ? getComputedStyle(el).backgroundColor : null;
+  });
+  const capsuleGone = await page.evaluate(() => {
+    const mn = document.querySelector('.main-nav');
+    return mn ? getComputedStyle(mn, '::before').content === 'none' : null;
+  });
+  ok('§4.1/§7.2: nav-btn.active — спокойная подложка (hover-bg), капсула погашена', nav && nav['background-image'] === 'none' && navSub === 'rgba(233, 201, 130, 0.08)' && capsuleGone === true, JSON.stringify({ nav, navSub, capsuleGone }));
+  ok('§4.1: nav-btn.active текст — text-primary', nav && nav.color === TEXT_PRIMARY, JSON.stringify(nav));
   const capsule = await page.evaluate(() => {
     const mn = document.querySelector('.main-nav');
     return mn ? getComputedStyle(mn, '::before').backgroundImage : null;
@@ -203,6 +213,94 @@ const styleOf = (page, sel, props) => page.evaluate(({ sel, props }) => {
   const badge = await styleOf(page, '.pay-plan__badge', ['color']);
   ok('§3.1: pay-plan__badge текст — on-accent', badge && badge.color === ON_ACCENT, JSON.stringify(badge));
   await page.screenshot({ path: path.join(OUT, 'bus741-payment.png'), fullPage: false });
+  await context.close();
+}
+
+/* ── BUS-969 инкремент 2: компоненты §4 R03 на живых экранах ── */
+{
+  const { context, page, errors } = await freshPage();
+  // §4.4 Button: secondary/destructive на surface-raised/х error, состояния §8.3.
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('beforeend', `
+      <div id="bus969-btn-probe">
+        <button class="btn btn-secondary" id="probe-secondary">Secondary</button>
+        <button class="btn btn-destructive" id="probe-destructive">Destructive</button>
+      </div>`);
+  });
+  const btnSecondary = await styleOf(page, '#probe-secondary', ['color', 'background-color', 'border-color', 'min-height', 'border-radius']);
+  ok('§4.4: btn-secondary — text-primary на surface-raised, border-control, 48px-минимум', btnSecondary
+    && btnSecondary.color === TEXT_PRIMARY
+    && btnSecondary['background-color'] === 'rgb(28, 34, 51)'
+    && btnSecondary['border-color'] === 'rgb(113, 123, 150)'
+    && parseFloat(btnSecondary['min-height']) >= 44
+    && btnSecondary['border-radius'] === '12px', JSON.stringify(btnSecondary));
+  const btnDestructive = await styleOf(page, '#probe-destructive', ['color', 'background-color']);
+  ok('§4.4: btn-destructive — on-accent на error', btnDestructive
+    && btnDestructive.color === ON_ACCENT
+    && btnDestructive['background-color'] === 'rgb(241, 164, 170)', JSON.stringify(btnDestructive));
+  // §8.3: disabled-состояние общего .btn.
+  await page.evaluate(() => { document.getElementById('probe-secondary').disabled = true; });
+  const btnDisabled = await styleOf(page, '#probe-secondary', ['opacity', 'cursor']);
+  ok('§8.3: .btn:disabled — opacity .48, cursor not-allowed', btnDisabled
+    && btnDisabled.opacity === '0.48'
+    && btnDisabled.cursor === 'not-allowed', JSON.stringify(btnDisabled));
+  await page.evaluate(() => document.getElementById('bus969-btn-probe').remove());
+
+  // §4.2: чат-каркас — композер на surface, пузырь assistant на surface, focus ring.
+  await page.evaluate(() => app.go('hub'));
+  await page.waitForTimeout(400);
+  await page.evaluate(() => app.openChat('oracle'));
+  await page.waitForTimeout(600);
+  const composer = await styleOf(page, '.composer-top', ['background-color', 'border-color', 'border-radius']);
+  ok('§4.2: composer — surface-подложка, border-control, radius-card', composer
+    && composer['background-color'] === 'rgb(20, 24, 39)'
+    && composer['border-color'] === 'rgb(113, 123, 150)'
+    && composer['border-radius'] === '16px', JSON.stringify(composer));
+  // focus-visible §8.2: ring виден при клавиатурном фокусе.
+  await page.focus('#chat-input');
+  const composerFocus = await page.evaluate(() => {
+    const el = document.querySelector('.composer-top');
+    return el ? getComputedStyle(el).boxShadow : null;
+  });
+  ok('§4.2/§8.2: composer:focus-within — --focus-ring', composerFocus
+    && composerFocus.includes('rgba(233, 201, 130, 0.35)'), composerFocus);
+  const sendBtn = await styleOf(page, '#send-btn', ['background-image', 'color']);
+  ok('§4.2: send-btn — grad-primary + on-accent', sendBtn
+    && sendBtn['background-image'].includes('linear-gradient')
+    && sendBtn.color === ON_ACCENT, JSON.stringify(sendBtn));
+
+  // §4.3: ToolCatalogSheet — overlay-поверхность, radius-sheet, ≤80vh, dialog-паттерн.
+  await page.evaluate(() => app.setToolbox(true));
+  await page.waitForTimeout(400);
+  const sheet = await page.evaluate(() => {
+    const el = document.querySelector('.te-sheet');
+    if (!el) return null;
+    const cs = getComputedStyle(el);
+    const vh = window.innerHeight;
+    return {
+      bg: cs.backgroundColor,
+      radius: cs.borderTopLeftRadius,
+      maxH: cs.maxHeight,
+      maxHRatio: parseFloat(cs.maxHeight) / vh,
+      shadow: cs.boxShadow,
+      role: el.getAttribute('role'),
+      ariaModal: el.getAttribute('aria-modal'),
+    };
+  });
+  ok('§4.3: te-sheet — surface-overlay, radius-sheet 24, ≤80vh, overlay-тень', sheet
+    && sheet.bg === 'rgb(36, 44, 63)'
+    && sheet.radius === '24px'
+    && sheet.maxHRatio <= 0.8
+    && sheet.shadow.includes('rgba(0, 0, 0, 0.85)'), JSON.stringify(sheet));
+  ok('§4.3: te-sheet — WAI-ARIA Dialog (role=dialog, aria-modal)', sheet
+    && sheet.role === 'dialog' && sheet.ariaModal === 'true', JSON.stringify({ role: sheet.role, ariaModal: sheet.ariaModal }));
+  // Escape закрывает sheet (§4.4 Sheet/Modal: Escape+кнопка).
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  const sheetClosed = await page.evaluate(() => !document.getElementById('tool-expand').classList.contains('open'));
+  ok('§4.3: sheet закрывается Escape', sheetClosed === true);
+  await page.screenshot({ path: path.join(OUT, 'bus969-chat-components.png'), fullPage: false });
+  ok('§4: JS-ошибок на живом пути нет', errors.length === 0, errors.join('; '));
   await context.close();
 }
 
