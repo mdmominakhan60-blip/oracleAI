@@ -18,7 +18,7 @@ Scanned files:
 | `app/repo/__init__.py                       ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/repo/admin.py` **✅ DB-001**                |        10 |         0 |                0 |             0 |              0 |         0 |        1 |   0 |    0 |           0 |             0 |
 | `app/repo/analytics.py` **✅ DB-001**            |        28 |         0 |                0 |             0 |              0 |         0 |        3 |   0 |    0 |           0 |             0 |
-| `app/repo/billing.py` **✅ DB-001**              |        53 |         0 |                0 |             0 |              0 |         0 |        7 |   0 |    0 |           0 |             0 |
+| `app/repo/billing.py` **✅ DB-001**              |        54 |         0 |                0 |             0 |              0 |         0 |        7 |   0 |    0 |           0 |             0 |
 | `app/repo/comms.py` **✅ DB-001**                |        28 |         0 |                0 |             0 |              0 |         0 |        8 |   0 |    0 |           1 |             0 |
 | `app/repo/content.py` **✅ DB-001**              |        11 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/repo/crm.py` **✅ DB-001**                  |         7 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
@@ -33,6 +33,7 @@ Scanned files:
 | `app/repo/notifications.py` **✅ DB-001**        |         5 |         0 |                0 |             0 |              0 |         0 |        1 |   0 |    0 |           0 |             0 |
 | `app/repo/palm.py` **✅ DB-001**                 |         5 |         0 |                0 |             0 |              0 |         0 |        1 |   0 |    0 |           0 |             0 |
 | `app/repo/readings.py` **✅ DB-001**             |        29 |         0 |                0 |             0 |              0 |         0 |        3 |   0 |    0 |           0 |             0 |
+| `app/repo/subscription_sync.py` **✅ DB-001**    |         4 |         0 |                0 |             0 |              0 |         0 |        1 |   0 |    0 |           0 |             0 |
 | `app/repo/users.py` **✅ DB-001**                |        19 |         0 |                0 |             0 |              0 |         0 |        1 |   0 |    0 |           0 |             0 |
 | `app/services/__init__.py                   ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/services/access.py                     ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
@@ -61,7 +62,7 @@ Scanned files:
 | `app/services/scheduler.py` **✅ DB-001**        |        30 |         0 |                0 |             0 |              0 |         0 |        2 |   0 |    0 |           0 |             0 |
 | `app/services/telegram.py                   ` |         0 |         0 |                0 |             0 |              0 |         0 |        0 |   0 |    0 |           0 |             0 |
 | `app/data/seed.py` **✅ DB-001**                 |        14 |         0 |                0 |             0 |              0 |         0 |       14 |   0 |    0 |           0 |             0 |
-| ****TOTAL**                                ** | **400** | **0** | **0** | **0** | **0** | **0** | **57** | **0** | **0** | **1** | **0** |
+| ****TOTAL**                                ** | **405** | **0** | **0** | **0** | **0** | **0** | **58** | **0** | **0** | **1** | **0** |
 
 ### Column Legend
 
