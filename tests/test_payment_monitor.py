@@ -40,6 +40,74 @@ async def test_monitor_detects_stale_orders_and_deduplicates_alerts(db, monkeypa
 
 
 @pytest.mark.asyncio
+async def test_monitor_alert_recipient_prefers_payment_alert_chat_id(db, monkeypatch):
+    """BUS-854/ADR-0005: (a) приоритет PAYMENT_ALERT_CHAT_ID; (b) fallback на
+    ADMIN_ID при 0; (c) оба нуля — алерт не отправляется."""
+    now = datetime(2026, 8, 27, 12, 0, tzinfo=timezone.utc)
+    await users.ensure(db, 1, "Владелец")
+    await db.execute(
+        "INSERT INTO orders(tg_id, kind, sku, title, amount_stars, status, payload, "
+        "created_at) VALUES(?,?,?,?,?,?,?,?)",
+        (1001, "product", "demo", "Demo", 100, "pending", "recipient-payload",
+         (now - timedelta(hours=3)).isoformat()),
+    )
+    recipients = []
+
+    async def fake_send(tg_id, text, *, html=True):
+        recipients.append(tg_id)
+        return True
+
+    monkeypatch.setattr(payment_monitor.telegram, "send_message", fake_send)
+
+    # (a) заданный chat_id сотрудника — приоритет над ADMIN_ID.
+    monkeypatch.setattr(payment_monitor.settings, "payment_alert_chat_id", 777000)
+    monkeypatch.setattr(payment_monitor.settings, "admin_id", 1)
+    first = await payment_monitor.run(None, db, now=now)
+    assert first["status"] == "degraded"
+    assert recipients == [777000]
+
+    # (b) 0 — fallback на ADMIN_ID (legacy-поведение).
+    monkeypatch.setattr(payment_monitor.settings, "payment_alert_chat_id", 0)
+    second = await payment_monitor.run(
+        None, db, now=now + timedelta(hours=7))  # cooldown 6ч истёк
+    assert second["status"] == "degraded"
+    assert recipients == [777000, 1]
+
+    # (c) оба нуля — доставки нет (не адресована никому = не отправляется).
+    monkeypatch.setattr(payment_monitor.settings, "admin_id", 0)
+    third = await payment_monitor.run(
+        None, db, now=now + timedelta(hours=14))
+    assert third["status"] == "degraded"
+    assert recipients == [777000, 1]
+
+
+@pytest.mark.asyncio
+async def test_monitor_fallback_recipient_warning_is_once_per_process(monkeypatch):
+    """Mitigation против забытого конфига (ADR-0005): warning один за процесс."""
+    monkeypatch.setattr(payment_monitor.settings, "admin_id", 1)
+    monkeypatch.setattr(payment_monitor.settings, "payment_alert_chat_id", 0)
+    warnings: list[str] = []
+
+    def fake_warning(msg, *args):
+        warnings.append(msg % args if args else msg)
+
+    monkeypatch.setattr(payment_monitor.log, "warning", fake_warning)
+    monkeypatch.setattr(payment_monitor, "_fallback_notice_shown", False)
+    payment_monitor._warn_fallback_recipient()
+    assert len(warnings) == 1
+    assert "PAYMENT_ALERT_CHAT_ID" in warnings[0]
+
+    payment_monitor._warn_fallback_recipient()
+    assert len(warnings) == 1  # второй вызов молчит
+
+    # сконфигурированный адресат — warning не звучит вовсе
+    monkeypatch.setattr(payment_monitor, "_fallback_notice_shown", False)
+    monkeypatch.setattr(payment_monitor.settings, "payment_alert_chat_id", 777000)
+    payment_monitor._warn_fallback_recipient()
+    assert len(warnings) == 1
+
+
+@pytest.mark.asyncio
 async def test_monitor_reconciles_recovery_and_failure_journal_is_safe(db):
     from app.api.routers.webhooks import _failure
 
