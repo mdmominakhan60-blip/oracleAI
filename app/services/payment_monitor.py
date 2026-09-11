@@ -294,8 +294,29 @@ def _alert_text(snapshot: dict, *, recovered: bool = False) -> str:
     )
 
 
+_fallback_notice_shown = False
+
+
+def _warn_fallback_recipient() -> None:
+    """ADR-0005: напоминание о забытой настройке адресата алертов.
+
+    Первый тик scheduler'а — фактическая инициализация платёжного контура
+    (отдельной init-фазы нет), поэтому warning звучит один раз за процесс
+    при старте бота, а не на каждом тике и не в момент инцидента.
+    """
+    global _fallback_notice_shown
+    if settings.payment_alert_chat_id or _fallback_notice_shown or not settings.admin_id:
+        return
+    _fallback_notice_shown = True
+    log.warning(
+        "платёжные алерты уйдут на ADMIN_ID (владельца); "
+        "задайте PAYMENT_ALERT_CHAT_ID — chat_id сотрудника/группы "
+        "(docs/ADR/ADR-0005-payment-alert-recipients.md)")
+
+
 async def run(bot, db, *, now: datetime | None = None) -> dict:
     """Run one bounded check, save only aggregate state and alert on transitions."""
+    _warn_fallback_recipient()
     snapshot = await build_snapshot(db, now=now, external=True)
     previous = await latest(db)
     prefs = await notification_preferences(db)
@@ -343,9 +364,15 @@ async def run(bot, db, *, now: datetime | None = None) -> dict:
         should_alert = False
     current["alert_attempts_exhausted"] = budget_exhausted
 
-    if should_alert and settings.admin_id and settings.bot_token:
+    if should_alert and settings.bot_token:
+        # ADR-0005: клиент (admin_id) — не адресат внутренних алертов; chat_id
+        # сотрудника/группы задаётся PAYMENT_ALERT_CHAT_ID. Оба нуля = не шлём
+        # (legacy-поведение: без сконфигурированного адресата доставки нет).
+        alert_chat_id = settings.payment_alert_chat_id or settings.admin_id
         text = _alert_text(snapshot, recovered=recovered)
-        delivered = await telegram.send_message(settings.admin_id, text, html=False)
+        delivered = False
+        if alert_chat_id:
+            delivered = await telegram.send_message(alert_chat_id, text, html=False)
         if prefs["secondary_enabled"] and settings.payment_alert_secondary_url:
             try:
                 async with ClientSession(timeout=ClientTimeout(total=5)) as session:

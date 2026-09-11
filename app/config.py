@@ -37,6 +37,9 @@ class Settings:
     # ── Telegram ──
     bot_token: str = os.getenv("BOT_TOKEN", "")
     admin_id: int = _int("ADMIN_ID", 0)
+    # BUS-854/ADR-0005: внутренние алерты — сотрудникам, не клиентке. 0 = fallback
+    # на admin_id (старое поведение); startup-warning напоминает о настройке.
+    payment_alert_chat_id: int = _int("PAYMENT_ALERT_CHAT_ID", 0)
     webapp_url: str = os.getenv("WEBAPP_URL", "").rstrip("/")
     payment_alert_secondary_url: str = os.getenv("PAYMENT_ALERT_SECONDARY_URL", "").rstrip("/")
     cryptobot_dashboard_url: str = os.getenv("CRYPTOBOT_DASHBOARD_URL", "").rstrip("/")
