@@ -1,0 +1,41 @@
+<!DOCTYPE html><html><body style="margin:0">
+<iframe id="f" style="width:320px;height:900px;border:0"></iframe>
+<pre id="out">PENDING</pre>
+<script>
+const f = document.getElementById('f');
+const out = document.getElementById('out');
+const results = [];
+function vis(d, id) { const el = d.getElementById(id); return el ? !el.hidden : 'noid'; }
+function stepLabel(d) { const l = d.getElementById('ob-step-label'); return l ? l.textContent : '?'; }
+f.onload = () => setTimeout(() => {
+  const d = f.contentDocument;
+  try {
+    results.push('start: ' + stepLabel(d) + ' step1visible=' + vis(d,'ob-step-1'));
+    d.querySelector('.intent-card[data-intent="astro"]').click();
+    results.push('after intent: ' + stepLabel(d) + ' step2visible=' + vis(d,'ob-step-2') + ' step1hidden=' + !vis(d,'ob-step-1'));
+    d.getElementById('ob-next').click();
+    results.push('after next: ' + stepLabel(d) + ' step3visible=' + vis(d,'ob-step-3'));
+    // время: выбор «Примерно»
+    const rows = d.querySelectorAll('#ob-step-4 .choice-row');
+    d.getElementById('ob-next').click();
+    d.getElementById('ob-next').click();
+    results.push('at step4: ' + stepLabel(d) + ' step4visible=' + vis(d,'ob-step-4'));
+    rows[1].click();
+    const approx = d.getElementById('ob-time-approx');
+    results.push('approx shown=' + !approx.hidden + ' exact hidden=' + d.getElementById('ob-time-exact').hidden);
+    // композер: send disabled с пустым полем
+    f.src = 'index.html?x=2#view-chat-empty';
+    f.onload = () => setTimeout(() => {
+      const d2 = f.contentDocument;
+      const inp = d2.getElementById('chat-input-empty');
+      const send = d2.querySelector('#view-chat-empty .composer__send');
+      results.push('send disabled empty=' + send.disabled);
+      inp.value = 'Тест';
+      inp.dispatchEvent(new d2.defaultView.Event('input', {bubbles:true}));
+      results.push('send disabled filled=' + send.disabled);
+      out.textContent = 'RESULT ' + JSON.stringify(results);
+    }, 400);
+  } catch (e) { out.textContent = 'RESULT ERR ' + String(e); }
+}, 600);
+window.addEventListener('load', () => { f.src = 'index.html?x=1'; });
+</script></body></html>

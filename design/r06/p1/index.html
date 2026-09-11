@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OracleAI R06 — пакет 1: онбординг · чат · навигация (макеты)</title>
+<link rel="stylesheet" href="styles.css">
+<style>/* Инлайн-пометки верстальщика макета — не для прод-кода */
+.mock-note { font-size: 12px; color: var(--color-text-muted); }
+.proto-label {
+  position: fixed; right: 12px; top: 8px; z-index: 100;
+  padding: 4px 10px; border-radius: 999px;
+  background: rgba(28,34,51,.92); border: 1px solid var(--color-border-control);
+  color: var(--color-text-muted); font-size: 11px;
+}
+</style>
+</head>
+<body>
+
+<!-- Фон-система R05: состояния через data-bg -->
+<div class="sky" data-bg="welcome" id="sky">
+  <div class="sky__cosmos"></div>
+  <div class="sky__stars" aria-hidden="true"></div>
+  <img class="sky__silhouette" src="img/lilith-sil.png" alt="" aria-hidden="true">
+</div>
+
+<!-- Переключатель экранов прототипа (не входит в прод) -->
+<nav class="proto-nav" aria-label="Навигация по макетам прототипа">
+  <button type="button" data-view="onboarding" class="is-active">Онбординг</button>
+  <button type="button" data-view="chat-empty">Чат пустой</button>
+  <button type="button" data-view="chat-dialog">Диалог</button>
+  <button type="button" data-view="chat-states">Состояния</button>
+  <button type="button" data-view="sessions">Диалоги</button>
+  <button type="button" data-view="sheet-tools">Каталог sheet</button>
+</nav>
+<div class="proto-label">R06 · пакет 1 · в разработке</div>
+
+<!-- ========================================================
+     S04 ОНБОРДИНГ (план §9.1) — 5 шагов
+     ======================================================== -->
+<div class="screen-view is-active" id="view-onboarding" role="region" aria-label="Онбординг">
+<div class="screen">
+  <div class="onboarding">
+
+    <div class="onboarding__progress">
+      <div class="onboarding__progress-meta">
+        <span id="ob-step-label">Шаг 1 из 5 · намерение</span>
+        <span>OracleAI</span>
+      </div>
+      <div class="seg-progress" id="ob-progress" role="progressbar" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1" aria-label="Прогресс знакомства">
+        <div class="seg-progress__seg is-active"></div><div class="seg-progress__seg"></div><div class="seg-progress__seg"></div><div class="seg-progress__seg"></div><div class="seg-progress__seg"></div>
+      </div>
+    </div>
+
+    <!-- Шаг 1: намерение (три возможности из §9.1) -->
+    <section class="onboarding__step" id="ob-step-1" aria-labelledby="ob-1-title">
+      <div>
+        <h1 class="onboarding__title" id="ob-1-title">С чего начнём знакомство?</h1>
+        <p class="onboarding__why">Выберите, что попробовать первым — остальное доступно сразу после знакомства.</p>
+      </div>
+      <div class="intent-list" role="group" aria-label="Что вы хотите делать">
+        <button type="button" class="intent-card" aria-pressed="false" data-intent="chat" data-goto="ob-step-2">
+          <span class="intent-card__icon" aria-hidden="true">🔮</span>
+          <span>
+            <span class="intent-card__name">Обсудить вопрос</span><br>
+            <span class="intent-card__hint">Разговор с личным оракулом — без ввода данных</span>
+          </span>
+        </button>
+        <button type="button" class="intent-card" aria-pressed="false" data-intent="astro" data-goto="ob-step-2">
+          <span class="intent-card__icon" aria-hidden="true">🌌</span>
+          <span>
+            <span class="intent-card__name">Разобрать натальную карту</span><br>
+            <span class="intent-card__hint">Понадобятся дата, время и город рождения</span>
+          </span>
+        </button>
+        <button type="button" class="intent-card" aria-pressed="false" data-intent="tarot" data-goto="ob-step-2">
+          <span class="intent-card__icon" aria-hidden="true">🎴</span>
+          <span>
+            <span class="intent-card__name">Сделать расклад Таро</span><br>
+            <span class="intent-card__hint">Достаточно вопроса — карты не требуют даты рождения</span>
+          </span>
+        </button>
+      </div>
+      <p class="mock-note">Выбор намерения задаёт следующую ветку: астро-ветка → шаги 2–4 (имя→дата→время→город); чат/таро → имя → чат (§9.1 «только действительно необходимые данные»).</p>
+    </section>
+
+    <!-- Шаг 2: имя/форма обращения -->
+    <section class="onboarding__step" id="ob-step-2" aria-labelledby="ob-2-title" hidden>
+      <div>
+        <h1 class="onboarding__title" id="ob-2-title">Как к вам обращаться?</h1>
+        <p class="onboarding__why">Имя появится в обращении агентов. Его можно изменить в профиле в любой момент.</p>
+      </div>
+      <div class="field">
+        <label class="field__label" for="ob-name">Имя</label>
+        <input class="field__input" id="ob-name" type="text" autocomplete="given-name"
+               placeholder="Например, Анна" aria-describedby="ob-name-hint">
+        <p class="field__hint" id="ob-name-hint">Не спрашиваем повторно, если имя уже известно из профиля.</p>
+      </div>
+      <!-- Состояние «некорректный ввод» (§11.2) -->
+      <div class="field" id="ob-name-error-demo" hidden>
+        <label class="field__label" for="ob-name-bad">Имя</label>
+        <input class="field__input" id="ob-name-bad" type="text" value="А" aria-invalid="true" aria-describedby="ob-name-err">
+        <p class="field__error" id="ob-name-err">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v4M8 11.2v.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Введите минимум 2 символа
+        </p>
+      </div>
+    </section>
+
+    <!-- Шаг 3: дата (три явных сегмента §9.1) -->
+    <section class="onboarding__step" id="ob-step-3" aria-labelledby="ob-3-title" hidden>
+      <div>
+        <h1 class="onboarding__title" id="ob-3-title">Дата вашего рождения</h1>
+        <p class="onboarding__why">Дата нужна для астрологических расчётов. Таро и разговор работают без неё.</p>
+      </div>
+      <div class="date-seg">
+        <div class="date-seg__seg date-seg__seg--day">
+          <label class="field__label" for="ob-day">День</label>
+          <input class="field__input" id="ob-day" inputmode="numeric" placeholder="14" aria-describedby="ob-date-hint">
+        </div>
+        <div class="date-seg__seg">
+          <label class="field__label" for="ob-month">Месяц</label>
+          <input class="field__input" id="ob-month" placeholder="март" aria-describedby="ob-date-hint">
+        </div>
+        <div class="date-seg__seg date-seg__seg--year">
+          <label class="field__label" for="ob-year">Год</label>
+          <input class="field__input" id="ob-year" inputmode="numeric" placeholder="1994" aria-describedby="ob-date-hint">
+        </div>
+      </div>
+      <p class="field__hint" id="ob-date-hint">Тап по сегменту открывает нижнюю панель выбора; ручной ввод доступен всегда. Случайная дата не подставляется.</p>
+      <!-- Состояние ошибки даты (§11.2) -->
+      <div class="field" id="ob-date-error-demo" hidden>
+        <label class="field__label" for="ob-day-bad">День</label>
+        <input class="field__input" id="ob-day-bad" value="31.02.1994" aria-invalid="true" aria-describedby="ob-date-err">
+        <p class="field__error" id="ob-date-err">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v4M8 11.2v.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Такого дня не бывает: в феврале 1994 — 28 дней
+        </p>
+      </div>
+    </section>
+
+    <!-- Шаг 4: время (точно/примерно/не знаю §9.1) -->
+    <section class="onboarding__step" id="ob-step-4" aria-labelledby="ob-4-title" hidden>
+      <div>
+        <h1 class="onboarding__title" id="ob-4-title">Время рождения</h1>
+        <p class="onboarding__why">Точное время делает карту точнее. «Не знаю» — допустимый ответ, он сохранится отдельно.</p>
+      </div>
+      <div class="choice-list" role="group" aria-label="Насколько известно время рождения">
+        <button type="button" class="choice-row" aria-pressed="true">Точно <span class="choice-row__note">часы и минуты</span></button>
+        <button type="button" class="choice-row" aria-pressed="false">Примерно <span class="choice-row__note">укажем интервал — без подстановки 14:00</span></button>
+        <button type="button" class="choice-row" aria-pressed="false">Не знаю <span class="choice-row__note">расчёт без времени; добавить можно позже</span></button>
+      </div>
+      <!-- Раскрытие «Точно»: время -->
+      <div class="field" id="ob-time-exact" role="group" aria-label="Точное время">
+        <label class="field__label" for="ob-time">Часы и минуты</label>
+        <input class="field__input" id="ob-time" type="time" value="09:40">
+      </div>
+      <!-- Раскрытие «Примерно»: интервал -->
+      <div class="field" id="ob-time-approx" hidden role="group" aria-label="Приблизительное время">
+        <label class="field__label" for="ob-time-interval">Интервал</label>
+        <input class="field__input" id="ob-time-interval" type="time" value="09:00"> — <input class="field__input" id="ob-time-interval2" type="time" value="12:00">
+        <p class="field__hint">Полдень не отображается как сообщённый факт.</p>
+      </div>
+    </section>
+
+    <!-- Шаг 5: город (combobox §9.1, до 5 подсказок) -->
+    <section class="onboarding__step" id="ob-step-5" aria-labelledby="ob-5-title" hidden>
+      <div>
+        <h1 class="onboarding__title" id="ob-5-title">Город рождения</h1>
+        <p class="onboarding__why">Город определяет часовой пояс карты. Это не то же поле, что часовой пояс уведомлений.</p>
+      </div>
+      <div class="combobox">
+        <label class="field__label visually-hidden" for="ob-city">Город рождения</label>
+        <input class="field__input" id="ob-city" type="text" role="combobox" aria-expanded="true"
+               aria-controls="ob-city-list" aria-autocomplete="list" aria-describedby="ob-city-hint"
+               placeholder="Начните вводить…" value="Каз">
+        <ul class="combobox__list" id="ob-city-list" role="listbox" aria-label="Подсказки городов">
+          <li><button type="button" class="combobox__option" role="option" aria-selected="false">
+            <span class="combobox__city">Казань</span>
+            <span class="combobox__region">Республика Татарстан · Россия</span>
+          </button></li>
+          <li><button type="button" class="combobox__option" role="option" aria-selected="false">
+            <span class="combobox__city">Караганда</span>
+            <span class="combobox__region">Карагандинская область · Казахстан</span>
+          </button></li>
+          <li><button type="button" class="combobox__option" role="option" aria-selected="false">
+            <span class="combobox__city">Касабланка</span>
+            <span class="combobox__region">Касабланка-Сеттат · Марокко</span>
+          </button></li>
+        </ul>
+        <p class="combobox__status" id="ob-city-hint">Loading подсказок… <span class="skeleton" style="display:inline-block;width:120px;height:14px;vertical-align:middle"></span></p>
+      </div>
+      <!-- Подтверждённый выбор -->
+      <div class="field" id="ob-city-confirmed" hidden>
+        <label class="field__label">Выбранный город</label>
+        <div class="review-row">
+          <span class="review-row__value">Казань, Татарстан · Россия</span>
+          <button type="button" class="btn btn--ghost review-row__edit">Изменить</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Проверка данных (последний экран перед расчётом §9.1) -->
+    <section class="onboarding__step" id="ob-review" aria-labelledby="ob-r-title" hidden>
+      <div>
+        <h1 class="onboarding__title" id="ob-r-title">Проверьте данные</h1>
+        <p class="onboarding__why">Каждый пункт можно исправить — остальные сохранятся.</p>
+      </div>
+      <div class="review-list">
+        <div class="review-row">
+          <span class="review-row__label">Имя</span>
+          <span class="review-row__value">Анна</span>
+          <button type="button" class="btn btn--ghost review-row__edit">Изменить</button>
+        </div>
+        <div class="review-row">
+          <span class="review-row__label">Дата рождения</span>
+          <span class="review-row__value">14.03.1994</span>
+          <button type="button" class="btn btn--ghost review-row__edit">Изменить</button>
+        </div>
+        <div class="review-row">
+          <span class="review-row__label">Время</span>
+          <span class="review-row__value">Точно · 09:40</span>
+          <button type="button" class="btn btn--ghost review-row__edit">Изменить</button>
+        </div>
+        <div class="review-row">
+          <span class="review-row__label">Город рождения</span>
+          <span class="review-row__value">Казань · Россия</span>
+          <button type="button" class="btn btn--ghost review-row__edit">Изменить</button>
+        </div>
+      </div>
+      <p class="mock-note">После «Начать разбор» — реальный первый результат, не экран «готово» с фиктивным прогрессом (§9.1). Ошибка расчёта → retry без повторного списания.</p>
+    </section>
+
+    <!-- Footer: sticky, ошибка не закрывается (§9.1) -->
+    <footer class="onboarding__footer">
+      <button type="button" class="btn btn--primary btn--block" id="ob-next" data-goto="ob-step-2">Продолжить</button>
+      <p class="onboarding__footer-note--info" id="ob-note" hidden>Поле не заполнено — кнопка объяснит, чего не хватает</p>
+    </footer>
+
+  </div>
+</div>
+</div>
+
+<!-- ========================================================
+     S05 ЧАТ: пустое состояние (план §4.1)
+     ======================================================== -->
+<div class="screen-view" id="view-chat-empty" role="region" aria-label="Чат — пустое состояние">
+<div class="screen">
+  <div class="chat">
+    <header class="chat-header">
+      <button type="button" class="screenheader__back" data-goto="view-sessions" aria-label="К списку диалогов">←</button>
+      <img class="chat-header__avatar" src="img/agents/oracle.jpg" alt="">
+      <div>
+        <div class="chat-header__name">Лилит</div>
+        <div class="chat-header__role">Личный оракул</div>
+      </div>
+      <span class="chat-header__spacer"></span>
+      <button type="button" class="chat-header__btn" aria-label="Меню разговора">⋯</button>
+    </header>
+
+    <div class="empty-chat">
+      <img class="empty-chat__portrait" src="img/agents/oracle.jpg" alt="">
+      <div class="empty-chat__greeting">С чего начнём?</div>
+      <p class="empty-chat__role">Я рядом. Расскажи, что болит или о чём думаешь, — вместе разберёмся, откуда это и куда ведёт 🔮</p>
+      <div class="empty-chat__examples" aria-label="Примеры вопросов — подставляют текст, не отправляют запрос">
+        <button type="button" class="empty-chat__example">Что меня сейчас держит на месте?</button>
+        <button type="button" class="empty-chat__example">Помоги понять мой сон про воду</button>
+        <button type="button" class="empty-chat__example">Как прожить эту неделю спокойнее</button>
+      </div>
+    </div>
+
+    <footer class="composer">
+      <div class="composer__row">
+        <button type="button" class="composer__tools" aria-label="Открыть каталог инструментов" data-open-sheet>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M6 10h8M9 15h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Инструменты
+        </button>
+        <div class="composer__input-wrap">
+          <label class="visually-hidden" for="chat-input-empty">Сообщение</label>
+          <textarea class="composer__input" id="chat-input-empty" rows="1" placeholder="Напиши вопрос…"></textarea>
+        </div>
+        <button type="button" class="composer__send" aria-label="Отправить сообщение" disabled>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10l14-7-5 14-2.5-5.5L3 10z" fill="currentColor"/></svg>
+        </button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Нижняя навигация скрыта в открытом диалоге (R02 §2.1) -->
+  <nav class="bottomnav" aria-label="Основная навигация" hidden>
+    <div class="bottomnav__tabs">
+      <button type="button" class="bottomnav__tab" aria-current="page"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 12l7-8 7 8M6 10v9h10v-9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Чат</button>
+      <button type="button" class="bottomnav__tab"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 7v4l3 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Сегодня</button>
+      <button type="button" class="bottomnav__tab"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 5h6v6H4zM12 5h6v6h-6zM4 12h6v5H4zM12 12h6v5h-6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Библиотека</button>
+      <button type="button" class="bottomnav__tab"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 18c1.5-3.5 4-5 6.5-5s5 1.5 6.5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Профиль</button>
+    </div>
+  </nav>
+</div>
+</div>
+
+<!-- ========================================================
+     S06 ЧАТ: диалог (план §4.2) — сообщения, действия,
+     результат-карточка, стриминг, «Новое сообщение ↓»
+     ======================================================== -->
+<div class="screen-view" id="view-chat-dialog" role="region" aria-label="Чат — диалог">
+<div class="screen">
+  <div class="chat">
+    <header class="chat-header">
+      <button type="button" class="screenheader__back" data-goto="sessions-view" aria-label="К списку диалогов">← Назад</button>
+      <img class="chat-header__avatar" src="img/agents/oracle.jpg" alt="">
+      <div>
+        <div class="chat-header__name">Лилит</div>
+        <div class="chat-header__role">Личный оракул</div>
+      </div>
+      <span class="chat-header__spacer"></span>
+      <button type="button" class="chat-header__btn" aria-label="Меню разговора">⋯</button>
+    </header>
+
+    <div class="chat__feed" id="chat-feed" tabindex="0" aria-label="Переписка">
+      <div class="msg msg--agent">
+        <div class="msg__head">
+          <img class="msg__agent-avatar" src="img/agents/oracle.jpg" alt="">
+          <span class="msg__agent-name">Лилит</span>
+        </div>
+        <div class="msg__bubble">
+          <p>Я рядом. Расскажи, что болит или о чём думаешь, — вместе разберёмся, откуда это и куда ведёт 🔮</p>
+        </div>
+      </div>
+
+      <div class="msg msg--user">
+        <div class="msg__bubble">Чувствую, что застряла на работе. Всё нормально, но радости нет. Что со мной происходит?</div>
+      </div>
+
+      <!-- Ответ агента: заголовки/список внутри, без карточек-тюрем (§4.2) -->
+      <div class="msg msg--agent">
+        <div class="msg__head">
+          <img class="msg__agent-avatar" src="img/agents/oracle.jpg" alt="">
+          <span class="msg__agent-name">Лилит</span>
+        </div>
+        <div class="msg__bubble">
+          <p>Судя по тому, как ты это описываешь — «всё нормально, но радости нет» — это не про работу. Это про то, что работа перестала отвечать на вопрос «зачем».</p>
+          <p style="margin-top:8px"><strong>Что вижу в твоей карте</strong></p>
+          <ul style="margin:6px 0 0 18px">
+            <li>Сатурн в 10-м — потребность в смысле дела, не только в результате</li>
+            <li>Венера в 6-м — радость должна быть в процессе, а не после</li>
+          </ul>
+          <p style="margin-top:8px">Хочешь, разберём подробнее — что именно гасит интерес?</p>
+        </div>
+        <div class="msg__meta">
+          <button type="button" class="msg__action">Копировать</button>
+          <button type="button" class="msg__action">Ещё</button>
+        </div>
+      </div>
+
+      <!-- Карточка результата в чате (§5.4): компактное превью + «Открыть» -->
+      <div class="msg msg--agent" aria-label="Карточка результата">
+        <div class="msg__bubble" style="max-width:360px">
+          <p style="font-size:12px;color:var(--color-text-muted);margin-bottom:4px">Разбор · Лилит · сегодня</p>
+          <p style="font-weight:700">Матрица судьбы — фокус месяца</p>
+          <div style="display:flex;align-items:center;gap:12px;margin:8px 0">
+            <span class="skeleton" style="width:56px;height:56px;border-radius:12px;flex:none"></span>
+            <span style="font-size:14px;color:var(--color-text-secondary)">Сатурн просит перезагрузки отношений с делом. Линия целей — 22, корень — 4…</span>
+          </div>
+          <button type="button" class="btn btn--secondary" style="width:100%;min-height:40px">Открыть</button>
+        </div>
+      </div>
+
+      <!-- Стриминг: ожидающий ответ (§4.4) -->
+      <div class="msg msg--agent" id="msg-streaming-demo" hidden>
+        <div class="msg__bubble">
+          Пишу разбор…<span class="msg__streaming-caret" aria-hidden="true"></span>
+          <span class="visually-hidden">Агент печатает</span>
+        </div>
+      </div>
+
+      <!-- Автопрокрутка выключена при чтении старых сообщений (§4.2) -->
+      <button type="button" class="newmsg-pivot" id="newmsg-demo" hidden>Новое сообщение ↓</button>
+    </div>
+
+    <footer class="composer" id="composer-dialog">
+      <div class="composer__row">
+        <button type="button" class="composer__tools" data-open-sheet aria-label="Открыть каталог инструментов">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M6 10h8M9 15h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Инструменты
+        </button>
+        <div class="composer__input-wrap">
+          <label class="visually-hidden" for="chat-input-dialog">Сообщение</label>
+          <textarea class="composer__input" id="chat-input-dialog" rows="1" placeholder="Напиши вопрос…">Черновик этого разговора изолирован и не уходит при переключении агента</textarea>
+        </div>
+        <button type="button" class="composer__send" aria-label="Отправить сообщение">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10l14-7-5 14-2.5-5.5L3 10z" fill="currentColor"/></svg>
+        </button>
+        <button type="button" class="composer__stop" aria-label="Остановить получение ответа">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="6" y="6" width="8" height="8" rx="1.5" fill="currentColor"/></svg>
+        </button>
+      </div>
+      <p class="mock-note" style="margin-top:6px">Composer 1–5 строк → внутренний скролл; Enter/Shift+Enter desktop; IME-safe. Во время ответа — черновик сохраняется.</p>
+    </footer>
+  </div>
+</div>
+</div>
+
+<!-- ========================================================
+     Состояния §11.2 (чат): loading истории, ошибка сети,
+     session expired, нет доступа, deep link на удалённый
+     ======================================================== -->
+<div class="screen-view" id="view-chat-states" role="region" aria-label="Состояния чата">
+<div class="screen">
+  <div class="chat">
+    <header class="chat-header">
+      <button type="button" class="screenheader__back" aria-label="К списку диалогов">← Назад</button>
+      <img class="chat-header__avatar" src="img/agents/oracle.jpg" alt="">
+      <div>
+        <div class="chat-header__name">Лилит</div>
+        <div class="chat-header__role">Личный оракул</div>
+      </div>
+      <span class="chat-header__spacer"></span>
+      <button type="button" class="chat-header__btn" aria-label="Меню разговора">⋯</button>
+    </header>
+
+    <!-- loading истории: skeleton -->
+    <div class="chat__feed" aria-label="Загрузка истории">
+      <div class="msg msg--agent"><div class="msg__bubble"><span class="skeleton" style="display:block;height:14px;width:70%"></span><span class="skeleton" style="display:block;height:14px;width:90%;margin-top:8px"></span></div></div>
+      <div class="msg msg--user"><div class="msg__bubble"><span class="skeleton" style="display:block;height:14px;width:80%"></span></div></div>
+      <div class="msg msg--agent"><div class="msg__bubble"><span class="skeleton" style="display:block;height:14px;width:60%"></span><span class="skeleton" style="display:block;height:14px;width:85%;margin-top:8px"></span><span class="skeleton" style="display:block;height:14px;width:40%;margin-top:8px"></span></div></div>
+      <p class="mock-note" style="align-self:center">Загружающий историю · порционная подгрузка с сохранением положения (§4.2)</p>
+    </div>
+
+    <!-- Статусные состояния в ленте -->
+    <div style="padding:0 16px 24px; display:flex; flex-direction:column; gap:16px">
+
+      <!-- Ошибка у сообщения + повтор того же запроса (§11.2) -->
+      <div class="msg msg--agent" style="max-width:100%">
+        <div class="msg__bubble">
+          <p>Запрос не дошёл до сервера — соединение пропало во время ответа.</p>
+        </div>
+        <div class="msg__error" role="alert">
+          <svg viewBox="0 0 16 16" aria-hidden="true" style="width:16px;height:16px;flex:none"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v4M8 11.2v.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Ошибка сети
+          <button type="button" class="btn btn--secondary msg__retry" style="min-height:32px;padding:0 12px;font-size:13px">Повторить</button>
+        </div>
+      </div>
+
+      <!-- Session expired: StatusBanner, не исчезает (§11.2) -->
+      <div class="status-banner status-banner--error" role="alert">
+        <span class="status-banner__icon" aria-hidden="true">⚠</span>
+        <div>
+          <div class="status-banner__title">Сессия истекла</div>
+          <div class="status-banner__text">Откройте OracleAI из Telegram ещё раз — данные и диалоги сохранены.</div>
+          <div class="status-banner__actions">
+            <button type="button" class="btn btn--secondary" style="min-height:40px">Войти заново</button>
+            <button type="button" class="btn btn--ghost" style="min-height:40px">Помощь</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Нет доступа: paywall-точка, но banner ведёт к paywall (H6) -->
+      <div class="status-banner status-banner--info" role="status">
+        <span class="status-banner__icon" aria-hidden="true">🔒</span>
+        <div>
+          <div class="status-banner__title">Разбор в этом месяце — по тарифу</div>
+          <div class="status-banner__text">Черновик вопроса сохранён и вернётся после доступа.</div>
+          <div class="status-banner__actions">
+            <button type="button" class="btn btn--primary" style="min-height:40px">Смотреть тариф</button>
+            <button type="button" class="btn btn--ghost" style="min-height:40px">Не сейчас</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Deep link на удалённый/несуществующий диалог (H10) -->
+      <div class="status-banner" role="status">
+        <span class="status-banner__icon" aria-hidden="true">🗂</span>
+        <div>
+          <div class="status-banner__title">Разбор не найден</div>
+          <div class="status-banner__text">Возможно, он удалён. Откройте библиотеку или продолжите разговор.</div>
+          <div class="status-banner__actions">
+            <button type="button" class="btn btn--secondary" style="min-height:40px">К списку диалогов</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="mock-note">Каждое состояние §11.2 получает свой набор доступных действий в реестре R02 §5.7 (action ID + условия видимости). Полный реестр состояний S05–S07 — в спецификации пакета 1 (doc).</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ========================================================
+     S07 СПИСОК ДИАЛОГОВ (R02 §1.1) — с bottomnav mobile
+     ======================================================== -->
+<div class="screen-view" id="view-sessions" role="region" aria-label="Список диалогов">
+<div class="screen">
+  <div class="screen__body" style="max-width:760px">
+    <div class="sessions">
+      <div class="sessions__header">
+        <h1 class="sessions__title">Чат</h1>
+      </div>
+      <div class="sessions__actions">
+        <button type="button" class="btn btn--secondary" style="flex:1">
+          <svg viewBox="0 0 20 20" aria-hidden="true" style="width:18px;height:18px"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Новый разговор
+        </button>
+      </div>
+
+      <!-- Один активный диалог с draft-индикатором -->
+      <button type="button" class="session-card">
+        <img class="session-card__avatar" src="img/agents/oracle.jpg" alt="">
+        <span class="session-card__body">
+          <span class="session-card__top">
+            <span class="session-card__name">Про работу и радость</span>
+            <span class="session-card__time">сейчас</span>
+          </span>
+          <span class="session-card__preview">Лилит: …это про то, что работа перестала отвечать на «зачем» ✍︎</span>
+        </span>
+        <span class="session-card__badge">1</span>
+      </button>
+
+      <button type="button" class="session-card">
+        <img class="session-card__avatar" src="img/agents/tarot.jpg" alt="">
+        <span class="session-card__body">
+          <span class="session-card__top">
+            <span class="session-card__name">Расклад про новый проект</span>
+            <span class="session-card__time">вчера</span>
+          </span>
+          <span class="session-card__preview">Мадам Ленорман: карты показывают дорогу — решение ваше 🎴</span>
+        </span>
+      </button>
+
+      <button type="button" class="session-card">
+        <img class="session-card__avatar" src="img/agents/astro.jpg" alt="">
+        <span class="session-card__body">
+          <span class="session-card__top">
+            <span class="session-card__name">Транзиты ноября</span>
+            <span class="session-card__time">3 дня</span>
+          </span>
+          <span class="session-card__preview">Урания: Сатурн в 10-м — это отношение к делу и долгу</span>
+        </span>
+      </button>
+
+      <!-- Empty: нет диалогов (§11.2) -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:48px 24px;color:var(--color-text-muted)" id="sessions-empty-demo" hidden>
+        <span style="font-size:32px" aria-hidden="true">🔮</span>
+        <p style="font-size:16px;color:var(--color-text-secondary)">Разговоры появятся здесь.<br>Начните первый — Лилит рядом.</p>
+        <button type="button" class="btn btn--primary">Написать Лилит</button>
+      </div>
+
+      <p class="mock-note" style="padding:16px 0">Порционная загрузка с сохранением положения; черновик каждого разговора изолирован (§3.4 R02).</p>
+    </div>
+  </div>
+
+  <!-- BottomNav: виден на списке (скрыт в открытом диалоге, R02 §2.1) -->
+  <nav class="bottomnav" aria-label="Основная навигация">
+    <div class="bottomnav__tabs">
+      <button type="button" class="bottomnav__tab" aria-current="page"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 12l7-8 7 8M6 10v9h10v-9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Чат</button>
+      <button type="button" class="bottomnav__tab"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 7v4l3 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Сегодня</button>
+      <button type="button" class="bottomnav__tab"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 5h6v6H4zM12 5h6v6h-6zM4 12h6v5H4zM12 12h6v5h-6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Библиотека</button>
+      <button type="button" class="bottomnav__tab"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 18c1.5-3.5 4-5 6.5-5s5 1.5 6.5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Профиль</button>
+    </div>
+  </nav>
+
+  <!-- Rail (tablet) и Sidebar (desktop) — те же 4 раздела -->
+  <nav class="rail" aria-label="Основная навигация">
+    <button type="button" class="rail__tab" aria-current="page"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 12l7-8 7 8M6 10v9h10v-9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Чат</button>
+    <button type="button" class="rail__tab"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 7v4l3 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Сегодня</button>
+    <button type="button" class="rail__tab"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 5h6v6H4zM12 5h6v6h-6zM4 12h6v5H4zM12 12h6v5h-6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Библиотека</button>
+    <button type="button" class="rail__tab"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 18c1.5-3.5 4-5 6.5-5s5 1.5 6.5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Профиль</button>
+  </nav>
+
+  <aside class="sidebar" aria-label="Основная навигация">
+    <div class="sidebar__brand">
+      <span class="sidebar__brand-mark" aria-hidden="true">O</span>
+      <span class="sidebar__brand-name">OracleAI</span>
+    </div>
+    <button type="button" class="sidebar__new">
+      <svg viewBox="0 0 20 20" aria-hidden="true" style="width:18px;height:18px"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      Новый разговор
+    </button>
+    <div class="sidebar__section">Разделы</div>
+    <button type="button" class="sidebar__link" aria-current="page">
+      <svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 12l7-8 7 8M6 10v9h10v-9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Чат
+    </button>
+    <button type="button" class="sidebar__link">
+      <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 7v4l3 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      Сегодня
+    </button>
+    <button type="button" class="sidebar__link">
+      <svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 5h6v6H4zM12 5h6v6h-6zM4 12h6v5H4zM12 12h6v5h-6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      Библиотека
+    </button>
+    <button type="button" class="sidebar__link">
+      <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 18c1.5-3.5 4-5 6.5-5s5 1.5 6.5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      Профиль
+    </button>
+    <div class="sidebar__section">Недавние</div>
+    <button type="button" class="sidebar__link">Про работу и радость</button>
+    <button type="button" class="sidebar__link">Расклад про новый проект</button>
+    <button type="button" class="sidebar__link">Транзиты ноября</button>
+    <div class="sidebar__footer">
+      <button type="button" class="sidebar__link">
+        <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 18c1.5-3.5 4-5 6.5-5s5 1.5 6.5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Анна
+      </button>
+    </div>
+  </aside>
+</div>
+</div>
+
+<!-- ========================================================
+     S10 KATALOG ИНСТРУМЕНТОВ — sheet (план §5.1)
+     ======================================================== -->
+<div class="screen-view" id="view-sheet-tools" role="region" aria-label="Каталог инструментов — sheet">
+<div class="screen">
+  <div class="screen__body">
+    <h1 style="font-size:24px;line-height:30px;font-weight:700;padding:24px 0 8px">Каталог инструментов</h1>
+    <p class="mock-note">В прототипе sheet открывается поверх Чата по кнопке «Инструменты» в composer. Здесь — статичный кадр. Мобильный sheet ≤80% высоты; на desktop — popup/panel.</p>
+
+    <div class="tool-row" style="max-width:480px;margin-top:24px">
+      <span class="tool-row__icon" aria-hidden="true">🎴</span>
+      <span class="tool-row__body">
+        <span class="tool-row__name">Таро · 10 раскладов</span>
+        <span class="tool-row__benefit" style="display:block">Вопрос, карты, разбор по школе Райдера-Уэйта</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Bottom sheet поверх Чата -->
+  <div class="sheet is-open" role="dialog" aria-modal="true" aria-labelledby="sheet-title" style="position:relative;margin:auto auto 0;width:100%;max-width:560px">
+    <div class="sheet__header">
+      <h2 class="sheet__title" id="sheet-title">Инструменты Лилит</h2>
+      <button type="button" class="sheet__close" aria-label="Закрыть каталог">
+        <svg viewBox="0 0 20 20" aria-hidden="true" style="width:18px;height:18px"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet__search">
+      <label class="visually-hidden" for="tool-search">Поиск инструментов</label>
+      <input class="field__input" id="tool-search" type="search" placeholder="Поиск…" style="width:100%">
+    </div>
+    <div class="sheet__body">
+      <!-- Недавние (до 3, §5.1) -->
+      <p class="mock-note" style="padding:0 12px 8px">Недавние</p>
+      <button type="button" class="tool-row">
+        <span class="tool-row__icon" aria-hidden="true">🎴</span>
+        <span class="tool-row__body">
+          <span class="tool-row__name">Расклад «Три карты»</span>
+          <span class="tool-row__benefit" style="display:block">Прошлое · настоящее · направление</span>
+        </span>
+        <span class="tool-row__meta">бесплатно</span>
+      </button>
+
+      <p class="mock-note" style="padding:16px 12px 8px">Категория: разборы</p>
+      <button type="button" class="tool-row">
+        <span class="tool-row__icon" aria-hidden="true">🧭</span>
+        <span class="tool-row__body">
+          <span class="tool-row__name">Матрица судьбы</span>
+          <span class="tool-row__benefit" style="display:block">Линии, арканы и фокус периода</span>
+        </span>
+      </button>
+      <button type="button" class="tool-row">
+        <span class="tool-row__icon" aria-hidden="true">📖</span>
+        <span class="tool-row__body">
+          <span class="tool-row__name">Дневник</span>
+          <span class="tool-row__benefit" style="display:block">Запись дня и практика наблюдения</span>
+        </span>
+      </button>
+
+      <!-- Нет совпадений (§5.1) -->
+      <div style="display:none;flex-direction:column;align-items:center;gap:8px;padding:32px 16px;color:var(--color-text-muted)" id="tool-noresults-demo">
+        <span style="font-size:24px" aria-hidden="true">🔍</span>
+        <p style="font-size:14px">Ничего не нашлось по «синастр»</p>
+        <button type="button" class="btn btn--ghost" style="min-height:36px;font-size:13px">Сбросить поиск</button>
+      </div>
+
+      <!-- У другого специалиста (§5.1) -->
+      <p class="mock-note" style="padding:16px 12px 8px">У другого специалиста</p>
+      <button type="button" class="tool-row">
+        <img class="session-card__avatar" src="img/agents/astro.jpg" alt="" style="width:40px;height:40px;border-radius:999px;object-fit:cover;flex:none">
+        <span class="tool-row__body">
+          <span class="tool-row__name">Синастрия</span>
+          <span class="tool-row__benefit" style="display:block">Совместимость — у Урании</span>
+        </span>
+        <span class="tool-row__meta">открыть у Астролога</span>
+      </button>
+
+      <!-- Недоступно сейчас / нужны данные (§5.1 различаются) -->
+      <button type="button" class="tool-row" aria-disabled="true" style="opacity:.55">
+        <span class="tool-row__icon" aria-hidden="true">🌙</span>
+        <span class="tool-row__body">
+          <span class="tool-row__name">Луна недели</span>
+          <span class="tool-row__benefit" style="display:block">Нужны данные рождения — заполнить в профиле</span>
+        </span>
+        <span class="tool-row__meta tool-row__meta--locked">нужны данные</span>
+      </button>
+      <p class="mock-note" style="padding:8px 12px 0">Состояния строки: «нет совпадений», «недоступно сейчас», «нужны данные» — различимы визуально и текстом, не только цветом.</p>
+    </div>
+  </div>
+
+  <!-- BottomNav под sheet -->
+  <nav class="bottomnav" aria-label="Основная навигация" style="display:block;position:relative">
+    <div class="bottomnav__tabs">
+      <button type="button" class="bottomnav__tab" aria-current="page"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 12l7-8 7 8M6 10v9h10v-9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Чат</button>
+      <button type="button" class="bottomnav__tab"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 7v4l3 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Сегодня</button>
+      <button type="button" class="bottomnav__tab"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 5h6v6H4zM12 5h6v6h-6zM4 12h6v5H4zM12 12h6v5h-6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Библиотека</button>
+      <button type="button" class="bottomnav__tab"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 18c1.5-3.5 4-5 6.5-5s5 1.5 6.5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Профиль</button>
+    </div>
+  </nav>
+</div>
+</div>
+
+<script>
+/* Прототипная логика макета: переключение видов и шагов.
+   Не прод-код: минимальный wire-up для ревью состояний. */
+(function () {
+  var views = document.querySelectorAll('.screen-view');
+  var navBtns = document.querySelectorAll('.proto-nav button');
+  var sky = document.getElementById('sky');
+
+  function showView(id) {
+    views.forEach(function (v) { v.classList.toggle('is-active', v.id === 'view-' + id); });
+    navBtns.forEach(function (b) { b.classList.toggle('is-active', b.dataset.view === id); });
+    if (sky) {
+      sky.dataset.bg = (id === 'onboarding') ? 'welcome' : 'chat';
+    }
+  }
+
+  navBtns.forEach(function (b) {
+    b.addEventListener('click', function () { showView(b.dataset.view); });
+  });
+
+  /* Прямая ссылка на экран: index.html#view-chat-dialog (для ревью и QA) */
+  function applyHash() {
+    var h = location.hash.replace('#', '');
+    if (h.indexOf('view-') === 0) showView(h.slice(5));
+  }
+  window.addEventListener('hashchange', applyHash);
+  applyHash();
+
+  /* Онбординг: шаги */
+  var stepLabels = {1:'намерение',2:'имя',3:'дата',4:'время',5:'город'};
+  var current = 1;
+  var steps = document.querySelectorAll('.onboarding__step');
+  var segs = document.querySelectorAll('#ob-progress .seg-progress__seg');
+  var label = document.getElementById('ob-step-label');
+  var progress = document.getElementById('ob-progress');
+  var next = document.getElementById('ob-next');
+
+  function showStep(n) {
+    current = n;
+    steps.forEach(function (s) { s.hidden = (s.id !== 'ob-step-' + n && s.id !== (n === 6 ? 'ob-review' : '')); });
+    document.getElementById('ob-review').hidden = (n !== 6);
+    if (n <= 5) document.getElementById('ob-step-' + n).hidden = false;
+    segs.forEach(function (seg, i) {
+      seg.classList.toggle('is-done', i < n - 1);
+      seg.classList.toggle('is-active', i === n - 1);
+    });
+    label.textContent = (n === 6) ? 'Проверка данных' : ('Шаг ' + n + ' из 5 · ' + stepLabels[n]);
+    progress.setAttribute('aria-valuenow', n === 6 ? 5 : n);
+    next.textContent = (n === 5) ? 'Проверить данные' : (n === 6 ? 'Начать разбор' : 'Продолжить');
+    next.dataset.goto = n === 1 ? 'ob-step-2' : (n < 5 ? 'ob-step-' + (n + 1) : (n === 5 ? 'ob-review' : ''));
+  }
+
+  document.querySelectorAll('[data-goto^="ob-step"], [data-goto="ob-review"]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var target = b.dataset.goto;
+      var n = parseInt(target.split('-')[2] || '6', 10);
+      if (target === 'ob-review') n = 6;
+      showStep(n);
+    });
+  });
+  /* intent-карточки проходят вперёд */
+  document.querySelectorAll('.intent-card').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.intent-card').forEach(function (x) { x.setAttribute('aria-pressed', 'false'); });
+      b.setAttribute('aria-pressed', 'true');
+      showStep(2);
+    });
+  });
+  /* время: выбор опции */
+  document.querySelectorAll('#ob-step-4 .choice-row').forEach(function (b, i) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#ob-step-4 .choice-row').forEach(function (x) { x.setAttribute('aria-pressed', 'false'); });
+      b.setAttribute('aria-pressed', 'true');
+      document.getElementById('ob-time-exact').hidden = (i !== 0);
+      document.getElementById('ob-time-approx').hidden = (i !== 1);
+    });
+  });
+
+  /* Чат: composer demo — кнопка «Отправить» активна только с текстом */
+  var inp = document.getElementById('chat-input-empty');
+  var send = document.querySelector('#view-chat-empty .composer__send');
+  if (inp && send) {
+    inp.addEventListener('input', function () { send.disabled = (inp.value.trim() === ''); });
+  }
+
+  /* Sheet: открытие из composer */
+  document.querySelectorAll('[data-open-sheet]').forEach(function (b) {
+    b.addEventListener('click', function () { showView('sheet-tools'); });
+  });
+})();
+</script>
+</body>
+</html>
