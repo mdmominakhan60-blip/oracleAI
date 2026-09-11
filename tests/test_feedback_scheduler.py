@@ -276,9 +276,13 @@ async def test_e2e_invite_then_submit_via_api_grants_bonus(client, db):
     user = await _day7_user(db, 4031, days_ago=7, fixed_now=FIXED_NOW)
 
     # Ключевая активность недели (гейт бонуса): 5 дней по 2 события.
+    # События — относительно РЕАЛЬНОГО «сейчас»: activity_gate в API-пути
+    # берёт now из datetime.now() (не из scheduler-патча), поэтому фикс на
+    # FIXED_NOW делал тест красным, как только окно 7д уезжало от 06.09.
     names = ["forecast_view", "tarot_draw", "question"]
+    real_now = datetime.now(timezone.utc)
     for d in range(5):
-        moment = FIXED_NOW - timedelta(days=d)
+        moment = real_now - timedelta(days=d, hours=1)
         for e in range(2):
             await db.execute(
                 "INSERT INTO events(tg_id, name, day, created_at) "
