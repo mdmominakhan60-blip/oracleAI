@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 TEXT_EXTENSIONS = {".css", ".html", ".js", ".py", ".ts", ".tsx"}
-URL_RE = re.compile(r"(?P<quote>['\"])(?P<url>/(?:static|public|admin/static)/[^'\"\s)<>]+)(?P=quote)")
+URL_RE = re.compile(r"(?P<quote>['\"])(?P<url>/(?:static|admin/static)/[^'\"\s)<>]+)(?P=quote)")
 CSS_URL_RE = re.compile(r"url\(\s*(?P<quote>['\"]?)(?P<url>[^)'\"\s]+)(?P=quote)\s*\)", re.IGNORECASE)
 DYNAMIC_MARKERS = ("${", "{{", "}}", "<%", "+", "`", "*", "[", "{", "}")
 CSS_IMPORT_RE = re.compile(r"@import\s+(?:url\(\s*)?(?P<quote>['\"]?)(?P<url>[^'\";)\s]+)(?P=quote)", re.IGNORECASE)
@@ -30,8 +30,6 @@ def _path_for_url(value: str) -> Path | None:
     value = urlsplit(value).path
     if value.startswith("/static/"):
         return ROOT / "miniapp" / value.removeprefix("/static/")
-    if value.startswith("/public/"):
-        return ROOT / "web" / value.removeprefix("/public/")
     if value.startswith("/admin/static/"):
         return ROOT / "admin" / value.removeprefix("/admin/static/")
     return None
@@ -82,7 +80,7 @@ def main() -> int:
     args = parser.parse_args()
     root = args.root.resolve()
     errors: list[str] = []
-    for directory in (root / "miniapp", root / "web", root / "admin", root / "app"):
+    for directory in (root / "miniapp", root / "admin", root / "app"):
         if not directory.is_dir():
             continue
         for path in directory.rglob("*"):
