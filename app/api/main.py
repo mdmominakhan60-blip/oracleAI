@@ -14,7 +14,6 @@ import os
 import re
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -65,7 +64,6 @@ def _route_label(request: Request) -> str:
 ROOT = Path(__file__).resolve().parent.parent.parent
 MINIAPP_DIR = ROOT / "miniapp"
 ADMIN_DIR = ROOT / "admin"
-WEB_DIR = ROOT / "web"                 # публичный лендинг и SEO-файлы (G36)
 
 
 def _validate_production_config() -> None:
@@ -397,143 +395,6 @@ if MINIAPP_DIR.is_dir():
 if ADMIN_DIR.is_dir():
     app.mount("/admin/static", StaticFiles(directory=str(ADMIN_DIR)),
               name="admin-static")
-class _NoHtmlStaticFiles(StaticFiles):
-    """Маунт /public отдаёт только ассеты: *.html → 404.
-
-    HTML-страницы web/ канонически обслуживают маршруты /landing, /privacy,
-    /terms (с подстановкой __PUBLIC_BASE_URL__); прямая раздача StaticFiles
-    отдавала бы их полные SEO-дубли с невалидным canonical (BUS-130 → BUS-321).
-    """
-
-    async def get_response(self, path: str, scope):
-        if path.lower().endswith(".html"):
-            return Response(status_code=404)
-        return await super().get_response(path, scope)
-
-
-if WEB_DIR.is_dir() and (WEB_DIR / "landing.css").is_file():
-    # Только публичные стили лендинга: HTML отдаётся отдельными маршрутами выше,
-    # а мёртвые статичные robots.txt/sitemap.xml удалены (аудит 4.4) —
-    # их генерируют динамические маршруты ниже.
-    app.mount("/public", _NoHtmlStaticFiles(directory=str(WEB_DIR)),
-              name="public-static")
-
-
-def _public_base(request: Request) -> str:
-    # Production startup requires WEBAPP_URL, so Host headers cannot poison
-    # canonical, robots or sitemap URLs. A request-derived fallback is dev-only.
-    return settings.webapp_url or (str(request.base_url).rstrip("/")
-                                   if settings.dev_mode else "")
-
-
-def _public_template(name: str, request: Request) -> HTMLResponse:
-    path = WEB_DIR / name
-    if not path.is_file():
-        return HTMLResponse("Страница не найдена", status_code=404)
-    body = path.read_text(encoding="utf-8").replace("__PUBLIC_BASE_URL__", _public_base(request))
-    return HTMLResponse(body)
-
-
-def _web_source(request: Request) -> str:
-    """utm_source, иначе referrer-хост, иначе direct. Только allowlist-токен."""
-    source = request.query_params.get("utm_source")
-    if not source:
-        referrer = request.headers.get("referer", "")
-        if "://" in referrer:
-            host = urlsplit(referrer).netloc.rsplit(".", 2)[-2:]
-            if host and not host[0].isdigit():
-                source = ".".join(host)
-    return source or "direct"
-
-
-async def _public_page(name: str, page: str, request: Request,
-                       db=Depends(get_db)) -> HTMLResponse:
-    """Отдаёт публичную страницу и пишет web-событие воронки (BUS-116/EXP-001).
-
-    Трекинг никогда не влияет на ответ: analytics.track — фоновая запись,
-    ошибки логируются внутри сервиса. visitor дедуплицируется по дню в рамках
-    cookie-сессии; landing/content — считаем каждый показ.
-    """
-    response = _public_template(name, request)
-    if response.status_code == 404:
-        return response
-    source = analytics_service.safe_web_source(_web_source(request)) or "direct"
-    if page == "landing":
-        day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        if request.cookies.get("sid_day") == day:
-            await analytics_service.track(
-                db, analytics_service.E_LANDING_VIEW, props={"page": page, "source": source},
-                surface="web")
-        else:
-            await analytics_service.track(
-                db, analytics_service.E_VISITOR, props={"source": source}, surface="web")
-            await analytics_service.track(
-                db, analytics_service.E_LANDING_VIEW, props={"page": page, "source": source},
-                surface="web")
-            response.set_cookie("sid_day", day, max_age=86400, samesite="lax")
-    else:
-        await analytics_service.track(
-            db, analytics_service.E_CONTENT_VIEW, props={"page": page, "source": source},
-            surface="web")
-    return response
-
-
-@app.get("/robots.txt", include_in_schema=False)
-async def robots_txt(request: Request):
-    # Allow длиннее Disallow → краулеры, уважающие robots.txt (Twitterbot,
-    # facebookexternalhit), fetchнут og:image и favicon под /static/img.
-    body = ("User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\n"
-            "Allow: /static/img/\nDisallow: /static\n\n"
-            f"Sitemap: {_public_base(request)}/sitemap.xml\n")
-    return Response(body, media_type="text/plain")
-
-
-@app.get("/sitemap.xml", include_in_schema=False)
-async def sitemap_xml(request: Request):
-    base = _public_base(request)
-    body = ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-            "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n"
-            f"  <url><loc>{base}/landing</loc></url>\n"
-            f"  <url><loc>{base}/landing/en</loc></url>\n"
-            f"  <url><loc>{base}/privacy</loc></url>\n"
-            f"  <url><loc>{base}/terms</loc></url>\n"
-            f"  <url><loc>{base}/privacy/en</loc></url>\n"
-            f"  <url><loc>{base}/terms/en</loc></url>\n"
-            "</urlset>\n")
-    return Response(body, media_type="application/xml")
-
-
-@app.get("/landing", include_in_schema=False)
-async def landing(request: Request, db=Depends(get_db)):
-    """Публичный русскоязычный лендинг для поиска и шаринга ссылок."""
-    return await _public_page("landing.html", "landing", request, db)
-
-
-@app.get("/landing/en", include_in_schema=False)
-async def landing_en(request: Request, db=Depends(get_db)):
-    """Англоязычная версия публичного лендинга."""
-    return await _public_page("landing-en.html", "landing", request, db)
-
-
-@app.get("/privacy", include_in_schema=False)
-async def privacy(request: Request, db=Depends(get_db)):
-    return await _public_page("privacy.html", "privacy", request, db)
-
-
-@app.get("/privacy/en", include_in_schema=False)
-async def privacy_en(request: Request, db=Depends(get_db)):
-    return await _public_page("privacy-en.html", "privacy", request, db)
-
-
-@app.get("/terms", include_in_schema=False)
-async def terms(request: Request, db=Depends(get_db)):
-    return await _public_page("terms.html", "terms", request, db)
-
-
-@app.get("/terms/en", include_in_schema=False)
-async def terms_en(request: Request, db=Depends(get_db)):
-    return await _public_page("terms-en.html", "terms", request, db)
-
 
 @app.get("/{filename}", include_in_schema=False)
 async def miniapp_asset(filename: str):

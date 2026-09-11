@@ -35,7 +35,7 @@
 
 | Surface | Текущее состояние | Evidence / gap |
 |---|---|---|
-| Public landing | **Enabled** | `web/landing.html`, `web/landing-en.html`, CSS, terms/privacy и sitemap. |
+| Public landing | **Removed (BUS-666)** | Сайт переезжает на отдельный WEBoracleAI (weboracleai.pages.dev); в продукте лендинга больше нет. |
 | Onboarding | **Enabled** | Age gate, intro guide, birth-data setup. |
 | Home / Today | **Enabled** | `/api/today`, diary, practices, moon week, home shell. |
 | Dashboard | **Enabled with limitation** | Mini App home acts as dashboard; отдельный desktop dashboard не выделен. |

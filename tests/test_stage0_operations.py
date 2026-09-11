@@ -82,10 +82,8 @@ def test_ops_alert_log_counts_are_windowed(tmp_path):
     }
 
 
-def test_cache_busting_policy_and_public_legal_pages():
+def test_cache_busting_policy():
     assert check_cache_busting.main() == 0
-    for name in ("privacy.html", "terms.html", "privacy-en.html", "terms-en.html"):
-        assert (ROOT / "web" / name).is_file()
 
 
 async def test_ops_alerts_recognize_postgres_backup_and_offsite_failure(db, tmp_path, monkeypatch, capsys):
