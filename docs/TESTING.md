@@ -31,6 +31,27 @@
 APP_ENV=dev DEV_MODE=1 LLM_PROVIDER=off \
 DATABASE_URL=postgresql+asyncpg://oracle:oracle@127.0.0.1:5432/oracle_test \
 pytest -q
+```
+
+### Environment prerequisites for a clean checkout
+
+A full `pytest` run in a fresh clone/worktree needs two extra prerequisites;
+without them ~6 tests fail for environment reasons, not code:
+
+1. **Frontend bundle** — `node scripts/build_frontend.mjs`. Tests that render the
+   Mini App index (`tests/test_api.py`, bundle-serving flips FE-002) read
+   `miniapp/dist/manifest.json`; some have a skip-guard when it is missing, but
+   `test_miniapp_index_uses_hashed_bundles_in_production` does not and fails on
+   a clean checkout. `scripts/build_frontend.mjs` requires Node with esbuild
+   (`transform`) available.
+2. **Redis on 127.0.0.1:6379** — `tests/test_bus200_replay.py` connects a real
+   Redis client via `settings.redis_url` for the fail-open/fail-closed replay
+   store semantics (no skip-guard; run `redis-server --daemonize yes` or point
+   `REDIS_URL` at an available instance).
+
+Baseline commands that do not need pytest (self-check, gates, syntax, audits):
+
+```bash
 python3 -m scripts.selfcheck
 python3 -m scripts.release_gate
 python3 -m compileall -q app scripts tests
