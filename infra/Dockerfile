@@ -36,13 +36,11 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Application code and every resource referenced at runtime. In particular,
-# models/ is required by the palm-line ONNX and MediaPipe adapters, while web/
-# is served by FastAPI as the public landing/SEO surface.
+# models/ is required by the palm-line ONNX and MediaPipe adapters.
 COPY app ./app
 COPY miniapp ./miniapp
 COPY --from=frontend-builder /opt/oracle/miniapp/dist ./miniapp/dist
 COPY admin ./admin
-COPY web ./web
 COPY models ./models
 COPY prompts ./prompts
 COPY scripts ./scripts

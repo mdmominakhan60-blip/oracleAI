@@ -89,7 +89,7 @@ ensure-mcp-role:
 #  - --no-deps: штатная зависимость api→migrate гоняла alembic upgrade из
 #    (возможно stale) образа против общей БД → «Can't locate revision».
 #    Схему поднимаем сами из монтированной alembic/ рабочей копии.
-#  - Монтируются app/alembic/miniapp/web (ro где только чтение): тесты читают
+#  - Монтируются app/alembic/miniapp (ro где только чтение): тесты читают
 #    исходники через ROOT/ (test_miniapp_actions, test_architecture_boundaries).
 #  - ensure_test_role перед reset: нормализует пароль oracle_test к .env
 #    (BUS-303/329: InvalidPasswordError при рассинхроне ранее созданной роли).
@@ -118,7 +118,6 @@ _test:
 		-v $(CURDIR)/alembic:/opt/oracle/alembic \
 		-v $(CURDIR)/alembic.ini:/opt/oracle/alembic.ini:ro \
 		-v $(CURDIR)/miniapp:/opt/oracle/miniapp:ro \
-		-v $(CURDIR)/web:/opt/oracle/web:ro \
 		-v $(CURDIR)/infra:/opt/oracle/infra \
 		-v $(CURDIR)/data:/opt/oracle/data:ro \
 		-v $(CURDIR)/.env.production.example:/opt/oracle/.env.production.example:ro \
