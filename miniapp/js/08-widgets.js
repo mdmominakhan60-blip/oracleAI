@@ -18,16 +18,22 @@ const widgetShell = (p, { title, body, tail = '' }) => {
     const wd = WD_LOWER;
     const days = p.days || [];
     return widgetShell(p, {
-      title: '🌙 Лунная неделя',
-      body: days.length ? days.map((d, i) => `
+      title: '🌙 ' + homeT('moonTitle'),
+      body: days.length ? days.map((d, i) => {
+        const formula = moonFormula(d);
+        const signBit = d.moon_sign && d.moon_sign.sign
+          ? ` <span class="mc-sign">${esc(SIGNS[d.moon_sign.sign] || '')} ${esc(d.moon_sign.sign)}</span>` : '';
+        return `
           <div class="planet-line pw-mline${p.exp === i ? ' exp' : ''}" data-act="moon-expand" data-i="${i}">
             <div class="p-ico moon-orb mini-moon">${moonSvg(d.emoji)}</div>
-            <div class="p-name">${d.date.slice(8)} ${wd[d.weekday]} · <b>${esc(d.name)}</b></div>
+            <div class="p-name">${d.date.slice(8)} ${wd[d.weekday]} · <b>${esc(d.name)}</b>${signBit}</div>
             <div class="p-val" style="font-size:11.5px">${d.day}-й д.</div>
+            ${formula ? `<div class="moon-formula">${esc(formula)}</div>` : ''}
             ${p.exp === i ? `<div class="moon-adv">${esc(d.advice)}</div>` : ''}
-          </div>`).join('')
+          </div>`;
+      }).join('')
         : '<div style="color:var(--text-faint);font-size:12.5px">' + esc(p.error || 'Нет данных') + '</div>',
-      tail: '<div style="font-size:11.5px;color:var(--text-faint);margin-top:8px">Тапни день — раскроется совет фазы</div>',
+      tail: '<div style="font-size:11.5px;color:var(--text-faint);margin-top:8px">' + esc(homeT('moonExpandHint')) + '</div>',
     });
   };
 

@@ -562,13 +562,14 @@ const profileFormat = (key, values = {}) => Object.entries(values).reduce(
 const HOME_I18N = {
   ru: {
     ritualLabel: 'Твой мягкий ритуал дня', welcomeKicker: 'СЕГОДНЯ — БЕЗ СПЕШКИ', focusAskToday: 'Спросить о своём дне', focusExpand: 'Развернуть', focusCollapse: 'Свернуть', heroNextPrefix: 'Дальше', accMoonBadge: 'сегодня',
+    moonLoadError: 'Лунная неделя не загрузилась. Потяни вниз — обновим.', moonEmpty: 'Лунный календарь скоро подтянет свет 🌙',
     flipCardAria: 'Перевернуть карту',
     rhythmAria: 'Твой ритм на сегодня', rhythmKicker: 'Твой ритм', rhythmTitle: 'Вернуться к себе', stepsAria: '{count} из 2 бережных шагов',
     diaryDoneAria: 'Дневник заполнен, открыть записи', diaryOpenAria: 'Открыть дневник состояния', diaryDone: 'Дневник уже заполнен', diaryOpen: 'Отметить своё состояние',
     diaryDoneCopy: 'Дневник уже ждёт тебя в личной библиотеке.', diaryPromptFallback: 'Одно честное предложение о том, как ты сейчас.',
     practiceDoneAria: 'Отметить шаг практики', practiceStartAria: 'Начать практику', practiceStepFallback: 'Отметить маленький шаг', practiceFallback: 'Мягкая практика на сегодня',
     ritualNote: 'Без штрафов за пропуски. Это не чек-лист «идеальной жизни», а две мягкие точки опоры для тебя.',
-    week: 'Вся неделя', today: 'сегодня', lunarDay: '{day}-й лунный день', moonTitle: '🌙 Лунный календарь', moonWeek: 'Неделя',
+    week: 'Вся неделя', today: 'сегодня', lunarDay: '{day}-й лунный день', moonTitle: '🌙 Лунный календарь', moonWeek: 'Неделя', moonExpandHint: 'Тапни день — раскроется рекомендация движка',
     personal: 'Только для тебя', todaySign: 'Знак на сегодня', forecastFallbackTitle: 'Начни с того, что уже чувствуешь.', forecastFallbackCopy: 'Открой личный знак дня или задай Оракулу вопрос — это тоже хороший способ вернуться к себе.',
     daySymbol: 'Символ дня', cardNearby: 'Карта, которая рядом', cardCopy: 'Носи эту энергию сегодня — карта дня задаёт тон всему: от решений до встреч.', cardHint: 'Тапни карту — она развернётся со смыслом ↻',
     guidesTitle: 'Твои проводники', guidesCopy: 'Не нужно знать «правильный» вопрос. Выбери того, с кем хочется побыть сегодня — он поможет разложить мысли по местам.',
@@ -578,13 +579,14 @@ const HOME_I18N = {
   },
   en: {
     ritualLabel: 'Your gentle daily ritual', welcomeKicker: 'TODAY — WITHOUT RUSH', focusAskToday: 'Ask about your day', focusExpand: 'Expand', focusCollapse: 'Collapse', heroNextPrefix: 'Next up', accMoonBadge: 'today',
+    moonLoadError: 'The moon week didn’t load. Pull down to refresh.', moonEmpty: 'The moon calendar will catch its light soon 🌙',
     flipCardAria: 'Flip the card',
     rhythmAria: 'Your rhythm for today', rhythmKicker: 'Your rhythm', rhythmTitle: 'Return to yourself', stepsAria: '{count} of 2 gentle steps',
     diaryDoneAria: 'Diary completed, open entries', diaryOpenAria: 'Open mood diary', diaryDone: 'Diary completed', diaryOpen: 'Check in with yourself',
     diaryDoneCopy: 'Your entry is waiting in your private library.', diaryPromptFallback: 'One honest sentence about how you are right now.',
     practiceDoneAria: 'Mark this practice step', practiceStartAria: 'Start practice', practiceStepFallback: 'Mark one small step', practiceFallback: 'A gentle practice for today',
     ritualNote: 'No penalties for skipping. This is not an “ideal life” checklist — just two gentle anchors for your day.',
-    week: 'Full week', today: 'today', lunarDay: 'lunar day {day}', moonTitle: '🌙 Moon calendar', moonWeek: 'Week',
+    week: 'Full week', today: 'today', lunarDay: 'lunar day {day}', moonTitle: '🌙 Moon calendar', moonWeek: 'Week', moonExpandHint: 'Tap a day to reveal the engine’s guidance',
     personal: 'Just for you', todaySign: 'Today’s sign', forecastFallbackTitle: 'Begin with what you already feel.', forecastFallbackCopy: 'Open your personal sign for today or ask the Oracle a question — both are gentle ways to return to yourself.',
     daySymbol: 'Symbol of the day', cardNearby: 'A card by your side', cardCopy: 'Carry this energy through the day — this card sets a tone for choices and encounters.', cardHint: 'Tap the card to reveal its meaning ↻',
     guidesTitle: 'Your guides', guidesCopy: 'You do not need the “right” question. Choose the voice you want to spend time with today — it will help you sort through your thoughts.',
@@ -596,6 +598,26 @@ const HOME_I18N = {
 const homeT = (key, fallback = '') => (HOME_I18N[oracleLang()] || HOME_I18N.ru)[key] || fallback || key;
 const homeFormat = (key, values = {}) => Object.entries(values).reduce(
   (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), homeT(key));
+
+// BUS-649 Э7b: формула дня из структурированных параметров движка (Э7a).
+// Расчёты не дублируем — только форматируем то, что прислал /api/moon/week.
+// d — день ленты: { phase:{name,emoji}, moon_sign:{sign,element}|null,
+// lunar_day:{n,quality,path}, transit:{planet,aspect,glyph,code,orb}|null }.
+const moonQualityT = q => oracleLang() === 'en'
+  ? ({ 'тёмный': 'dark', 'обычный': 'usual' })[q] || q : q;
+const moonFormula = function(d) {
+  if (!d || !d.lunar_day) return '';
+  const en = oracleLang() === 'en';
+  const bits = [];
+  if (d.moon_sign && d.moon_sign.sign) {
+    const glyph = SIGNS[d.moon_sign.sign] || '';
+    bits.push((glyph ? glyph + ' ' : '') + d.moon_sign.sign);
+  }
+  bits.push((en ? 'day ' : '') + d.lunar_day.n + (en ? '' : '-й'));
+  if (d.lunar_day.quality) bits.push(moonQualityT(d.lunar_day.quality));
+  if (d.transit && d.transit.glyph) bits.push('☽' + d.transit.glyph + d.transit.planet);
+  return bits.join(' · ');
+};
 
 // P3: детерминированный вариант без сторонних трекеров. В событие уходят только
 // имя эксперимента и вариант; вопрос, дневник и другие личные данные не передаются.
