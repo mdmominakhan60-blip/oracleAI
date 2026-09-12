@@ -301,8 +301,13 @@
     }
     if (step === 5) {
       const city = (document.getElementById('ob-city')?.value || '').trim();
-      if (!city) return false;
+      if (!city) {
+        const input = document.getElementById('ob-city');
+        if (input) { input.setAttribute('aria-invalid', 'true'); input.focus(); }
+        return showErr(t('obCityError'));
+      }
       this.onboardingData.city = city;
+      clearErr();
     }
     return true;
   };

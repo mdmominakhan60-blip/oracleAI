@@ -153,6 +153,10 @@ async function run() {
     const city = await page.$('#ob-city, .combobox input');
     ok('S04 шаг 5: город', !!city);
     if (city) {
+      const nextEmpty = await page.$('[data-act="ob-next"]');
+      if (nextEmpty) { await nextEmpty.click(); await page.waitForTimeout(300); }
+      const cityErr = await page.$eval('[data-ob-error]', (el) => !el.hidden).catch(() => false);
+      ok('S04 §11.2: ошибка города (пустой ввод)', cityErr === true);
       await city.fill('К');
       await page.waitForTimeout(300);
       const opts = await page.$$('.combobox__option');

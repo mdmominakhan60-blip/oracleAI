@@ -356,7 +356,7 @@ const I18N = {
     obTimeTitle: 'Время рождения', obTimeCopy: 'Точное время делает карту точнее. «Не знаю» — допустимый ответ.',
     obTimeExact: 'Точно', obTimeApprox: 'Примерно', obTimeDontKnow: 'Не знаю',
     obTimeExactNote: 'часы и минуты', obTimeApproxNote: 'укажем интервал — без подстановки полудня', obTimeDontKnowNote: 'расчёт без времени; добавить можно позже',
-    obCityTitle: 'Город рождения', obCityCopy: 'Определяет часовой пояс карты.', obCityPlaceholder: 'Начните вводить…', obCityLoading: 'Подсказки…',
+    obCityTitle: 'Город рождения', obCityCopy: 'Определяет часовой пояс карты.', obCityPlaceholder: 'Начните вводить…', obCityLoading: 'Подсказки…', obCityError: 'Укажите город рождения',
     obReviewTitle: 'Проверьте данные', obReviewCopy: 'Каждый пункт можно исправить.', obStart: 'Начать',
     // R06 p1 welcome
     welcomeKicker: 'Добро пожаловать', welcomeSub: 'Твой мягкий ритуал дня', welcomeCta: 'Продолжить',
@@ -396,7 +396,7 @@ const I18N = {
     obTimeTitle: 'Time of birth', obTimeCopy: 'Exact time makes the chart more accurate. "Don\'t know" is a valid answer.',
     obTimeExact: 'Exactly', obTimeApprox: 'Approximately', obTimeDontKnow: 'Don\'t know',
     obTimeExactNote: 'hours and minutes', obTimeApproxNote: 'we\'ll use an interval — no noon substitution', obTimeDontKnowNote: 'calculation without time; can add later',
-    obCityTitle: 'City of birth', obCityCopy: 'Determines the chart time zone.', obCityPlaceholder: 'Start typing…', obCityLoading: 'Suggestions…',
+    obCityTitle: 'City of birth', obCityCopy: 'Determines the chart time zone.', obCityPlaceholder: 'Start typing…', obCityLoading: 'Suggestions…', obCityError: 'Please enter your city of birth',
     obReviewTitle: 'Review your details', obReviewCopy: 'Each item can be corrected.', obStart: 'Begin',
     // R06 p1 welcome
     welcomeKicker: 'Welcome', welcomeSub: 'Your gentle daily ritual', welcomeCta: 'Continue',
