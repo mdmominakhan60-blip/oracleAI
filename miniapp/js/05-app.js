@@ -25,6 +25,7 @@ app.syncBg = function () {
   if (!root) return;
   let bg = 'welcome';
   if (this.chat && this.chat.key) bg = this.chat.key === 'tarot' ? 'tarot' : 'chat';
+  else if (['tarot-question', 'tarot-reveal', 'tarot-zoom', 'tarot-reading'].includes(this.view)) bg = 'tarot';
   else if (this.view === 'profile' || this.view === 'payment') bg = 'work';
   if (root.dataset.bg !== bg) root.dataset.bg = bg;
   document.documentElement.dataset.bg = bg;
@@ -142,6 +143,7 @@ app.initBgControls = function () {
       }
       else if (qaView === 'sessions') this.go('sessions');
       else if (qaView === 'sheet') this.go('sheet');
+      else if (['tool-quick', 'tool-form', 'tool-run', 'result', 'tarot-question', 'tarot-reveal', 'tarot-zoom', 'tarot-reading'].includes(qaView)) this.go(qaView);
       else if (['home', 'hub', 'profile'].includes(qaView)) this.go(qaView);
       if (qaView === 'profile' && ['summary', 'chart', 'history', 'memory'].includes(qaTab)) {
         setTimeout(() => document.querySelector(`.ptab[data-tab="${qaTab}"]`)?.click(), 120);
@@ -549,6 +551,10 @@ app.initBgControls = function () {
       if (app.chat && app.chat.key) return () => app.closeChat();
       if (app.view === 'welcome' || app.view === 'onboarding') return () => app.go('home');
       if (app.view === 'sessions') return () => app.go(app.chat && app.chat.key ? 'chat' : 'hub');
+      if (app.view === 'tarot-zoom') return () => app.go('tarot-reveal');
+      if (app.view === 'tarot-reveal' || app.view === 'tarot-reading') return () => app.go('tarot-question');
+      if (app.view === 'tool-run' || app.view === 'result') return () => app.go('hub');
+      if (app.view === 'tarot-question' || app.view === 'tool-quick' || app.view === 'tool-form') return () => app.go('hub');
       if (app.view !== 'home') return () => app.go('home');
       return null;
     })();
@@ -563,7 +569,7 @@ app.initBgControls = function () {
     }
   };
 
-  app.go = function(v) {
+  app.go = function(v, opts) {
     if (v === 'chat') v = 'hub';
     if (v !== 'hub') this.chat.key = null;
     this.view = v;
@@ -581,6 +587,14 @@ app.initBgControls = function () {
     else if (v === 'onboarding') this.startOnboarding();
     else if (v === 'sessions') this.renderSessions(main);
     else if (v === 'sheet') this.renderSheetTools(main);
+    else if (v === 'tool-quick') this.renderToolQuick(main);
+    else if (v === 'tool-form') this.renderToolForm(main);
+    else if (v === 'tool-run') this.renderToolRun(main, opts);
+    else if (v === 'result') this.renderResult(main, opts);
+    else if (v === 'tarot-question') this.renderTarotQuestion(main);
+    else if (v === 'tarot-reveal') this.renderTarotReveal(main);
+    else if (v === 'tarot-zoom') this.renderTarotZoom(main);
+    else if (v === 'tarot-reading') this.renderTarotReading(main);
   };
 
 
