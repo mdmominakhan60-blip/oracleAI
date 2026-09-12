@@ -115,6 +115,64 @@ DEFAULT_EN_CONTENT: dict[tuple[str, str], dict[str, str]] = {
                  "You can do it anytime — in your Profile. No rush — I'll keep "
                  "everything safe."),
     },
+    # Attention-queue playbook frames (BUS-293 §6, seeded per BUS-622/BUS-313 F2).
+    ("copy", "pb1_vip_sleeping"): {
+        "title": "Playbook PB-1: sleeping VIP",
+        "body": ("{name}, it's been a while — this is {oracle_name} 🌙\n\n"
+                 "I noticed your pause and wanted to ask: is everything alright?\n\n"
+                 "If you're tired of forecasts or something isn't working for you — "
+                 "tell me honestly, I'll adjust. If life simply got in the way — "
+                 "write anyway, I'm here.\n\n"
+                 "Your chart isn't going anywhere: I've kept everything you've "
+                 "shared with me ✨"),
+    },
+    ("copy", "pb2_welcome_back"): {
+        "title": "Playbook PB-2: welcome back",
+        "body": ("{name}, how lovely to see you here again ✨\n\n"
+                 "What brings you today — advice, or just a visit? Tell me — "
+                 "I'm listening."),
+    },
+    ("copy", "pb3_offer_unclaimed"): {
+        "title": "Playbook PB-3: unclaimed gift",
+        "body": ("{name}, my gift from last week is still waiting unwrapped 🎁\n\n"
+                 "It's yours until {code_until}.\n\n"
+                 "If it's a stretch right now or something didn't feel right — "
+                 "just say so, we'll find a solution. No hard feelings and no "
+                 "pressure 🌙"),
+    },
+    ("copy", "pb4_plan_pain"): {
+        "title": "Playbook PB-4: plan feels tight",
+        "body": ("{name}, this week you hit the limit {N} times — the «{plan}» "
+                 "plan feels tight for you ✨\n\n"
+                 "On «{next_plan}» that's solved: {diff}.\n\n"
+                 "Drop by whenever the mood strikes: {deep_link}"),
+    },
+    ("copy", "pb6_onboard_stuck"): {
+        "title": "Playbook PB-6: onboarding stalled",
+        "body": ("{name}, I noticed our introduction paused halfway — and I won't "
+                 "rush you 🌙\n\n"
+                 "Which step got stuck? Maybe something felt unclear — or the "
+                 "timing just wasn't right. Tell me how to help, or come back "
+                 "whenever you're ready ✨"),
+    },
+    ("copy", "pb7_refund"): {
+        "title": "Playbook PB-7: refund",
+        "body": ("{name}, I see the refund on your payment 🌙\n\n"
+                 "I'm sorry it turned out this way. Tell me what happened — I want "
+                 "to understand and make it right."),
+    },
+    # pb5_no_channel is an operator reference card (delivery statuses), not
+    # client copy; seeded too so admins can override it without a release.
+    ("copy", "pb5_no_channel"): {
+        "title": "Playbook PB-5: channel closed",
+        "body": ("forbidden — the client has closed the channel: messages won't "
+                 "get through until the first successful delivery after "
+                 "unblocking. Action: tag no-channel.\n\n"
+                 "failed — a temporary delivery error: the scheduler will retry on "
+                 "its own, no intervention needed. Action: observe.\n\n"
+                 "Escalate to DevOps — only on a mass spike of failed within a "
+                 "short window at regular volume."),
+    },
     # welcome-цепочка W1-W3 (BUS-258, §1; копирайт BUS-263 §4)
     ("copy", "welcome_d1"): {
         "title": "Welcome: day 1",
