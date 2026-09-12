@@ -145,7 +145,10 @@
     'survey-next': () => call('surveyAdvance'),
     'survey-back': () => call('surveyBack'),
     'survey-close': () => call('closeSurvey'),
-    'survey-open': () => call('openSurvey')
+    'survey-open': () => call('openSurvey'),
+    // BUS-1070 p1 R06: онбординг — шаги и review
+    'ob-next': () => call('_obAdvance'),
+    'ob-back': () => call('_obBack')
   };
 
   app.actionHandlers = actionHandlers;
