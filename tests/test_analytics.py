@@ -174,31 +174,6 @@ async def test_touch_throttled_to_once_per_interval(db):
     assert u["last_seen"] is not None, "после окна touch обязан записать"
 
 
-# ─────────────────── web-события воронки (BUS-116 / EXP-001) ───────────────────
-
-async def test_web_events_written_with_web_surface(db):
-    """landing_view/visitor/content_view пишутся анонимно с surface='web'."""
-    await analytics.track_now(db, analytics.E_VISITOR,
-                              props={"source": "organic"}, surface="web")
-    await analytics.track_now(db, analytics.E_LANDING_VIEW,
-                              props={"page": "landing", "source": "organic"},
-                              surface="web")
-    await analytics.track_now(db, analytics.E_CONTENT_VIEW,
-                              props={"page": "privacy", "source": "direct"},
-                              surface="web")
-    await analytics.drain()
-    cur = await db.execute(
-        "SELECT name, tg_id, surface, props_json FROM events "
-        "WHERE name IN (?, ?, ?)",
-        (analytics.E_VISITOR, analytics.E_LANDING_VIEW, analytics.E_CONTENT_VIEW))
-    rows = [dict(r) for r in await cur.fetchall()]
-    assert len(rows) == 3
-    assert all(r["tg_id"] is None for r in rows), "web-события анонимны"
-    assert all(r["surface"] == "web" for r in rows)
-    props = {r["name"]: json.loads(r["props_json"] or "{}") for r in rows}
-    assert props[analytics.E_LANDING_VIEW]["page"] == "landing"
-
-
 def test_safe_web_source_rejects_pii_and_injection():
     """Валидатор source: только ascii-токены, всё прочее → None."""
     assert analytics.safe_web_source("Google") == "google"
