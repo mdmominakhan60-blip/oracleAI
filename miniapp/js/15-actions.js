@@ -148,7 +148,34 @@
     'survey-open': () => call('openSurvey'),
     // BUS-1070 p1 R06: онбординг — шаги и review
     'ob-next': () => call('_obAdvance'),
-    'ob-back': () => call('_obBack')
+    'ob-back': () => call('_obBack'),
+    // BUS-1070 p2 R06: инструменты, результат, таро
+    'tool-back': () => call('go', 'hub'),
+    'tool-submit': (el, data) => {
+      if (data.tool === 'syn' && typeof app._synValidate === 'function' && !app._synValidate()) return;
+      call('go', 'tool-run', { tool: data.tool });
+    },
+    'tarot-example': (el, data) => {
+      const input = document.getElementById('tarot-q');
+      if (input) { input.value = data.q || ''; input.focus(); }
+    },
+    'tarot-draw': () => {
+      const btn = document.querySelector('.tarot__footer .btn, [data-act="tarot-draw"]');
+      if (btn && btn.disabled) return;
+      if (btn) { btn.disabled = true; btn.textContent = app.t ? app.t('tarotDrawing') : '…'; }
+      call('go', 'tarot-reveal');
+    },
+    'tarot-card': (el, data) => call('tarotOpenCard', parseInt(data.i, 10)),
+    'tarot-show-all': () => call('tarotShowAll'),
+    'tarot-interpret': () => call('go', 'tarot-reading'),
+    'tarot-back-cards': () => call('go', 'tarot-reveal'),
+    'tarot-discuss': () => call('tarotDiscuss'),
+    'tarot-config': () => call('tarotConfig'),
+    'run-fail-check': () => call('runFailCheck'),
+    'run-fail-retry': () => call('runFailRetry'),
+    'result-share': () => call('resultShare'),
+    'result-discuss': () => call('resultDiscuss'),
+    'result-library': () => call('resultLibrary')
   };
 
   app.actionHandlers = actionHandlers;
