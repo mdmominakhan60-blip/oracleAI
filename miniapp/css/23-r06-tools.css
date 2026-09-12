@@ -1,0 +1,395 @@
+/* ============================================================================
+   BUS-1070 p2 R06: инструменты S11 (quick/form/run) + результат S12 +
+   Таро S13 (question/reveal/zoom/reading). Источник — design/r06/p2.
+   Карта .tcard здесь строго в скоупе .tarot-cards — глобальный .tcard
+   принадлежит чат-карусели (10-tarot-carousel.css) и не меняется.
+   ============================================================================ */
+
+/* --- Шапки: контейнер ScreenHeader (back присутствует в 22-components) --- */
+.screenheader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  max-width: 100%;
+  min-width: 0;
+}
+/* прототип компенсирует боковой padding .screen; в проде padding 18px */
+.screenheader--flush { margin: 0 -18px; width: calc(100% + 36px); min-width: 0; }
+.screenheader__spacer { flex: 1; }
+.screenheader__title { font-size: 17px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- Шапка чата агента (S13): аватар + имя + роль --- */
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+}
+.chat-header__avatar { width: 36px; height: 36px; border-radius: 999px; object-fit: cover; flex: none; }
+.chat-header__name { font-size: 16px; font-weight: 600; line-height: 22px; }
+.chat-header__role { font-size: 12px; line-height: 16px; color: var(--color-text-muted); }
+.chat-header__btn {
+  display: grid; place-items: center;
+  width: 44px; height: 44px;
+  border: 0; border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.chat-header__btn:hover { background: var(--hover-bg); color: var(--color-text-primary); }
+.chat-header__btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* --- S11: рабочее пространство инструмента --- */
+.tool-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  max-width: 560px;
+  width: 100%;       /* SPEC §6.2: flex-цепочка не должна сжимать колонку */
+  min-width: 0;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+.tool-view__kicker {
+  display: flex; align-items: center; gap: var(--space-2);
+  font-size: 12px; line-height: 18px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: var(--space-2);
+}
+.tool-view__kicker img { width: 20px; height: 20px; border-radius: 999px; object-fit: cover; flex: none; }
+.tool-view__title { font-size: 22px; line-height: 28px; font-weight: 700; margin-bottom: var(--space-2); }
+.tool-view__why { font-size: 14px; line-height: 20px; color: var(--color-text-secondary); margin-bottom: var(--space-5); }
+
+/* --- S11c: статус выполнения + этапы --- */
+.tool-run__status {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  margin-bottom: var(--space-4);
+}
+.tool-run__spinner {
+  width: 28px; height: 28px; flex: none;
+  border-radius: 999px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  animation: spin 900ms linear infinite; /* keyframes spin: 03-profile.css */
+}
+.tool-run__status-title { font-size: 15px; font-weight: 600; }
+.tool-run__status-note { font-size: 13px; line-height: 18px; color: var(--color-text-secondary); }
+
+.tool-run__steps { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-5); }
+.tool-run__step {
+  display: flex; align-items: center; gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: 14px; line-height: 20px;
+  color: var(--color-text-secondary);
+}
+.tool-run__step.is-done { color: var(--color-text-primary); }
+.tool-run__step.is-active { color: var(--color-text-primary); border: 1px solid var(--hover-border); }
+.tool-run__step-icon {
+  width: 24px; height: 24px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  background: var(--color-surface-raised);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.tool-run__step-icon svg { width: 12px; height: 12px; }
+.tool-run__step.is-done .tool-run__step-icon { background: color-mix(in srgb, var(--color-success) 22%, transparent); color: var(--color-success); }
+.tool-run__step.is-active .tool-run__step-icon { background: var(--grad-primary); color: var(--color-on-accent); }
+
+/* Слой сбоя (§5.3): проверить статус до повторного списания */
+.tool-run__fail {
+  display: flex; align-items: flex-start; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--color-error) 45%, transparent);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-error) 10%, var(--color-surface));
+  font-size: 14px; line-height: 20px;
+  color: var(--color-error);
+  margin-bottom: var(--space-4);
+}
+.tool-run__fail-actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+
+/* --- Футер: явное последнее действие + условия --- */
+.tool-view__footer {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  padding: var(--space-4) 0 calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, transparent, var(--color-bg) 40%);
+}
+.tool-view__terms {
+  display: flex; align-items: flex-start; gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  font-size: 13px; line-height: 18px;
+  color: var(--color-text-muted);
+}
+.tool-view__terms strong { color: var(--color-text-secondary); font-weight: 600; }
+.tool-view__draft-note {
+  display: flex; align-items: center; gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: 12px; line-height: 16px;
+  color: var(--color-text-muted);
+}
+.tool-view__draft-note svg { width: 14px; height: 14px; flex: none; }
+
+/* --- S12: результат --- */
+.result { max-width: 560px; margin: 0 auto; padding: var(--space-4); min-width: 0; }
+.result__head { display: flex; align-items: flex-start; gap: var(--space-3); margin-bottom: var(--space-2); }
+.result__avatar { width: 40px; height: 40px; border-radius: 999px; object-fit: cover; flex: none; }
+.result__title { font-size: 20px; line-height: 26px; font-weight: 700; min-width: 0; }
+.result__meta { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-4); font-size: 12px; line-height: 16px; color: var(--color-text-muted); }
+.result__meta span + span::before { content: '·'; margin-right: var(--space-2); }
+.result__summary { font-size: 16px; line-height: 25px; margin-bottom: var(--space-4); }
+.result__summary strong { color: var(--color-accent); font-weight: 600; }
+
+/* Основной визуал (SPEC §6.3: img не распирает flex-колонку) */
+.result__visual {
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  margin-bottom: var(--space-4);
+}
+.result__visual img { max-width: min(280px, 100%); min-width: 0; border-radius: var(--radius-control); }
+
+details.result-details { border: 1px solid var(--color-border); border-radius: var(--radius-card); overflow: hidden; margin-bottom: var(--space-4); }
+details.result-details + details.result-details { margin-top: calc(-1 * var(--space-4)); }
+.result-details__summary {
+  display: flex; align-items: center; gap: var(--space-2);
+  min-height: 48px;
+  padding: 0 var(--space-4);
+  background: var(--color-surface);
+  font-size: 15px; font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.result-details__summary::-webkit-details-marker { display: none; }
+.result-details__summary::after { content: '▾'; margin-left: auto; color: var(--color-text-muted); transition: transform var(--motion-quick) var(--ease); }
+details[open] .result-details__summary::after { transform: rotate(180deg); }
+.result-details__summary:focus-visible { outline: none; box-shadow: inset var(--focus-ring); }
+.result-details__body { padding: var(--space-3) var(--space-4) var(--space-4); font-size: 14px; line-height: 22px; color: var(--color-text-secondary); border-top: 1px solid var(--color-border); }
+.result-details__body h4 { font-size: 14px; color: var(--color-text-primary); margin: var(--space-3) 0 var(--space-1); }
+.result-details__body h4:first-child { margin-top: 0; }
+
+.result__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.result__actions .btn { min-height: 44px; }
+.result__saved-note { display: flex; align-items: center; gap: var(--space-2); width: 100%; margin-top: var(--space-2); font-size: 12px; color: var(--color-text-muted); }
+.result__saved-note svg { width: 14px; height: 14px; flex: none; }
+
+/* --- S13: таро. В живом каркасе высоту держит #app-main, поэтому 100% --- */
+.tarot { flex: 1; min-height: 0; display: flex; flex-direction: column; height: 100%; }
+.tarot__feed { flex: 1; min-height: 0; overflow-y: auto; padding: var(--space-4); }
+.tarot__panel {
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex; flex-direction: column; gap: var(--space-4);
+}
+
+/* Вопрос: короткое поле + подстановщики */
+.tarot-question__label { display: block; font-size: 14px; line-height: 20px; color: var(--color-text-secondary); margin-bottom: var(--space-2); }
+.tarot-question__input { width: 100%; }
+.tarot-examples { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-3); }
+.tarot-examples__item {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.tarot-examples__item:hover { border-color: var(--hover-border); color: var(--color-text-primary); }
+.tarot-examples__item:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Расклад и колода — компактные строки */
+.tarot-config { display: flex; flex-direction: column; gap: var(--space-2); }
+.tarot-config__row {
+  display: flex; align-items: center; gap: var(--space-3);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  text-align: left;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.tarot-config__row:hover { border-color: var(--hover-border); }
+.tarot-config__row:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.tarot-config__label { font-size: 12px; line-height: 16px; color: var(--color-text-muted); }
+.tarot-config__value { font-size: 15px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tarot-config__arrow { margin-left: auto; flex: none; color: var(--color-text-muted); font-size: 14px; }
+
+/* Сцена draw: веер рубашек */
+.tarot-scene {
+  position: relative;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: var(--space-4);
+  min-height: 300px;
+  padding: var(--space-5) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  overflow: hidden;
+}
+.tarot-scene__fan { position: relative; width: 240px; height: 150px; }
+.tarot-scene__card-back {
+  position: absolute;
+  left: 50%; bottom: 0;
+  width: 84px; height: 140px;
+  margin-left: -42px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--color-border-control);
+  box-shadow: 0 6px 18px -6px rgba(0,0,0,.7);
+  transform-origin: 50% 100%;
+}
+.tarot-scene__card-back--1 { transform: rotate(-28deg); }
+.tarot-scene__card-back--2 { transform: rotate(-14deg); }
+.tarot-scene__card-back--3 { transform: rotate(0deg); }
+.tarot-scene__card-back--4 { transform: rotate(14deg); }
+.tarot-scene__card-back--5 { transform: rotate(28deg); }
+.tarot-scene__status { font-size: 14px; line-height: 20px; color: var(--color-text-secondary); text-align: center; }
+.tarot-scene__note { font-size: 12px; line-height: 16px; color: var(--color-text-muted); text-align: center; }
+
+/* Раскрытие по позициям */
+.tarot-reveal__counter {
+  display: flex; align-items: center; gap: var(--space-2);
+  font-size: 14px; font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-3);
+}
+.tarot-cards { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: center; }
+
+/* Карта расклада — только внутри .tarot-cards (глобальный .tcard — карусель) */
+.tarot-cards .tcard {
+  position: relative;
+  width: 96px;
+  min-width: 96px;
+  max-width: 96px;
+  aspect-ratio: auto;
+  display: flex; flex-direction: column; gap: var(--space-1);
+  border: 0; padding: 0;
+  background: none;
+  cursor: pointer;
+}
+.tarot-cards .tcard:focus-visible { outline: none; }
+.tarot-cards .tcard:focus-visible .tcard__frame { box-shadow: var(--focus-ring); }
+.tarot-cards .tcard__frame {
+  position: relative;
+  width: 96px; height: 160px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-control);
+  background: var(--color-surface-raised);
+  padding: 0;
+}
+.tarot-cards .tcard__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tarot-cards .tcard__back { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tarot-cards .tcard.is-open .tcard__back { display: none; }
+.tarot-cards .tcard[disabled] { cursor: default; }
+.tarot-cards .tcard__pos { font-size: 11px; line-height: 14px; color: var(--color-text-muted); text-align: center; min-height: 28px; }
+.tarot-cards .tcard.is-open .tcard__pos { color: var(--color-text-secondary); }
+.tarot-cards .tcard__pos-name { font-size: 12px; font-weight: 600; color: var(--color-text-primary); display: block; }
+.tarot-cards .tcard__pos-mean { font-size: 12px; line-height: 16px; }
+/* Лифт лица карты: без 3D, только прозрачность */
+.tarot-cards .tcard__img { opacity: 0; transition: opacity var(--motion-base) var(--ease); }
+.tarot-cards .tcard.is-open .tcard__img { opacity: 1; }
+
+/* Тост порядка раскрытия (§6.4) */
+.tcard[data-warn] { position: relative; }
+.tcard[data-warn]::after {
+  content: attr(data-warn);
+  position: absolute;
+  left: 50%; bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  z-index: 5;
+  width: 220px;
+  padding: 8px 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-surface-overlay);
+  border: 1px solid var(--color-border-control);
+  box-shadow: var(--shadow-overlay);
+  color: var(--color-text-primary);
+  font-size: 12px; line-height: 16px;
+  font-weight: 400;
+  text-align: left;
+  white-space: normal;
+}
+
+.tarot-reveal__grid-note { font-size: 12px; line-height: 16px; color: var(--color-text-muted); margin-top: var(--space-2); }
+
+/* Рассмотреть карту */
+.card-zoom { position: relative; max-width: 320px; margin: 0 auto; }
+.card-zoom__img { width: 100%; height: auto; border-radius: var(--radius-card); border: 1px solid var(--color-border-control); }
+.card-zoom__caption { text-align: center; margin-top: var(--space-3); }
+.card-zoom__caption .tcard__pos-name { font-size: 15px; }
+.card-zoom__note { margin-top: var(--space-3); }
+
+/* Разбор: итог, затем карты по позициям */
+.tarot-reading__verdict {
+  font-size: 16px; line-height: 25px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--hover-border);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  margin-bottom: var(--space-4);
+}
+.tarot-reading__cards { display: flex; flex-direction: column; gap: var(--space-3); }
+.tarot-reading__card {
+  display: flex; gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.tarot-reading__thumb { width: 64px; height: 106px; border-radius: 8px; object-fit: cover; flex: none; border: 1px solid var(--color-border-control); }
+.tarot-reading__body { min-width: 0; }
+.tarot-reading__pos { font-size: 12px; line-height: 16px; color: var(--color-text-muted); }
+.tarot-reading__name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.tarot-reading__text { font-size: 13px; line-height: 19px; color: var(--color-text-secondary); }
+.tarot-reading__text em { color: var(--color-text-muted); font-style: normal; }
+.tarot-reading__title { font-size: 20px; line-height: 26px; font-weight: 700; }
+
+/* Гейт личного смысла (§6.4) */
+.tarot-interpret__gate {
+  display: flex; align-items: flex-start; gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  font-size: 14px; line-height: 20px;
+}
+.tarot-interpret__gate-icon { font-size: 18px; flex: none; }
+.tarot-interpret__gate strong { font-weight: 600; }
+.tarot-interpret__gate-note { display: block; font-size: 12px; line-height: 16px; color: var(--color-text-muted); margin-top: 2px; }
+.tarot-interpret__gate-btn { display: block; margin-top: var(--space-2); }
+
+/* SPEC §6.4: атрибут hidden сильнее любых display-стилей */
+[hidden] { display: none !important; }
+
+/* Reduced-motion (R05 §3.3) */
+@media (prefers-reduced-motion: reduce) {
+  .tool-run__spinner { animation: none !important; }
+  .tarot-cards .tcard__img { opacity: 1; transition: none !important; }
+  .tcard[data-warn]::after { transition: none; }
+}

@@ -5,16 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a0920">
 <meta name="description" content="OracleAI — личное пространство мягких ритуалов, астрологии и Таро.">
-<link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg?v=108">
+<link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg?v=109">
 <link rel="icon" type="image/png" href="/static/img/oracle-mark.png">
 <link rel="apple-touch-icon" href="/static/img/oracle-mark.png">
 <title>OracleAI — твой мягкий ритуал дня</title>
 <!-- ?v=N — cache-busting: имена ассетов без хеша, TTL /static/* = 1ч; при деплое версию поднять -->
 <link rel="preconnect" href="https://telegram.org">
 <link rel="preload" as="image" href="/static/img/bg-cosmos.jpg?v=108" fetchpriority="high">
-<link rel="stylesheet" href="/static/fonts/oracle-fonts.css?v=45">
+<!-- R03 §3.1: preload главного RU-начертания Manrope (variable, cyrillic-субсет) -->
+<link rel="preload" as="font" type="font/woff2" href="/static/fonts/manrope-cyrillic.woff2" crossorigin>
+<link rel="stylesheet" href="/static/fonts/oracle-fonts.css?v=46">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="/static/styles.css?v=108">
+<link rel="stylesheet" href="/static/styles.css?v=109">
 </head>
 <body>
 <div class="starfield">
@@ -45,25 +47,28 @@
   <img class="lilith-sil" src="/static/img/lilith-sil.png" alt="" aria-hidden="true" loading="eager">
 </div>
 <div id="app-root"></div>
-<script src="/static/js/00-runtime.js?v=108"></script>
-<script src="/static/js/01-utils.js?v=108"></script>
-<script src="/static/js/03-data.js?v=108"></script>
-<script src="/static/js/02-art.js?v=108"></script>
-<script src="/static/js/05-app.js?v=108"></script>
-<script src="/static/js/06-home.js?v=108"></script>
-<script src="/static/js/07-chat.js?v=108"></script>
-<script src="/static/js/08-widgets.js?v=108"></script>
-<script src="/static/js/09-tarot.js?v=108"></script>
-<script src="/static/js/10-chart.js?v=108"></script>
-<script src="/static/js/11-compat.js?v=108"></script>
-<script src="/static/js/12-misc.js?v=108"></script>
-<script src="/static/js/13-palm.js?v=108"></script>
-<script src="/static/js/14-products.js?v=108"></script>
-<script src="/static/js/16-placements.js?v=108"></script>
-<script src="/static/js/14-gestures.js?v=108"></script>
-<script src="/static/js/15-actions.js?v=108"></script>
-<script src="/static/js/17-payments.js?v=108"></script>
-<script src="/static/js/19-feedback.js?v=108"></script>
-<script src="/static/js/13-events.js?v=108"></script>
+<script src="/static/js/00-runtime.js?v=109"></script>
+<script src="/static/js/01-utils.js?v=109"></script>
+<script src="/static/js/03-data.js?v=109"></script>
+<script src="/static/js/02-art.js?v=109"></script>
+<script src="/static/js/05-app.js?v=109"></script>
+<script src="/static/js/06-home.js?v=109"></script>
+<script src="/static/js/07-chat.js?v=109"></script>
+<script src="/static/js/08-widgets.js?v=109"></script>
+<script src="/static/js/09-tarot.js?v=109"></script>
+<script src="/static/js/10-chart.js?v=109"></script>
+<script src="/static/js/11-compat.js?v=109"></script>
+<script src="/static/js/12-misc.js?v=109"></script>
+<script src="/static/js/13-palm.js?v=109"></script>
+<script src="/static/js/14-products.js?v=109"></script>
+<script src="/static/js/16-placements.js?v=109"></script>
+<script src="/static/js/14-gestures.js?v=109"></script>
+<script src="/static/js/15-actions.js?v=109"></script>
+<script src="/static/js/17-payments.js?v=109"></script>
+<script src="/static/js/18-onboarding.js?v=109"></script>
+<script src="/static/js/18-r06-views.js?v=109"></script>
+<script src="/static/js/19-r06-tools.js?v=109"></script>
+<script src="/static/js/19-feedback.js?v=109"></script>
+<script src="/static/js/13-events.js?v=109"></script>
 </body>
 </html>
