@@ -508,6 +508,7 @@ if (window.OracleRuntime) window.OracleRuntime.bindLegacyState(app, app.state);
     else if (v === 'hub') this.renderHub(main);
     else if (v === 'profile') { this.renderProfile(main); }
     else if (v === 'payment') { this.goPayment(); }
+    else if (app._r06 && app._r06.views[v]) { app._r06.views[v](main); }
   };
 
 

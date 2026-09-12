@@ -1,0 +1,26 @@
+/*
+   R06 · token bridge — прототип → live design system
+   Сопоставляет токены из design/r06/p{1,2,3}/styles.css
+   с live-токенами miniapp/css/00-tokens.css.
+   Порядок: после 00-tokens.css, до компонентных модулей.
+*/
+
+:root {
+  --color-bg: var(--color-bg-primary);
+  --color-surface: var(--color-bg-secondary);
+  --color-surface-raised: var(--color-bg-elevated);
+  --color-surface-overlay: var(--color-bg-overlay);
+  --color-accent-hover: var(--color-accent-strong);
+  --color-border-control: var(--color-border-strong);
+  --color-text-error: var(--color-error);
+  --shadow-overlay: var(--shadow-primary);
+}
+
+/* Живой нейминг кнопок (btn-primary/btn-ghost из 03-profile.css) не покрывает
+   r06-варианты. Алиасы, чтобы разметка r06-модулей работала без дублей стилей. */
+.btn-primary { background: var(--grad-primary); color: var(--color-on-accent); }
+.btn-primary:hover { background: var(--color-accent-hover); filter: none; }
+.btn-primary:disabled { background: var(--color-bg-elevated); color: var(--color-text-muted); cursor: not-allowed; }
+.btn-secondary { background: none; border: 1px solid var(--color-border-strong); color: var(--color-text-primary); }
+.btn-secondary:hover { background: var(--hover-bg); border-color: var(--hover-border); }
+.btn--block { width: 100%; }

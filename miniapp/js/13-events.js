@@ -77,4 +77,79 @@ document.addEventListener('submit', function (event) {
 });
 
 
+/* BUS-1070 (R06): делегированная навигация data-goto / data-goto-view.
+ * Прототипы R06 используют свои атрибуты вместо live data-act="go".
+ * ob-step-N — внутренние шаги онбординга: тот же view + dataset шага. */
+document.addEventListener('click', function (event) {
+  const el = event.target && event.target.closest
+    ? event.target.closest('[data-goto], [data-goto-view], [data-open-sheet]')
+    : null;
+  if (!el) return;
+  if (el.hasAttribute('data-open-sheet')) {
+    const sheet = el.getAttribute('data-open-sheet');
+    const target = sheet && sheet !== 'true' ? sheet : 'tool-catalog';
+    if (app._r06 && app._r06.views[target]) app.go(target);
+    return;
+  }
+  const target = el.getAttribute('data-goto') || el.getAttribute('data-goto-view');
+  if (!target) return;
+  const obMatch = target.match(/^ob-step-([1-5])$/);
+  if (obMatch) {
+    const main = document.getElementById('app-main');
+    if (main) {
+      main.dataset.obStep = obMatch[1];
+      app._r06.views['onboarding'](main);
+      tactile('open');
+    }
+    return;
+  }
+  /* live-фичи, не являющиеся r06-views: chart/tarot — флоу live-агентов */
+  if (target === 'chart') { tactile('open'); app.openChat('astro', () => app.featureChart()); return; }
+  if (target === 'tarot') { tactile('open'); app.openChat('tarot'); return; }
+  if (target === 'chat') { tactile('open'); app.openChat('oracle'); return; }
+  if (target === 'widget-moon') { tactile('open'); app.openMoon(); return; }
+  if (target === 'widget-palm') { tactile('select'); app.featurePalm(); return; }
+  if (target === 'widget-matrix' || target === 'widget-career') {
+    tactile('open');
+    app.openChat('astro', () => app.askAgent('astro', target === 'widget-career' ? 'Разбери 10-й дом и мой профессиональный путь' : 'Покажи мою матрицу судьбы'));
+    return;
+  }
+  if (app._r06 && app._r06.views[target]) {
+    tactile('open');
+    app.go(target);
+  } else if (typeof app[target] === 'function' || ['home', 'hub', 'profile', 'payment', 'chat'].includes(target)) {
+    tactile('open');
+    app.go(target);
+  }
+});
+
+
+/* BUS-1070 (R06): sheet-закрытие (overlay/×) и «Развернуть» прогноза сегодня. */
+document.addEventListener('click', function (event) {
+  const t = event.target;
+  if (!t || !t.closest) return;
+  if (t.closest('.sheet-overlay') && !t.closest('.sheet') && !t.closest('[data-goto]')) {
+    if (app._r06 && app._r06._sheetBack) app.go(app._r06._sheetBack);
+    else app.go('hub');
+    return;
+  }
+  const close = t.closest('.sheet__close');
+  if (close) {
+    if (app._r06 && app._r06._sheetBack) app.go(app._r06._sheetBack);
+    else app.go('hub');
+    return;
+  }
+  const expand = t.closest('[data-r06-toggle-expand]');
+  if (expand) {
+    const fc = document.getElementById(expand.getAttribute('aria-controls'));
+    if (fc) {
+      const open = expand.getAttribute('aria-expanded') === 'true';
+      expand.setAttribute('aria-expanded', String(!open));
+      fc.classList.toggle('today__forecast--clamped', open);
+      expand.firstChild.nodeValue = open ? 'Развернуть ' : 'Свернуть ';
+    }
+  }
+});
+
+
 app.boot();

@@ -1,0 +1,763 @@
+/* ============================================================
+   OracleAI R06 — пакет 1 (онбординг + чат + навигация)
+   Токены из REDESIGN_R03_DESIGN_SYSTEM.md §2 (SSOT).
+   Только существующие ассеты (борд BUS-963): bg-cosmos.jpg/-2.jpg,
+   lilith-sil.png, портреты агентов из img/agents/.
+   ============================================================ */
+/* ============================================================
+   База
+   ============================================================ */
+img { display: block; max-width: 100%; }
+/* ============================================================
+   Фон-система R05 §1 (существующие слои, data-bg состояния)
+   ============================================================ */
+.sky {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+.sky__cosmos {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: 50% 18%;
+  opacity: .7;
+  transition: opacity var(--motion-slow) var(--ease);
+}
+/* L1: пара кадров по порогу 601px (R05 §1.2) */
+.sky[data-bg="welcome"] .sky__cosmos { background-image: url('../img/bg-cosmos.jpg'); opacity: 1; }
+.sky[data-bg="chat"]    .sky__cosmos { background-image: url('../img/bg-cosmos.jpg'); opacity: .7; }
+@media (min-width: 601px) {
+  .sky[data-bg="welcome"] .sky__cosmos { background-image: url('../img/bg-cosmos-2.jpg'); }
+  .sky[data-bg="chat"]    .sky__cosmos { background-image: url('../img/bg-cosmos-2.jpg'); }
+}
+.sky__stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 20% 30%, rgba(244,242,237,.9) 50%, transparent 51%),
+    radial-gradient(1px 1px at 70% 20%, rgba(244,242,237,.55) 50%, transparent 51%),
+    radial-gradient(2px 2px at 40% 70%, rgba(244,242,237,.4) 50%, transparent 51%),
+    radial-gradient(1px 1px at 85% 60%, rgba(244,242,237,.5) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 10% 85%, rgba(244,242,237,.6) 50%, transparent 51%);
+  background-size: 420px 420px;
+  opacity: .8;
+  animation: starDrift 120s linear infinite;
+}
+.sky__silhouette {
+  position: absolute;
+  bottom: 0;
+  right: 4%;
+  height: 68vh;
+  max-height: 640px;
+  opacity: .55;
+  transition: opacity var(--motion-slow) var(--ease);
+}
+.sky[data-bg="welcome"] .sky__silhouette { opacity: .6; }
+.sky[data-bg="chat"]    .sky__silhouette { opacity: 0; }
+@keyframes starDrift {
+  from { background-position: 0 0; }
+  to   { background-position: 0 420px; }
+}
+/* ============================================================
+   Каркас: header / nav / main (R02 §2)
+   ============================================================ */
+.screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.screen__body {
+  flex: 1;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+/* --- BottomNav (mobile <768) — 64px + safe area, R03 §4.1 --- */
+.bottomnav {
+  display: none;
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 30;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--color-border);
+}
+.bottomnav__tabs { display: flex; height: 64px; }
+.bottomnav__tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 44px;
+  background: none;
+  border: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+}
+.bottomnav__tab svg { width: 22px; height: 22px; }
+.bottomnav__tab[aria-current="page"] {
+  color: var(--color-text-primary);
+  background: var(--hover-bg);
+}
+.bottomnav__tab:focus-visible { outline: none; box-shadow: inset var(--focus-ring); }
+/* --- Rail (tablet 768–1279) --- */
+.rail {
+  display: none;
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  z-index: 30;
+  width: 72px;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) 0;
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  border-right: 1px solid var(--color-border);
+}
+.rail__tab {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.rail__tab svg { width: 22px; height: 22px; }
+.rail__tab[aria-current="page"] { color: var(--color-text-primary); background: var(--hover-bg); }
+.rail__tab:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* --- Sidebar (desktop ≥1280) — 224px, R02 §2.3 --- */
+.sidebar {
+  display: none;
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  z-index: 30;
+  width: 224px;
+  flex-direction: column;
+  padding: var(--space-5) var(--space-4);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  border-right: 1px solid var(--color-border);
+}
+.sidebar__brand { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-5); }
+.sidebar__brand-mark {
+  width: 28px; height: 28px;
+  border-radius: 999px;
+  background: var(--grad-primary);
+  display: grid; place-items: center;
+  color: var(--color-on-accent);
+  font-weight: 700;
+  font-size: 14px;
+}
+.sidebar__brand-name { font-weight: 600; font-size: 15px; }
+.sidebar__new {
+  display: flex; align-items: center; gap: var(--space-2);
+  width: 100%;
+  height: 44px;
+  margin-bottom: var(--space-5);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-primary);
+  font-size: 15px; font-weight: 600;
+  cursor: pointer;
+}
+.sidebar__new:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.sidebar__new:hover { background: var(--hover-bg); border-color: var(--hover-border); }
+.sidebar__section {
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: 12px; line-height: 18px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.sidebar__link {
+  display: flex; align-items: center; gap: var(--space-3);
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--space-3);
+  border: 0; border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.sidebar__link svg { width: 20px; height: 20px; flex: none; }
+.sidebar__link:hover { background: var(--hover-bg); color: var(--color-text-primary); }
+.sidebar__link[aria-current="page"] { background: var(--hover-bg); color: var(--color-text-primary); }
+.sidebar__link:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.sidebar__footer { margin-top: auto; padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+/* Брейкпоинты (R02 §2): <768 bottomnav, 768–1279 rail, ≥1280 sidebar */
+@media (min-width: 768px) {
+  .bottomnav { display: none; }
+  .rail { display: flex; }
+  .screen__body { padding-left: calc(72px + var(--space-5)); padding-right: var(--space-5); }
+}
+@media (min-width: 1280px) {
+  .rail { display: none; }
+  .sidebar { display: flex; }
+  .screen__body { padding-left: calc(224px + var(--space-6)); padding-right: var(--space-6); }
+}
+/* ============================================================
+   Компоненты R03 §4
+   ============================================================ */
+/* --- Button (§4.4) --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: 0 var(--space-5);
+  border: 0;
+  border-radius: var(--radius-control);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--motion-quick) var(--ease);
+}
+.btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.btn--primary { background: var(--grad-primary); color: var(--color-on-accent); }
+.btn--primary:hover { background: var(--color-accent-hover); }
+.btn--primary:disabled { background: var(--color-surface-raised); color: var(--color-text-muted); cursor: not-allowed; }
+.btn--secondary { background: none; border: 1px solid var(--color-border-control); color: var(--color-text-primary); }
+.btn--secondary:hover { background: var(--hover-bg); border-color: var(--hover-border); }
+.btn--ghost { background: none; color: var(--color-accent); min-height: 44px; padding: 0 var(--space-3); }
+.btn--ghost:hover { background: var(--hover-bg); }
+.btn--block { width: 100%; }
+/* --- Field + ErrorMessage (§4.4) --- */
+.field { display: flex; flex-direction: column; gap: var(--space-2); }
+.field__label { font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
+.field__input {
+  height: 48px;
+  padding: 0 var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  color: var(--color-text-primary);
+  font-size: 16px;
+}
+.field__input::placeholder { color: var(--color-text-muted); }
+.field__input:hover { border-color: var(--hover-border); }
+.field__input:focus-visible { outline: none; border-color: var(--color-accent); box-shadow: var(--focus-ring); }
+.field__input[aria-invalid="true"] { border-color: var(--color-error); }
+.field__error {
+  display: flex; align-items: center; gap: var(--space-2);
+  font-size: 14px; line-height: 20px;
+  color: var(--color-error);
+}
+.field__error svg { width: 16px; height: 16px; flex: none; }
+.field__hint { font-size: 14px; line-height: 20px; color: var(--color-text-muted); }
+/* --- ScreenHeader (§4.1) --- */
+.screenheader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-4);
+}
+.screenheader__back {
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border: 0; border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-accent);
+  font-size: 15px;
+  cursor: pointer;
+}
+.screenheader__back:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.screenheader__title { font-size: 17px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.screenheader__spacer { flex: 1; }
+/* --- Chip (§4.4) --- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 28px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-control);
+  border-radius: 999px;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 12px; line-height: 18px;
+  cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--hover-bg); border-color: var(--color-accent); color: var(--color-text-primary); }
+.chip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* --- Skeleton (§4.4) --- */
+.skeleton {
+  border-radius: var(--radius-control);
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-surface-raised) 50%, var(--color-surface) 75%);
+  background-size: 200% 100%;
+  animation: skeleton 1.4s ease infinite;
+}
+@keyframes skeleton { to { background-position: -200% 0; } }
+/* ============================================================
+   Онбординг S04 (план §9.1)
+   ============================================================ */
+.onboarding { max-width: 480px; margin: 0 auto; padding: var(--space-5) var(--space-4); }
+.onboarding__progress { margin-bottom: var(--space-6); }
+.onboarding__progress-meta {
+  display: flex; justify-content: space-between;
+  font-size: 12px; line-height: 18px;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+/* SegmentedProgress — эталон palm-progress (R03 §4.4) */
+.seg-progress { display: flex; gap: var(--space-1); }
+.seg-progress__seg { height: 4px; flex: 1; border-radius: 999px; background: var(--color-border); }
+.seg-progress__seg.is-done { background: var(--color-accent); opacity: .55; }
+.seg-progress__seg.is-active { background: var(--grad-primary); }
+.onboarding__title { font-size: 24px; line-height: 30px; font-weight: 700; margin-bottom: var(--space-2); }
+.onboarding__why { font-size: 14px; line-height: 20px; color: var(--color-text-secondary); margin-bottom: var(--space-5); }
+.onboarding__step { display: flex; flex-direction: column; gap: var(--space-5); }
+.onboarding__step:not([hidden]) { display: flex; }
+/* --- Выбор намерения --- */
+.intent-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.intent-card {
+  display: flex; align-items: center; gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4);
+  text-align: left;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.intent-card:hover { border-color: var(--hover-border); background: var(--color-surface-raised); }
+.intent-card:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.intent-card[aria-pressed="true"] { border-color: var(--color-accent); background: var(--hover-bg); }
+.intent-card__icon { font-size: 22px; width: 32px; text-align: center; flex: none; }
+.intent-card__name { font-size: 16px; font-weight: 600; }
+.intent-card__hint { font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
+/* --- Сегменты даты день-месяц-год (§9.1) --- */
+.date-seg { display: flex; gap: var(--space-2); }
+.date-seg__seg { flex: 1; }
+.date-seg__seg .field__input { text-align: center; width: 100%; }
+.date-seg__seg--day { flex: .8; }
+.date-seg__seg--year { flex: 1.2; }
+/* --- Время: точно/примерно/не знаю --- */
+.choice-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.choice-row {
+  display: flex; align-items: center; gap: var(--space-3);
+  width: 100%;
+  min-height: 48px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.choice-row:hover { border-color: var(--hover-border); }
+.choice-row:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.choice-row[aria-pressed="true"] { border-color: var(--color-accent); background: var(--hover-bg); }
+.choice-row__note { font-size: 12px; line-height: 18px; color: var(--color-text-muted); }
+/* --- Город: combobox §9.1 (до 5 подсказок) --- */
+.combobox { position: relative; }
+.combobox__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  z-index: 20;
+  list-style: none;
+  background: var(--color-surface-overlay);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-overlay);
+  overflow: hidden;
+}
+.combobox__option {
+  display: flex; flex-direction: column; gap: 2px;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 0; background: none;
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.combobox__option[aria-selected="true"], .combobox__option:hover { background: var(--hover-bg); }
+.combobox__option:focus-visible { outline: none; box-shadow: inset var(--focus-ring); }
+.combobox__city { font-size: 16px; font-weight: 600; }
+.combobox__region { font-size: 12px; line-height: 18px; color: var(--color-text-muted); }
+.combobox__status { margin-top: var(--space-2); font-size: 14px; color: var(--color-text-muted); }
+/* --- Проверка данных (S04 последний шаг) --- */
+.review-list { display: flex; flex-direction: column; border: 1px solid var(--color-border); border-radius: var(--radius-card); overflow: hidden; }
+.review-row {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+}
+.review-row + .review-row { border-top: 1px solid var(--color-border); }
+.review-row__label { font-size: 14px; color: var(--color-text-secondary); flex: 1; }
+.review-row__value { font-size: 16px; font-weight: 600; }
+.review-row__edit { min-height: 44px; }
+.onboarding__footer {
+  position: sticky;
+  bottom: 0;
+  margin-top: var(--space-6);
+  padding: var(--space-4) 0 calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, transparent, var(--color-bg) 40%);
+}
+.onboarding__footer-note { margin-top: var(--space-2); text-align: center; font-size: 14px; color: var(--color-text-error, var(--color-error)); }
+.onboarding__footer-note--info { color: var(--color-info); }
+/* ============================================================
+   Чат S05–S07 (план §4, R03 §4.2)
+   ============================================================ */
+.chat { display: flex; flex-direction: column; height: 100dvh; }
+@media (min-width: 768px) { .chat { height: 100vh; } }
+/* --- ScreenHeader чата: аватар+имя+роль+«⋯» (план §4.1) --- */
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+}
+.chat-header__avatar { width: 36px; height: 36px; border-radius: 999px; object-fit: cover; }
+.chat-header__name { font-size: 16px; font-weight: 600; line-height: 22px; }
+.chat-header__role { font-size: 12px; line-height: 16px; color: var(--color-text-muted); }
+.chat-header__btn {
+  display: grid; place-items: center;
+  width: 44px; height: 44px;
+  border: 0; border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.chat-header__btn:hover { background: var(--hover-bg); color: var(--color-text-primary); }
+.chat-header__btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* --- Лента сообщений (план §4.2) --- */
+.chat__feed {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.msg { max-width: 92%; }
+.msg--user { align-self: flex-end; }
+.msg--agent { align-self: flex-start; }
+.msg__bubble {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card);
+  font-size: 16px;
+  line-height: 25px;
+}
+.msg--agent .msg__bubble {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top-left-radius: 6px;
+}
+.msg--user .msg__bubble {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-control);
+  border-top-right-radius: 6px;
+}
+.msg__meta { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-1); font-size: 12px; color: var(--color-text-muted); }
+.msg--agent .msg__meta { flex-direction: row; }
+.msg__action {
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: 0; border-radius: 8px;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.msg__action:hover { background: var(--hover-bg); color: var(--color-text-primary); }
+.msg__action:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.msg__head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-1); }
+.msg__agent-avatar { width: 24px; height: 24px; border-radius: 999px; object-fit: cover; }
+.msg__agent-name { font-size: 12px; font-weight: 600; color: var(--color-text-secondary); }
+/* Состояние ошибки у сообщения (§11.2) */
+.msg__error {
+  display: flex; align-items: center; gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--color-error) 45%, transparent);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--color-error) 12%, transparent);
+  font-size: 14px;
+  color: var(--color-error);
+}
+.msg__retry { margin-left: auto; }
+/* Стриминг: частичный ответ (§4.4) */
+.msg__streaming-caret {
+  display: inline-block;
+  width: 2px; height: 18px;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--color-accent);
+  animation: caret 1s steps(2) infinite;
+}
+@keyframes caret { 50% { opacity: 0; } }
+/* Новое сообщение ↓ (§4.2) */
+.newmsg-pivot {
+  align-self: center;
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-surface-overlay);
+  border: 1px solid var(--color-border-control);
+  color: var(--color-accent);
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: var(--shadow-overlay);
+}
+.newmsg-pivot:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* --- Пустой чат S05 (план §4.1) --- */
+.empty-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  text-align: center;
+}
+.empty-chat__portrait {
+  width: 64px; height: 64px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid var(--color-border-control);
+}
+.empty-chat__greeting { font-size: 20px; line-height: 28px; font-weight: 700; }
+.empty-chat__role { font-size: 14px; line-height: 20px; color: var(--color-text-secondary); max-width: 320px; }
+.empty-chat__examples { display: flex; flex-direction: column; gap: var(--space-2); width: 100%; max-width: 400px; }
+.empty-chat__example {
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.empty-chat__example:hover { border-color: var(--hover-border); color: var(--color-text-primary); }
+.empty-chat__example:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* --- Composer (план §4.3, R03 §4.2) --- */
+.composer {
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  padding: var(--space-2) var(--space-4) calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+}
+.composer__row { display: flex; align-items: flex-end; gap: var(--space-2); }
+.composer__tools {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 0; border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-accent);
+  font-size: 14px; font-weight: 600;
+  cursor: pointer;
+}
+.composer__tools:hover { background: var(--hover-bg); }
+.composer__tools:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.composer__tools svg { width: 20px; height: 20px; }
+.composer__input-wrap { flex: 1; min-width: 0; }
+.composer__input {
+  width: 100%;
+  min-height: 44px;
+  max-height: 140px;
+  padding: var(--space-3) var(--space-4);
+  resize: none;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: 16px;
+  line-height: 22px;
+}
+.composer__input::placeholder { color: var(--color-text-muted); }
+.composer__input:focus-visible { outline: none; border-color: var(--color-accent); box-shadow: var(--focus-ring); }
+.composer__send {
+  display: grid; place-items: center;
+  width: 44px; height: 44px;
+  flex: none;
+  border: 0; border-radius: 999px;
+  background: var(--grad-primary);
+  color: var(--color-on-accent);
+  cursor: pointer;
+}
+.composer__send:hover { background: var(--color-accent-hover); }
+.composer__send:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.composer__send:disabled { background: var(--color-surface-raised); color: var(--color-text-muted); cursor: not-allowed; }
+.composer__send svg { width: 20px; height: 20px; }
+/* «Остановить» — только с честной семантикой отмены (§4.3) */
+.composer__stop {
+  display: none;
+  width: 44px; height: 44px;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--color-border-control);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.composer.is-streaming .composer__send { display: none; }
+.composer.is-streaming .composer__stop { display: grid; }
+/* ============================================================
+   Список диалогов S07 (R02 §1.1)
+   ============================================================ */
+.sessions { display: flex; flex-direction: column; }
+.sessions__header { padding-top: var(--space-4); }
+.sessions__title { font-size: 24px; line-height: 30px; font-weight: 700; }
+.sessions__actions { display: flex; gap: var(--space-2); margin: var(--space-4) 0; }
+.session-card {
+  display: flex; align-items: center; gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.session-card:hover { background: var(--hover-bg); }
+.session-card:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.session-card__avatar { width: 40px; height: 40px; border-radius: 999px; object-fit: cover; flex: none; }
+.session-card__body { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
+.session-card__top { display: flex; justify-content: space-between; gap: var(--space-2); min-width: 0; }
+.session-card__name { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-card__time { font-size: 12px; color: var(--color-text-muted); flex: none; }
+.session-card__preview { font-size: 14px; line-height: 20px; color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; max-width: 100%; }
+.session-card__badge {
+  flex: none;
+  min-width: 20px; height: 20px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 11px; font-weight: 700;
+  display: grid; place-items: center;
+  padding: 0 6px;
+}
+/* ============================================================
+   Sheet каталога инструментов S10 (план §5.1) — по праву
+   поставки пакетами: sheet из Чата входит в навигационную
+   связку чата, полный разбор инструмента — пакет 2.
+   ============================================================ */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(11, 13, 24, .6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-base) var(--ease);
+}
+.sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 41;
+  max-height: 80%;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface-overlay);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  box-shadow: var(--shadow-overlay);
+  transform: translateY(100%);
+  transition: transform var(--motion-base) var(--ease);
+  visibility: hidden;
+}
+.sheet.is-open { transform: translateY(0); visibility: visible; }
+.sheet-backdrop.is-open { opacity: 1; pointer-events: auto; }
+.sheet__header {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-2);
+}
+.sheet__title { font-size: 18px; font-weight: 700; flex: 1; }
+.sheet__close {
+  display: grid; place-items: center;
+  width: 44px; height: 44px;
+  border: 0; border-radius: 999px;
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.sheet__close:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.sheet__search { padding: 0 var(--space-4) var(--space-3); }
+.sheet__body { overflow-y: auto; padding: 0 var(--space-2) var(--space-4); }
+.tool-row {
+  display: flex; align-items: center; gap: var(--space-3);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--space-2) var(--space-3);
+  border: 0; border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.tool-row:hover { background: var(--hover-bg); }
+.tool-row:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.tool-row__icon {
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  border-radius: var(--radius-control);
+  background: var(--color-surface-raised);
+  font-size: 18px;
+  flex: none;
+}
+.tool-row__body { flex: 1; min-width: 0; }
+.tool-row__name { font-size: 15px; font-weight: 600; }
+.tool-row__benefit { font-size: 13px; line-height: 18px; color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-row__meta { flex: none; font-size: 12px; color: var(--color-text-muted); }
+.tool-row__meta--locked { color: var(--color-accent); }
+/* ============================================================
+   Баннер статуса (§4.4, StatusBanner)
+   ============================================================ */
+.status-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  font-size: 14px;
+  line-height: 20px;
+}
+.status-banner--error { border-color: color-mix(in srgb, var(--color-error) 45%, transparent); background: color-mix(in srgb, var(--color-error) 10%, var(--color-surface)); }
+.status-banner--info { border-color: color-mix(in srgb, var(--color-info) 45%, transparent); background: color-mix(in srgb, var(--color-info) 10%, var(--color-surface)); }
+.status-banner__icon { font-size: 18px; line-height: 20px; }
+.status-banner__title { font-weight: 600; }
+.status-banner__text { color: var(--color-text-secondary); }
+.status-banner__actions { display: flex; gap: var(--space-3); margin-top: var(--space-2); }
+/* ============================================================
+   Прототип: переключение экранов/состояний
+   ============================================================ */
