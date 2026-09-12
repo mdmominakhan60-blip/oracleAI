@@ -284,6 +284,51 @@ async def test_crm_post_limit_audience_excludes_synthetic(db):
     assert 10001 not in ids and 10002 not in ids
 
 
+async def _refund_pending_order(db, tg_id: int):
+    """create → pay → queue_refund_revoke: состояние для _revoke_audience."""
+    from app.repo import billing as billing_repo
+
+    order = await billing_repo.create_order(
+        db, tg_id, "plan", sku="vip", title="VIP", surface="web",
+        meta={"grant_kind": "plan", "grant_code": "vip", "grant_qty": 1,
+              "valid_days": 30, "provider": "paddle",
+              "paddle_transaction_id": f"txn_revoke_{tg_id}"})
+    paid = await billing_repo.mark_order_paid(
+        db, order["payload"], charge_id=f"txn_revoke_{tg_id}",
+        amount_stars=0, provider="paddle", currency="USD")
+    assert paid is not None, "mark_order_paid потерял заказ"
+    assert await billing_repo.queue_refund_revoke(
+        db, order["id"], source="paddle") is True
+    return order
+
+
+async def test_revoke_audience_excludes_synthetic(db):
+    """Revoke-очередь refund_pending не отдаёт синтетике (BUS-1005)."""
+    from app.repo import users as users_repo
+    from app.services import scheduler
+
+    synthetic_ids = (10001, 10002, 999000012)
+    for tg_id in synthetic_ids:
+        await users_repo.ensure(db, tg_id, f"Synthetic {tg_id}")
+        assert await _refund_pending_order(db, tg_id) is not None
+    audience = await scheduler._revoke_audience(db)
+    ids = {u["tg_id"] for u in audience}
+    for tg_id in synthetic_ids:
+        assert tg_id not in ids
+
+
+async def test_revoke_audience_keeps_real_user_with_refund_pending(db):
+    """Фильтр не ест живых: реальный refund_pending-ордер остаётся в revoke."""
+    from app.repo import users as users_repo
+    from app.services import scheduler
+
+    await users_repo.ensure(db, 424242, "Real")
+    order = await _refund_pending_order(db, 424242)
+    audience = await scheduler._revoke_audience(db)
+    ids = {u["tg_id"]: u for u in audience}
+    assert ids[424242]["order_id"] == order["id"]
+
+
 async def test_real_user_reaches_tick_audience(db):
     """Фильтр не ест живых: реальный юзер в аудитории тика (BUS-976)."""
     from app.repo import users as users_repo
