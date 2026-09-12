@@ -75,19 +75,27 @@ async def mark_sent(db, tg_id: int, kind: str, key: str,
 async def claim(db, tg_id: int, kind: str, key: str) -> bool:
     """Атомарно занимает право на отправку. True — отправляем, False — занято/уже ушло.
 
+    Stale-claim: процесс упал между claim и mark → строка застревает в
+    'sending'. Через CLAIM_TIMEOUT_S право возвращается в очередь
+    (аналог reclaim в next_targets для broadcast_targets). Активная отправка
+    короче 600 с, параллельные тики защищены lease — окно гонки пренебрежимо.
+
     Поддерживает обе схемы deliveries: со status (BUS-308) и без (старые миграции).
     """
     token = _claim_token()
+    cutoff = (datetime.now(timezone.utc) - timedelta(seconds=CLAIM_TIMEOUT_S)
+              ).isoformat()
     try:
         async with transaction(db):
             cur = await db.execute(
                 "INSERT INTO deliveries(tg_id, kind, key, status, error, created_at) "
                 "VALUES(:tg_id, :kind, :key, 'sending', :token, :now) "
                 "ON CONFLICT (tg_id, kind, key) DO UPDATE SET "
-                "  status='sending', error=:token "
-                "WHERE deliveries.status='failed'",
+                "  status='sending', error=:token, created_at=:now "
+                "WHERE deliveries.status='failed' "
+                "   OR (deliveries.status='sending' AND deliveries.created_at < :cutoff)",
                 {"tg_id": tg_id, "kind": kind, "key": key,
-                 "token": token, "now": utcnow()})
+                 "token": token, "now": utcnow(), "cutoff": cutoff})
             return bool(cur.rowcount)
     except Exception:  # noqa: BLE001
         # Схема без status (миграции до 0012) — простая идемпотентная вставка.
