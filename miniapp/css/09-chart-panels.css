@@ -79,3 +79,120 @@ body { font-size: 16px; }
 .spread-cell { transition: transform .15s var(--ease), border-color .15s var(--ease), box-shadow .3s var(--ease); }
 .spread-cell.sel { box-shadow: 0 0 0 1px var(--gold), 0 0 12px -4px var(--gold-glow); transition: box-shadow .3s var(--ease); }
 .agent-avatar.active, .online-dot.active { animation: pulseDot 2s ease-in-out infinite; }
+
+/* ═══ BUS-650 Э8b: персональный разбор карты — структурный рендер ═══
+   Блоки human-first контракта v2: секция = смысловой блок, ниже —
+   свёрнутая астрологическая основа (техслой) и дисклеймер. */
+
+/* точка входа на экране карты: единый переход карта → разбор */
+.chart-interpret-entry { margin: 12px 0 4px; }
+.chart-interpret-entry .btn.is-loading { opacity: .72; pointer-events: none; }
+.chart-interpret-entry .btn.is-loading .chart-interpret-spin {
+  display: inline-block; margin-right: 7px; vertical-align: -1px;
+  animation: chartInterpretSpin 1s linear infinite;
+}
+@keyframes chartInterpretSpin { to { transform: rotate(360deg); } }
+.chart-interpret-entry__hint {
+  margin: 7px 2px 0; color: var(--text-faint); font-size: 11px; line-height: 1.45;
+}
+
+/* контейнер разбора */
+.fc-explain-head { margin-bottom: 12px; }
+.fc-explain-t {
+  margin: 0 0 5px; font-family: var(--font-serif); color: var(--gold-bright);
+  font-size: 17px; font-weight: 650; letter-spacing: .2px;
+}
+.fc-explain-intro { color: var(--text-dim); font-size: 12.5px; line-height: 1.55; }
+.fc-precision {
+  margin: 0 0 12px; padding: 9px 11px; border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--violet) 32%, transparent);
+  background: color-mix(in srgb, var(--violet) 8%, transparent);
+  color: var(--text-dim); font-size: 11.5px; line-height: 1.5;
+}
+
+/* смысловая секция = блок контракта */
+.fc-sec {
+  margin: 0 0 10px; padding: 12px 13px; border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--gold) 22%, transparent);
+  background: color-mix(in srgb, var(--gold) 5%, transparent);
+}
+.fc-sec-t {
+  margin: 0 0 8px; font-family: var(--font-serif); color: var(--gold);
+  font-size: 14px; font-weight: 650; letter-spacing: .3px;
+}
+.fc-sec-body { color: var(--text); font-size: 13px; line-height: 1.62; }
+.fc-sec-body p { margin: 0 0 6px; }
+.fc-sec-body p:last-child { margin-bottom: 0; }
+.fc-row-in {
+  display: grid; grid-template-columns: minmax(84px, .42fr) minmax(0, 1fr);
+  gap: 9px; align-items: baseline; padding: 6px 0;
+  border-top: 1px solid rgba(190,170,255,.07); font-size: 12.5px;
+}
+.fc-row-in:first-child { border-top: none; padding-top: 0; }
+.fc-row-label { color: var(--text-dim); font-weight: 600; }
+.fc-row-text { color: var(--text); line-height: 1.55; }
+.fc-list { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.fc-list li { color: var(--text); line-height: 1.55; }
+
+/* шкалы профиля: выраженность темы, не оценка */
+.fc-scales { display: grid; gap: 11px; margin-bottom: 4px; }
+.fc-scale { display: grid; grid-template-columns: 1fr auto; gap: 3px 9px; align-items: center; }
+.fc-scale-label { color: var(--text); font-size: 12.5px; font-weight: 600; }
+.fc-scale-value { color: var(--gold-bright); font-size: 12px; font-variant-numeric: tabular-nums; }
+.fc-scale-track {
+  grid-column: 1 / -1; height: 6px; border-radius: 99px; overflow: hidden;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(190,170,255,.1);
+}
+.fc-scale-fill {
+  display: block; height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--violet), var(--gold));
+}
+.fc-scale-drivers {
+  grid-column: 1 / -1; color: var(--text-faint); font-size: 10.5px; line-height: 1.45;
+}
+
+/* сворачиваемые детали (Раху/Кету) и CTA блока */
+.fc-details { margin-top: 8px; color: var(--text-dim); }
+.fc-details summary {
+  min-height: 32px; display: flex; align-items: center; cursor: pointer;
+  color: var(--gold-light); font-size: 11.5px; font-weight: 600; list-style: none;
+}
+.fc-details summary::-webkit-details-marker { display: none; }
+.fc-details summary::after { content: '⌄'; margin-left: auto; color: var(--gold); font-size: 16px; transition: transform .2s ease; }
+.fc-details[open] summary::after { transform: rotate(180deg); }
+.fc-details summary:focus-visible { outline: 2px solid var(--champagne-300); outline-offset: 3px; border-radius: 8px; }
+.fc-cta {
+  margin-top: 10px; width: 100%; min-height: 38px; padding: 8px 12px;
+  border-radius: 11px; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent);
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  color: var(--gold-bright); font-size: 12.5px; font-weight: 600;
+  transition: background .15s var(--ease), box-shadow .2s var(--ease);
+}
+.fc-cta:active { background: color-mix(in srgb, var(--gold) 18%, transparent); }
+.fc-cta:focus-visible { outline: 2px solid var(--champagne-300); outline-offset: 2px; }
+
+/* вопрос-хуки: честное «что спросить дальше» */
+.fc-hooks { border-style: dashed; background: transparent; }
+.fc-hooks-list { display: grid; gap: 7px; }
+.fc-hook {
+  padding: 9px 11px; border-radius: 11px; cursor: pointer; text-align: left;
+  border: 1px solid rgba(190,170,255,.18); background: rgba(255,255,255,.03);
+  color: var(--text); font-size: 12.5px; line-height: 1.45;
+  transition: background .15s var(--ease), border-color .15s var(--ease);
+}
+.fc-hook:active { background: rgba(230,193,120,.1); border-color: rgba(230,193,120,.4); }
+.fc-hook:focus-visible { outline: 2px solid var(--champagne-300); outline-offset: 2px; }
+
+/* астрологическая основа: свёрнутый техслой, привязка к позициям карты */
+.fc-tech { margin-top: 4px; }
+.fc-tech-toggle {
+  margin-left: auto; color: var(--gold); font-size: 11px; font-weight: 500;
+}
+.fc-tech-copy { margin: 4px 0 8px; color: var(--text-faint); font-size: 11px; line-height: 1.5; }
+.fc-tech-grid { display: grid; }
+
+.fc-disclaimer {
+  margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(190,170,255,.14);
+  color: var(--text-faint); font-size: 10.5px; line-height: 1.5;
+}
