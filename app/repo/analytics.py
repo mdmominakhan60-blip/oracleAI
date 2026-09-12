@@ -40,12 +40,6 @@ E_RETURN_D1 = "return_d1"
 E_RETURN_D7 = "return_d7"
 E_RETURN_D30 = "return_d30"
 
-# Web-funnel events (BUS-116 / EXP-001). surface="web", tg_id=None — события
-# анонимные, в пользовательские воронки (DISTINCT tg_id) не попадают.
-# Props ограничены allowlist'ом через _safe_web_prop: никаких free-form данных.
-E_LANDING_VIEW = "landing_view"
-E_CONTENT_VIEW = "content_view"
-E_VISITOR = "visitor"
 E_REPEAT_PAID = "repeat_purchase"
 
 # Monetization milestones. These names and props are server-owned; clients cannot
