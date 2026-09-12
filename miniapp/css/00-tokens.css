@@ -12,40 +12,65 @@
 :root {
   --nav-h: 66px;
 
-  /* Semantic visual tokens — the single source of truth for the final QA pass. */
-  --color-bg-primary: #0a0920;
-  --color-bg-secondary: #100e29;
-  --color-bg-elevated: #19153a;
-  --color-bg-overlay: rgba(10, 9, 32, .92);
-  --color-accent: #f5d48b;
-  --color-accent-strong: #ffe9b4;
-  --color-accent-deep: #eabf68;
-  --color-accent-secondary: #b9a6ff;
-  --color-text-primary: #faf8ff;
-  --color-text-secondary: #d4cee7;
-  --color-text-muted: #a39bbd;
-  /* BUS-115 (A-1): #948cb2 даёт 5.50–6.20:1 на всех трёх фонах (WCAG AA ≥4.5:1);
-     старый #6f6890 давал 3.36–3.78:1. Иерархия subtle < muted < secondary сохранена. */
-  --color-text-subtle: #948cb2;
-  --color-border: rgba(230, 219, 255, .14);
-  --color-border-strong: rgba(245, 212, 139, .50);
-  --color-success: #7be0c5;
-  --color-warning: #f5d48b;
-  --color-error: #f5a9c7;
-  --color-info: #b9a6ff;
-  --color-on-accent: #251d39;
-  --focus-ring: 0 0 0 3px rgba(245, 212, 139, .24);
-  /* FE-018: hover/focus — токены уровня дизайн-системы, а не ad-hoc rgba
-     в каждом компоненте. Компоненты обязаны ссылаться на них. */
-  --hover-bg: rgba(245, 212, 139, .08);
-  --hover-border: rgba(245, 212, 139, .35);
-  --focus-outline: 2px solid var(--champagne-300);
-  /* BUS-741 (P0 §3.1): единственный primary-градиент и его тень.
-     Все primary-действия ссылаются сюда — ручные объявления запрещены. */
-  --grad-primary: linear-gradient(135deg, var(--champagne-300), var(--champagne-500));
-  --shadow-primary: 0 12px 23px -15px rgba(245, 212, 139, .9);
-  /* BUS-741 (P0 §3.3): единый сегментный прогресс для всех многошаговых сценариев.
-     Сегменты — <i>, подписи — <span>; включённые состояния — .is-on. */
+  /* ============================================================
+     R03 §2.1 — семантический слой дизайн-системы OracleAI (BUS-969).
+     Канон: docs/design/REDESIGN_R03_DESIGN_SYSTEM.md (коммит 7f7c79a).
+     Значения — 1:1 из §2.1; контраст AA проверен в §2.4 документа.
+     Новые hex в CSS-модулях запрещены (§2.1, §9.4) — только отсюда.
+     ============================================================ */
+  --color-bg: #0B0D18;
+  --color-surface: #141827;
+  --color-surface-raised: #1C2233;
+  --color-surface-overlay: #242C3F;
+  --color-text-primary: #F4F2ED;
+  --color-text-secondary: #B7BDCB;
+  --color-text-muted: #9AA4B8;
+  --color-accent: #E9C982;
+  --color-accent-hover: #F1D99F;
+  --color-on-accent: #1C1820;
+  --color-border: #384256;
+  --color-border-control: #717B96;
+  --color-success: #97D8BD;
+  --color-error: #F1A4AA;
+  --color-info: #ABC9EF;
+
+  /* Производные слои R03 §2.1 (допускаются как производные, не новые цвета). */
+  --focus-ring: 0 0 0 3px rgba(233, 201, 130, .35);
+  --hover-bg: rgba(233, 201, 130, .08);
+  --hover-border: rgba(233, 201, 130, .35);
+  --shadow-overlay: 0 18px 50px -18px rgba(0, 0, 0, .85);
+  /* Градиент акцента единый (§2.1): вертикаль #F1D99F → #E9C982.
+     Ручное размножение градиента в селекторах запрещено (урок BUS-712). */
+  --grad-primary: linear-gradient(180deg, var(--color-accent-hover), var(--color-accent));
+  --focus-outline: 2px solid var(--color-accent);
+
+  /* ============================================================
+     Legacy-слой аметистовой ночи (до-R03): значения выведены, имена
+     сохранены для модулей 01–21 в период миграции. Теперь каждый
+     legacy-алиас перенаправлен на семантический слой R03 — расхождение
+     значений с документом системы исключено, новые hex не плодятся.
+     Соответствия: bg-primary→bg, bg-secondary/elevated→surface(-raised),
+     champagne→accent(-hover), старый border→border-control (интерактив).
+     ============================================================ */
+  --color-bg-primary: var(--color-bg);
+  --color-bg-secondary: var(--color-surface);
+  --color-bg-elevated: var(--color-surface-raised);
+  --color-bg-overlay: var(--color-surface-overlay);
+  --color-accent-strong: var(--color-accent-hover);
+  --color-accent-deep: var(--color-accent);
+  /* Был #b9a6ff (аметист) — аналога в R03 нет; вторичный текст как нейтральный,
+     пока R06 не введёт вторичный акцент (вопрос в артефакт-отчёт). */
+  --color-accent-secondary: var(--color-text-secondary);
+  /* BUS-115: subtle остаётся читаемым (R03 muted 6.3–7.7:1 на поверхностях). */
+  --color-text-subtle: var(--color-text-muted);
+  /* Декоративный разделитель (не интерактив): #384256 по R03. */
+  --color-border-soft: var(--color-border);
+  /* Интерактивные границы: #717B96 (R03 §2.4, 3:1+). */
+  --color-border-strong: var(--color-border-control);
+  --color-warning: var(--color-accent);
+  --color-on-accent-legacy: var(--color-on-accent);
+  --shadow-primary: 0 12px 23px -15px rgba(0, 0, 0, .9);
+  /* BUS-741 (P0 §3.3): сегментный прогресс. */
   --seg-line: rgba(255, 255, 255, .13);
 
   /* 4px spacing scale: every layout value should be one of these steps. */
@@ -61,8 +86,13 @@
   --space-10: 64px;
 
   /* Type scale: display, body, utility. */
-  --font-family-display: 'Cinzel', Georgia, serif;
-  --font-family-body: 'Plus Jakarta Sans', Arial, sans-serif;
+  /* R03 §3.1 (BUS-969): Manrope — основной и заголовочный шрифт (400/500/600/700,
+     self-hosted WOFF2 с реальной кириллицей). RU-заголовки не проваливаются в
+     Georgia/Arial: Manrope загружен с cyrillic-субсетом (preload в index.html).
+     Cinzel/Plus Jakarta Sans остаются loaded (fallback после Manrope) до вывода
+     по графику замены R03 — существующие экраны не ломаются. */
+  --font-family-display: 'Manrope', 'Cinzel', Georgia, serif;
+  --font-family-body: 'Manrope', 'Plus Jakarta Sans', Arial, sans-serif;
   --font-size-h1: 32px;
   --font-size-h2: 24px;
   --font-size-h3: 20px;
@@ -81,15 +111,17 @@
   --tracking-label: .08em;
 
   /* Shared geometry and motion. */
-  --radius-control: 14px;
-  --radius-card: 20px;
+  /* R03 §2.2: контрол 12, карточка 16, sheet 24. */
+  --radius-control: 12px;
+  --radius-card: 16px;
   --radius-sheet: 24px;
   --touch-target: 44px;
-  --motion-focus: 160ms;
+  /* R03 §6.1: единый темп — legacy имена (focus/enter/exit) следуют за quick/base. */
+  --motion-focus: var(--motion-quick);
   --motion-enter: 320ms;
-  --motion-exit: 220ms;
+  --motion-exit: var(--motion-base);
 
-  /* палитра — ночь с золотом и аметистом */
+  /* палитра — ночь с золотом и аметистом; значения теперь идут от R03-слоя */
   --bg-0: var(--color-bg-primary);
   --bg-1: var(--color-bg-secondary);
   --bg-2: var(--color-bg-elevated);
@@ -98,42 +130,50 @@
   --gold: var(--color-accent);
   --gold-bright: var(--color-accent-strong);
   --gold-deep: var(--color-accent-deep);
-  --gold-glow: rgba(245, 212, 139, .35);
+  --gold-glow: rgba(233, 201, 130, .35);
   --violet: var(--color-accent-secondary);
-  --violet-glow: rgba(185, 166, 255, .35);
+  --violet-glow: rgba(183, 189, 203, .35);
   --text: var(--color-text-primary);
   --text-dim: var(--color-text-secondary);
   --text-faint: var(--color-text-subtle);
-  --border: var(--color-border);
+  /* R03 §2.1: --border — для интерактивных контролов, border-control #717B96
+     (декоративные разделители — var(--color-border-soft)). */
+  --border: var(--color-border-control);
   --border-strong: var(--color-border-strong);
 
   --font-serif: var(--font-family-display);
   --font-body: var(--font-family-body);
   --font-sans: var(--font-body);
 
-  --r-s: 14px;
-  --r-m: 20px;
+  /* R03 §2.2: алиасы радиусов следуют за semantic-слоем (контрол 12, карточка 16). */
+  --r-s: var(--radius-control);
+  --r-m: var(--radius-card);
   --r-l: 28px;
 
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  /* Единый темп интерактивов: короткий отклик, основной переход, мягкое раскрытие. */
-  --motion-quick: 160ms;
+  /* R03 §6.1: единый темп (--motion-quick 140ms / base 220 / slow 480).
+     Legacy имена сохранены, значения приведены к документу системы. */
+  --motion-quick: 140ms;
   --motion-base: 220ms;
-  --motion-slow: 420ms;
+  --motion-slow: 480ms;
   --motion-ritual: cubic-bezier(.22, .9, .24, 1);
-  --sh-card: 0 18px 50px -18px rgba(0, 0, 0, 0.85);
-  /* BUS-741 (P0 §3.4): мигрировано с legacy-золота E6C178 на champagne (потребителей нет). */
-  --sh-gold: 0 0 0 1px rgba(245,212,139,.06), 0 18px 50px -22px rgba(245,212,139,.18);
+  /* R03 §2.1: тень одна — для меню/popover/sheet/модалок. */
+  --sh-card: var(--shadow-overlay);
+  /* BUS-741 (P0 §3.4): акцентная тень от R03-слоя (урок: rgba-тон указан
+     один раз здесь; компоненты ссылаются на токен). */
+  --sh-gold: 0 0 0 1px rgba(233,201,130,.06), 0 18px 50px -22px rgba(233,201,130,.18);
 
-  /* Legacy aliases retained for feature modules during the migration. */
+  /* Legacy aliases retained for feature modules during the migration.
+     R03: значения либо редирект на семантический слой, либо легаси-хекс,
+     который не входит в документ системы (помечен как к выводу в отчёте). */
   --ink-950: var(--color-bg-primary);
   --ink-900: var(--color-bg-secondary);
   --ink-800: var(--color-bg-elevated);
-  --ink-700: #27204d;
+  --ink-700: #27204d; /* legacy, к выводу (потребителей нет) */
   --champagne-500: var(--color-accent-deep);
   --champagne-400: var(--color-accent);
-  --champagne-300: var(--color-accent-strong);
-  --lilac-500: #917df0;
+  --champagne-300: var(--color-accent-hover);
+  --lilac-500: #917df0; /* legacy аметист, к выводу (потребителей нет) */
   --lilac-400: var(--color-accent-secondary);
   --blush-400: var(--color-error);
   --mint-400: var(--color-success);
@@ -141,18 +181,18 @@
   --text-soft: var(--color-text-secondary);
   --text-muted: var(--color-text-muted);
   --surface-soft: rgba(255, 255, 255, .055);
-  --surface-raised: rgba(29, 24, 61, .78);
-  --line-soft: var(--color-border);
+  --surface-raised: rgba(28, 34, 51, .78);
+  --line-soft: var(--color-border-soft);
   --line-bright: var(--color-border-strong);
   --font-display: var(--font-family-display);
   --ease-out: var(--ease);
   --gold-light: var(--color-accent-strong);
-  --lilac-300: #d8ceff;
-  --champagne-200: #fff4d2;
-  --line: var(--color-border);
+  --lilac-300: #d8ceff; /* legacy, к выводу (2 потребителя, см. отчёт) */
+  --champagne-200: #fff4d2; /* legacy, к выводу (17 потребителей, см. отчёт) */
+  --line: var(--color-border-soft);
   --ac-bright: var(--color-accent-strong);
-  --ac-glow: rgba(245, 212, 139, .34);
-  --ac-surface: rgba(245, 212, 139, .1);
+  --ac-glow: rgba(233, 201, 130, .34);
+  --ac-surface: rgba(233, 201, 130, .1);
   --ac2: var(--color-accent-secondary);
   --lc: var(--color-accent-secondary);
   --mc: var(--color-success);

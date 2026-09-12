@@ -477,7 +477,7 @@
     try {
       const privacy = await api('/api/account/privacy');
       const categories = (privacy.categories || []).map(item => `<div class="privacy-row"><b>${esc(item.label)}</b><span>${item.exportable ? 'доступно в экспорте' : 'не входит в экспорт'}</span></div>`).join('');
-      document.getElementById('privacy-body').innerHTML = `<p class="modal-soft-copy">Удаление аккаунта анонимизирует профиль, а settlement-safe payment trace может сохраниться для финансовой отчётности. Анонимизация необратима.</p><div class="privacy-list">${categories}</div><div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" data-act="account-export">Скачать мой экспорт</button><button class="btn btn-danger" data-act="modal-close">Закрыть</button></div>`;
+      document.getElementById('privacy-body').innerHTML = `<p class="modal-soft-copy">Удаление аккаунта анонимизирует профиль, а settlement-safe payment trace может сохраниться для финансовой отчётности. Анонимизация необратима.</p><div class="privacy-list">${categories}</div><div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" data-act="account-export">Скачать мой экспорт</button><button class="btn btn-destructive" data-act="modal-close">Закрыть</button></div>`;
     } catch (e) { document.getElementById('privacy-body').innerHTML = `<p class="modal-soft-copy">${esc(friendlyError(e, 'Центр приватности временно недоступен.'))}</p>`; }
   };
 
