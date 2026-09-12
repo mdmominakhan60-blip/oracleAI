@@ -25,8 +25,8 @@ app.syncBg = function () {
   if (!root) return;
   let bg = 'welcome';
   if (this.chat && this.chat.key) bg = this.chat.key === 'tarot' ? 'tarot' : 'chat';
-  else if (['tarot-question', 'tarot-reveal', 'tarot-zoom', 'tarot-reading'].includes(this.view)) bg = 'tarot';
-  else if (this.view === 'profile' || this.view === 'payment') bg = 'work';
+  else if (['tarot-question', 'tarot-reveal', 'tarot-zoom', 'tarot-reading', 'tarot-cross'].includes(this.view)) bg = 'tarot';
+  else if (this.view === 'profile' || this.view === 'payment' || ['plan-r06', 'orders-r06', 'library', 'memory-r06', 'notifications-r06', 'paywall', 'pay-pending', 'states'].includes(this.view)) bg = 'work';
   if (root.dataset.bg !== bg) root.dataset.bg = bg;
   document.documentElement.dataset.bg = bg;
   const paused = !this.bgAnimationEnabled();
@@ -144,7 +144,7 @@ app.initBgControls = function () {
       else if (qaView === 'sessions') this.go('sessions');
       else if (qaView === 'sheet') this.go('sheet');
       else if (['tool-quick', 'tool-form', 'tool-run', 'result', 'tarot-question', 'tarot-reveal', 'tarot-zoom', 'tarot-reading'].includes(qaView)) this.go(qaView);
-      else if (['home', 'hub', 'profile'].includes(qaView)) this.go(qaView);
+      else if (['home', 'hub', 'profile', 'today', 'library', 'memory-r06', 'notifications-r06', 'plan-r06', 'paywall', 'pay-pending', 'orders-r06', 'tarot-cross', 'states'].includes(qaView)) this.go(qaView);
       if (qaView === 'profile' && ['summary', 'chart', 'history', 'memory'].includes(qaTab)) {
         setTimeout(() => document.querySelector(`.ptab[data-tab="${qaTab}"]`)?.click(), 120);
       }
@@ -555,6 +555,11 @@ app.initBgControls = function () {
       if (app.view === 'tarot-reveal' || app.view === 'tarot-reading') return () => app.go('tarot-question');
       if (app.view === 'tool-run' || app.view === 'result') return () => app.go('hub');
       if (app.view === 'tarot-question' || app.view === 'tool-quick' || app.view === 'tool-form') return () => app.go('hub');
+      // BUS-1070 p3 R06: подэкраны Профиля ведут назад в Профиль, Сегодня — в hub
+      if (['memory-r06', 'notifications-r06', 'plan-r06', 'orders-r06'].includes(app.view)) return () => app.go('profile');
+      if (app.view === 'paywall' || app.view === 'pay-pending') return () => app.go(app._paywallReturn || 'plan-r06');
+      if (app.view === 'today' || app.view === 'library' || app.view === 'states') return () => app.go('hub');
+      if (app.view === 'tarot-cross') return () => app.go('tarot-question');
       if (app.view !== 'home') return () => app.go('home');
       return null;
     })();
@@ -581,7 +586,7 @@ app.initBgControls = function () {
     const main = document.getElementById('app-main');
     if (v === 'home') this.renderHome(main);
     else if (v === 'hub') this.renderHub(main);
-    else if (v === 'profile') { this.renderProfile(main); }
+    else if (v === 'profile') { this.renderProfileR06(main); }
     else if (v === 'payment') { this.goPayment(); }
     else if (v === 'welcome') this.renderWelcome(main);
     else if (v === 'onboarding') this.startOnboarding();
@@ -595,6 +600,17 @@ app.initBgControls = function () {
     else if (v === 'tarot-reveal') this.renderTarotReveal(main);
     else if (v === 'tarot-zoom') this.renderTarotZoom(main);
     else if (v === 'tarot-reading') this.renderTarotReading(main);
+    // BUS-1070 p3 R06: экраны S15/S20/S22/S23/S24/S25/S26/S13-большой/§11.2
+    else if (v === 'today') this.renderTodayR06(main);
+    else if (v === 'library') this.renderLibrary(main);
+    else if (v === 'memory-r06') this.renderMemoryR06(main);
+    else if (v === 'notifications-r06') this.renderNotificationsR06(main);
+    else if (v === 'plan-r06') this.renderPlanR06(main);
+    else if (v === 'paywall') this.renderPaywall(main, opts);
+    else if (v === 'pay-pending') this.renderPayPending(main);
+    else if (v === 'orders-r06') this.renderOrdersR06(main);
+    else if (v === 'tarot-cross') this.renderTarotGrid(main);
+    else if (v === 'states') this.renderStates(main);
   };
 
 
@@ -636,6 +652,8 @@ app.initBgControls = function () {
       this.dailyPulse = { diary, prompt, practices };
     } catch (e) { this.dailyPulse = null; }
     if (this.view === 'home') this.renderHome(document.getElementById('app-main'));
+    /* p3: «Сегодня» перерисовывается и после тихого /api/diary-фетча */
+    if (this.view === 'today') this.renderTodayR06(document.getElementById('app-main'));
   };
 
 

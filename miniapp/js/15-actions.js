@@ -124,7 +124,7 @@
     'bg-anim': (el) => {
       tactile('select');
       call('setBgAnimation', !app.bgAnimationEnabled());
-      if (app.view === 'profile') call('renderProfile', document.getElementById('app-main'));
+      if (app.view === 'profile') call('renderProfileR06', document.getElementById('app-main'));
     },
     'set-lang': (el, data) => call('setLanguage', data.lang),
     'ask-chart': () => call('askChart'),
@@ -177,7 +177,23 @@
     'run-fail-retry': () => call('runFailRetry'),
     'result-share': () => call('resultShare'),
     'result-discuss': () => call('resultDiscuss'),
-    'result-library': () => call('resultLibrary')
+    'result-library': () => call('resultLibrary'),
+    // BUS-1070 p3 R06: экраны S15–S26, крест, промо, состояния
+    'today-expand': (el) => call('todayExpand', el),
+    'lib-tab': (el, data) => { tactile('select'); call('switchLibTab', data.tab); },
+    'lib-retry': () => call('libRetry'),
+    'mem-del-confirm': (el, data) => call('_memConfirm', data.id),
+    'mem-confirm-cancel': () => call('_memConfirmCancel'),
+    'mem-confirm-yes': (el, data) => call('_memConfirmYes', data.id),
+    'notif-toggle': (el, data) => { tactile('select'); call('_notifToggle', data.key); },
+    'promo-toggle': (el) => call('_promoToggle', el),
+    'promo-apply': () => call('_promoApply'),
+    'paywall-back': () => call('_paywallBack'),
+    'paywall-pay': () => call('_paywallPay'),
+    'pay-check-status': () => call('_payCheckStatus'),
+    'tarot-cross-open': (el, data) => call('tarotCrossOpen', parseInt(data.pos, 10)),
+    'r06-pay-stars': (el) => call('selectPaymentMethod', 'stars'),
+    'r06-pay-crypto': (el) => call('selectPaymentMethod', 'crypto')
   };
 
   app.actionHandlers = actionHandlers;
