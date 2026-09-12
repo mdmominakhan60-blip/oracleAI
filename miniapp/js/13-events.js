@@ -116,56 +116,8 @@ document.addEventListener('click', function (event) {
     return;
   }
 
-  // История: inline-подтверждение удаления диалога (без alert/confirm).
-  const sessDel = target.closest('[data-act="sess-del"]');
-  if (sessDel) {
-    event.stopPropagation();
-    const row = sessDel.closest('[data-sess-row], .session-card');
-    if (row && row.dataset.confirmed !== '1') {
-      row.dataset.confirmed = '1';
-      row.style.outline = '2px solid var(--color-error)';
-      row.style.outlineOffset = '-2px';
-      const lbl = row.querySelector('.session-card__confirm-label');
-      if (lbl) { lbl.hidden = false; lbl.textContent = t('sessionsConfirmDel'); }
-      sessDel.setAttribute('aria-label', t('sessionsConfirmDel'));
-      // Сброс подтверждения, если пользователь передумал в течение 3с.
-      setTimeout(() => {
-        if (row.dataset.confirmed === '1') {
-          row.dataset.confirmed = '0';
-          row.style.outline = '';
-          row.style.outlineOffset = '';
-          const lbl2 = row.querySelector('.session-card__confirm-label');
-          if (lbl2) { lbl2.hidden = true; lbl2.textContent = ''; }
-        }
-      }, 3000);
-    } else if (row) {
-      // Второй тап — подтверждённое удаление.
-      if (typeof app.delSession === 'function') {
-        app.delSession(sessDel.dataset.tid);
-      }
-    }
-    return;
-  }
-
-  // История: очистить все диалоги (inline-подтверждение по тому же паттерну).
-  const sessClear = target.closest('[data-act="sess-clear"]');
-  if (sessClear) {
-    if (sessClear.dataset.confirmed !== '1') {
-      sessClear.dataset.confirmed = '1';
-      const span = sessClear.querySelector('span');
-      if (span) span.textContent = t('sessionsConfirmDel');
-      setTimeout(() => {
-        if (sessClear.dataset.confirmed === '1') {
-          sessClear.dataset.confirmed = '0';
-          if (span) span.textContent = t('sessionsClear');
-        }
-      }, 3000);
-    } else if (typeof app.deleteAllSessions === 'function') {
-      app.deleteAllSessions();
-    }
-    return;
-  }
-
+  // unify-all: sess-del/sess-clear живут в реестре 15-actions (единая точка
+  // входа data-act) — здесь не дублируем, иначе двойное срабатывание.
   // Sheet инструментов: открытие.
   const openSheet = target.closest('[data-open-sheet]');
   if (openSheet) {
@@ -175,13 +127,7 @@ document.addEventListener('click', function (event) {
     return;
   }
 
-  // Sheet инструментов: закрытие → возврат в чат.
-  const closeSheet = target.closest('[data-act="sheet-close"]');
-  if (closeSheet) {
-    if (app.chat && app.chat.key) app.openChat(app.chat.key);
-    else app.go('hub');
-    return;
-  }
+  // unify-all: sheet-close — в реестре 15-actions, здесь не дублируем.
 });
 
 // Онбординг: Enter в полях ввода → следующий шаг; Escape → назад/закрыть.

@@ -597,8 +597,8 @@
     if (note) note.textContent = en ? 'Checking the code…' : 'Проверяем код…';
     api('/api/shop/promo', { method: 'POST', body: JSON.stringify({ code: code }) }).then(function (r) {
       if (note) note.textContent = (r && r.ok) ? (en ? 'Promo code applied!' : 'Промокод применён!') : (en ? 'Code not accepted' : 'Код не принят');
-    }).catch(function (e) {
-      if (note) note.textContent = String((e && e.message) || (en ? 'Code not accepted' : 'Код не принят'));
+    }).catch(function () {
+      if (note) note.textContent = en ? 'Code not accepted' : 'Код не принят';
     });
   };
 
