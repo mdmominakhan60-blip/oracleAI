@@ -1,0 +1,206 @@
+/* BUS-1103 S14 R06: натальная карта (G-кадр explain-chart), макет BUS-1067 p4.
+ * Копия прототипа design/r06/p4/styles.css (секция S14), сверено построчно;
+ * отличия помечены комментариями. Токены — 00-tokens.css (совпадают с макетом).
+ *
+ * Скоупинг .tool-view: классы .chart-details и .chart-provenance уже заняты
+ * legacy-виджетом карты (15-ritual-redesign.css), а .chart-wheel — профилем
+ * (03-profile.css). Наши виды живут в .tool-view / .chart-card-view, legacy —
+ * нет; поэтому конфликтные правила вложены, остальные — плоские, как в макете. */
+
+/* ============================================================
+   S14 · КАРТОЧКА-ПРЕВЬЮ В ЛЕНТЕ ЧАТА
+   ============================================================ */
+.chart-card {
+  display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-3); border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-card); background: var(--color-surface); max-width: 400px;
+}
+.chart-card__wheel { width: 100%; max-width: 240px; margin: 0 auto; }
+.chart-card__wheel svg { width: 100%; height: auto; }
+.chart-card__body { display: flex; flex-direction: column; gap: 2px; }
+.chart-card__kicker { font-size: 12px; color: var(--color-text-muted); }
+.chart-card__title { font-size: 16px; font-weight: 600; }
+.chart-card__meta { font-size: 13px; line-height: 18px; color: var(--color-text-secondary); }
+.chart-card__actions { display: flex; gap: var(--space-2); }
+.chart-card__actions .btn { min-height: 44px; font-size: 14px; } /* SPEC §6.1: 44px touch target */
+
+/* Standalone-вид карточки (qa-сверка и вход из ленты): чат-шапка + лента */
+.chart-card-view { display: flex; flex-direction: column; min-height: 0; }
+.chart-card-feed {
+  display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-4); overflow-y: auto; min-height: 0;
+}
+.chart-card-feed .msg.user { align-self: flex-end; } /* пузырь запроса — паттерн 06-composer-chat */
+
+/* ============================================================
+   S14 · КОЛЕСО КАРТЫ (инлайн-SVG без новых изображений)
+   ============================================================ */
+.chart-scene { display: flex; flex-direction: column; gap: var(--space-5); width: 100%; min-width: 0; }
+@media (min-width: 1280px) {
+  .chart-scene { flex-direction: row; align-items: flex-start; gap: var(--space-6); }
+  .chart-scene__wheel { flex: 0 0 420px; max-width: 420px; position: sticky; top: var(--space-4); }
+  .chart-scene__side { flex: 1; min-width: 0; }
+}
+.chart-scene__wheel { width: 100%; max-width: 400px; margin: 0 auto; }
+.chart-scene__wheel svg { width: 100%; height: auto; display: block; }
+.chart-scene__hint { font-size: 12px; line-height: 17px; color: var(--color-text-muted); text-align: center; margin-top: var(--space-2); }
+
+/* Светила на колесе */
+.chart-wheel__p { cursor: pointer; }
+.chart-wheel__phit { fill: color-mix(in srgb, var(--color-surface) 85%, transparent); stroke: var(--color-border-control); stroke-width: 1.5; transition: fill var(--motion-quick); }
+.chart-wheel__p:hover .chart-wheel__phit { fill: var(--hover-bg); stroke: var(--color-accent); }
+.chart-wheel__p:focus-visible { outline: none; }
+.chart-wheel__p:focus-visible .chart-wheel__phit { fill: var(--hover-bg); stroke: var(--color-accent); box-shadow: var(--focus-ring); }
+.pglyph { font-size: 13px; fill: var(--color-text-primary); pointer-events: none; }
+.pglyph--node { fill: var(--color-text-muted); }
+.zglyph { font-size: 16px; fill: var(--color-text-secondary); }
+.cmglyph { font-size: 11px; fill: var(--color-text-muted); letter-spacing: .05em; }
+.wglyph { font-size: 12px; fill: var(--color-text-muted); font-weight: 700; }
+.wplanet { font-size: 12px; fill: var(--color-text-secondary); }
+
+/* ============================================================
+   S14 · ГЛАВНАЯ СЦЕНА: светила, списки, provenance
+   ============================================================ */
+.chart-lum { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-2); }
+.chart-lum__row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: var(--color-surface-raised); border-radius: var(--radius-control); }
+.chart-lum__glyph {
+  width: 28px; height: 28px; flex: none; display: grid; place-items: center;
+  border-radius: 999px; background: var(--color-surface-overlay); font-size: 13px; font-weight: 700;
+}
+.chart-lum__glyph--asc { background: var(--grad-primary); color: var(--color-on-accent); font-size: 11px; }
+.chart-lum__body { flex: 1; min-width: 0; }
+.chart-lum__name { font-size: 14px; font-weight: 600; }
+.chart-lum__val { font-size: 13px; line-height: 18px; color: var(--color-text-secondary); }
+.chart-side__title { font-size: 15px; font-weight: 600; margin-bottom: var(--space-2); }
+
+/* Списки планет/аспектов/домов — скоуп: .chart-details занят legacy-виджетом */
+.tool-view .chart-details { border: 1px solid var(--color-border); border-radius: var(--radius-card); overflow: hidden; margin-bottom: var(--space-4); }
+.tool-view .chart-details + .chart-details { margin-top: calc(-1 * var(--space-4)); }
+.tool-view .chart-details__summary {
+  display: flex; align-items: center; gap: var(--space-2); min-height: 44px;
+  padding: var(--space-2) var(--space-3); cursor: pointer; list-style: none;
+  font-size: 14px; font-weight: 600; color: var(--color-text-primary);
+  background: var(--color-surface-raised);
+}
+.tool-view .chart-details__summary::-webkit-details-marker { display: none; }
+.tool-view .chart-details__summary::after { content: '▾'; margin-left: auto; color: var(--color-text-muted); transition: transform var(--motion-quick) var(--ease); font-size: 12px; }
+.tool-view .chart-details[open] > .chart-details__summary::after { transform: rotate(180deg); }
+.tool-view .chart-details__summary:focus-visible { outline: none; box-shadow: inset var(--focus-ring); }
+.tool-view .chart-details__body { padding: var(--space-2) var(--space-3) var(--space-3); border-top: 1px solid var(--color-border); }
+
+/* Ряды (планеты) */
+.chart-row {
+  display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 44px;
+  padding: var(--space-2) var(--space-3); background: none; border: 0; border-radius: var(--radius-control);
+  color: var(--color-text-primary); cursor: pointer; text-align: left;
+}
+.chart-row:hover { background: var(--hover-bg); }
+.chart-row:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.chart-row + .chart-row { margin-top: 1px; }
+.chart-row__glyph {
+  width: 24px; height: 24px; flex: none; display: grid; place-items: center;
+  border-radius: 999px; background: var(--color-surface-overlay); font-size: 12px;
+}
+.chart-row__glyph--node { background: color-mix(in srgb, var(--color-text-muted) 15%, var(--color-surface-overlay)); }
+.chart-row__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.chart-row__name { font-size: 14px; font-weight: 500; }
+.chart-row__val { font-size: 13px; line-height: 18px; color: var(--color-text-secondary); }
+.chart-row__retro {
+  display: inline-flex; align-items: center; font-size: 11px; color: var(--color-accent);
+  margin-left: var(--space-1); font-weight: 600;
+}
+.chart-row__go { color: var(--color-text-muted); font-size: 16px; flex: none; }
+
+/* Аспекты и дома (статичные строки) */
+.chart-aspect { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; line-height: 18px; color: var(--color-text-secondary); padding: var(--space-1) 0; }
+.chart-aspect__glyph { color: var(--color-accent); font-size: 14px; flex: none; width: 20px; text-align: center; }
+.chart-house { display: flex; align-items: baseline; gap: var(--space-2); font-size: 13px; line-height: 18px; color: var(--color-text-secondary); padding: var(--space-1) 0; }
+.chart-house__n { color: var(--color-text-muted); font-size: 12px; min-width: 20px; flex: none; }
+
+/* Provenance — скоуп: .chart-provenance занят legacy-виджетом */
+.tool-view .chart-provenance {
+  display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+  padding: var(--space-2) var(--space-3); font-size: 13px; line-height: 18px;
+  color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border);
+}
+.tool-view .chart-provenance__mark { color: var(--color-accent); }
+.tool-view .chart-provenance strong { color: var(--color-text-primary); }
+.tool-view .chart-provenance__link {
+  background: none; border: 0; color: var(--color-accent); font-size: 13px; cursor: pointer; margin-left: auto;
+}
+.tool-view .chart-provenance__link:hover { text-decoration: underline; }
+
+/* Действия под сценой карты */
+.chart-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); width: 100%; }
+.chart-actions .btn { min-height: 44px; }
+@media (min-width: 768px) { .chart-actions { max-width: 560px; } }
+
+/* Кнопка в шапке вида (share) */
+.chat-header__btn {
+  background: none; border: 0; color: var(--color-text-secondary); cursor: pointer;
+  width: 36px; height: 36px; border-radius: 999px; display: grid; place-items: center; flex: none;
+}
+.chat-header__btn:hover { color: var(--color-accent); background: var(--hover-bg); }
+.chat-header__btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* ============================================================
+   S14 · КРУПНЫЙ ПЛАН ПЛАНЕТЫ (zoom)
+   ============================================================ */
+.chart-zoom { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-4) 0; text-align: center; max-width: 400px; margin: 0 auto; }
+.chart-zoom__badge {
+  width: 64px; height: 64px; display: grid; place-items: center;
+  border-radius: 999px; background: var(--grad-primary); color: var(--color-on-accent); font-size: 28px;
+}
+.chart-zoom__glyph { font-size: 32px; }
+.chart-zoom__title { font-size: 20px; line-height: 26px; font-weight: 700; }
+.chart-zoom__meta { font-size: 13px; line-height: 18px; color: var(--color-text-secondary); }
+.chart-zoom__note { width: 100%; }
+
+/* ============================================================
+   S14 · EMPTY + ВРЕМЯ НЕИЗВЕСТНО
+   ============================================================ */
+.chart-empty { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding: var(--space-6) var(--space-4); text-align: center; }
+.chart-empty__glyph { width: 100%; max-width: 200px; opacity: .7; }
+.chart-empty__title { font-size: 18px; line-height: 24px; font-weight: 600; }
+.chart-empty__text { font-size: 14px; line-height: 20px; color: var(--color-text-secondary); max-width: 480px; }
+.chart-partial {
+  margin: var(--space-4) var(--space-4) 0; padding: var(--space-4);
+  border: 1px solid var(--color-border-control); border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-surface-raised) 60%, var(--color-surface));
+}
+.chart-partial__title { font-size: 15px; font-weight: 600; margin-bottom: var(--space-2); }
+.chart-partial__text { font-size: 14px; line-height: 20px; color: var(--color-text-secondary); margin-bottom: var(--space-3); }
+.chart-partial__actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+/* ============================================================
+   S14 · ИНТЕРПРЕТАЦИЯ (explain-chart, structured 11 секций)
+   ============================================================ */
+.interpret { max-width: 560px; margin: 0 auto; padding: 0 var(--space-4) var(--space-6); width: 100%; min-width: 0; }
+.interpret__meta { font-size: 13px; line-height: 18px; color: var(--color-text-muted); margin-bottom: var(--space-2); }
+.interpret__title { font-size: 20px; line-height: 26px; font-weight: 700; margin-bottom: var(--space-4); }
+.interpret__verdict {
+  padding: var(--space-4); border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-card); background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface-raised));
+  font-size: 15px; line-height: 23px; margin-bottom: var(--space-5);
+}
+.interpret__sec { margin-bottom: var(--space-5); }
+.interpret__sec-title { font-size: 16px; font-weight: 600; margin-bottom: var(--space-2); color: var(--color-text-primary); }
+.interpret__p { font-size: 14px; line-height: 22px; color: var(--color-text-secondary); margin-bottom: var(--space-2); }
+.interpret__p:last-child { margin-bottom: 0; }
+.interpret__list { padding-left: var(--space-5); }
+.interpret__list li { font-size: 14px; line-height: 22px; color: var(--color-text-secondary); margin-bottom: var(--space-1); }
+.interpret__deep { margin-top: var(--space-3); }
+.interpret__disclaimer { font-size: 13px; line-height: 18px; color: var(--color-text-muted); font-style: italic; margin-top: var(--space-5); padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+.interpret__loading { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-5) 0; font-size: 14px; color: var(--color-text-secondary); }
+
+/* ============================================================
+   S14 · БРЕЙКПОИНТЫ R02 §2: <768 mobile / 768–1279 rail / ≥1280 sidebar
+   ============================================================ */
+@media (min-width: 768px) {
+  .chart-card { flex-direction: row; align-items: center; max-width: 100%; }
+  .chart-card__wheel { max-width: 160px; margin: 0; }
+}
+@media (min-width: 1280px) {
+  .chart-card { max-width: 520px; }
+  .chart-card__wheel { max-width: 200px; }
+}
