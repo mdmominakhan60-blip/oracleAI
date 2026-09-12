@@ -41,10 +41,13 @@ def main() -> int:
     # 22-components — BUS-969 инкремент 2 (библиотека §4 R03);
     # 22-background-states — BUS-993 (R05: data-bg состояния, пауза E18, reduce E23).
     # 23-r06-tools — BUS-1070 p2 (волна B: S11 инструменты + S12 результат + S13 таро).
+    # 24-r06-p3 — BUS-1070 p3 (волна B: S15 сегодня + S20 библиотека + S22 память
+    # + S23 уведомления + S24 тариф/paywall + S25 ожидание + S26 заказы
+    # + S13 крест + состояния §11.2).
     expected_prefixes = ["00-", "01-", "02-", "03-", "04-", "05-", "06-", "07-",
                          "08-", "09-", "10-", "11-", "12-", "13-", "14-", "15-",
                          "16-", "16-", "17-", "18-", "18-", "19-", "20-", "21-",
-                         "22-", "22-", "23-"]
+                         "22-", "22-", "23-", "24-"]
     import_order_ok = (
         len(imports) == len(expected_prefixes)
         and len(imports) == len(list((ROOT / "miniapp" / "css").glob("*.css")))
@@ -61,6 +64,7 @@ def main() -> int:
         and imports[24] == "22-components.css"
         and imports[25] == "22-background-states.css"
         and imports[26] == "23-r06-tools.css"
+        and imports[27] == "24-r06-p3.css"
     )
     reduced_motion = "prefers-reduced-motion: reduce" in styles or any(
         "prefers-reduced-motion: reduce" in path.read_text(encoding="utf-8")
