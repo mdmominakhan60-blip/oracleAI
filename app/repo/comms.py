@@ -88,12 +88,15 @@ async def claim(db, tg_id: int, kind: str, key: str) -> bool:
     try:
         async with transaction(db):
             cur = await db.execute(
-                "INSERT INTO deliveries(tg_id, kind, key, status, error, created_at) "
-                "VALUES(:tg_id, :kind, :key, 'sending', :token, :now) "
+                "INSERT INTO deliveries(tg_id, kind, key, status, error, "
+                "  created_at, claimed_at) "
+                "VALUES(:tg_id, :kind, :key, 'sending', :token, :now, :now) "
                 "ON CONFLICT (tg_id, kind, key) DO UPDATE SET "
-                "  status='sending', error=:token, created_at=:now "
+                "  status='sending', error=:token, claimed_at=:now "
                 "WHERE deliveries.status='failed' "
-                "   OR (deliveries.status='sending' AND deliveries.created_at < :cutoff)",
+                "   OR (deliveries.status='sending' "
+                "       AND COALESCE(deliveries.claimed_at, "
+                "                    deliveries.created_at) < :cutoff)",
                 {"tg_id": tg_id, "kind": kind, "key": key,
                  "token": token, "now": utcnow(), "cutoff": cutoff})
             return bool(cur.rowcount)
@@ -106,6 +109,34 @@ async def claim(db, tg_id: int, kind: str, key: str) -> bool:
                 "ON CONFLICT (tg_id, kind, key) DO NOTHING",
                 {"tg_id": tg_id, "kind": kind, "key": key, "now": utcnow()})
             return bool(cur.rowcount)
+
+
+async def reclaim_stale_sending(db) -> int:
+    """Возвращает в очередь зависшие sending-строки (крэш между claim и mark).
+
+    Аналог reclaim у broadcast_targets: строка в status='sending' старше
+    CLAIM_TIMEOUT_S — процесс, занявший её, умер, не поставив mark.
+    Помечаем failed (не удаляем: дедуп-история сохраняется), следующий
+    claim() пере-занят её как обычный retry. Возвращает число строк.
+
+    claim() с момента BUS-313 F1 пишет claimed_at; строки без claimed_at
+    (занятые до миграции) считаем по created_at — консервативный фолбэк.
+    """
+    cutoff = (datetime.now(timezone.utc)
+              - timedelta(seconds=CLAIM_TIMEOUT_S)).isoformat()
+    try:
+        async with transaction(db):
+            cur = await db.execute(
+                "UPDATE deliveries SET status='failed', "
+                "  error='reclaimed', claimed_at=NULL "
+                "WHERE status='sending' AND COALESCE(claimed_at, created_at) "
+                "  < :cutoff",
+                {"cutoff": cutoff})
+            return cur.rowcount or 0
+    except Exception:  # noqa: BLE001
+        # Схема без claimed_at (миграции до 0014) — reclaim невозможен,
+        # старое поведение: зависшие sending остаются до prune.
+        return 0
 
 
 async def mark_failed(db, tg_id: int, kind: str, key: str,
