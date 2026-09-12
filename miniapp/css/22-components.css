@@ -124,3 +124,165 @@
 }
 .te-chip b { color: var(--color-text-primary); }
 .te-chip small { color: var(--color-text-muted); }
+
+/* ── BUS-1070 p1: R06 онбординг + чат + история + sheet ─────────────────── */
+
+/* §4.1 Field (онбординг S04): label + input + hint/error, токены R03 §2 */
+.field__label { display: block; color: var(--color-text-secondary); font-size: var(--font-size-caption); font-weight: 600; letter-spacing: .03em; margin-bottom: 6px; }
+.field__input { width: 100%; min-height: 44px; padding: 10px 12px; color: var(--color-text-primary); background: var(--color-surface-raised); border: 1px solid var(--color-border-control); border-radius: var(--radius-control); font: inherit; outline: none; }
+.field__input::placeholder { color: var(--color-text-muted); }
+.field__input:focus { border-color: var(--color-accent); box-shadow: var(--focus-ring); }
+.field__input[aria-invalid="true"] { border-color: var(--color-error); }
+.field__hint { margin-top: 5px; color: var(--color-text-muted); font-size: var(--font-size-caption); line-height: 1.4; }
+.field__error { display: flex; align-items: center; gap: 6px; margin-top: 5px; color: var(--color-error); font-size: var(--font-size-caption); line-height: 1.35; }
+.field__error svg { flex: 0 0 auto; }
+
+/* §4.2 DateSeg (S04 шаг 3): три сегмента в строке */
+.date-seg { display: flex; gap: 8px; }
+.date-seg__seg { flex: 1; min-width: 0; }
+.date-seg__seg--day { flex: 0 0 64px; }
+.date-seg__seg--year { flex: 0 0 80px; }
+
+/* §4.3 ChoiceRow (S04 шаг 4): mutually exclusive, aria-pressed */
+.choice-list { display: grid; gap: 6px; }
+.choice-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 10px 12px; color: var(--color-text-primary); background: var(--color-surface-raised); border: 1px solid var(--color-border-control); border-radius: var(--radius-control); font: inherit; text-align: left; cursor: pointer; }
+.choice-row:hover:not([aria-pressed="true"]), .choice-row:focus-visible { background: var(--hover-bg); border-color: var(--hover-border); }
+.choice-row[aria-pressed="true"] { border-color: var(--color-accent); background: var(--hover-bg); }
+.choice-row__note { color: var(--color-text-muted); font-size: var(--font-size-caption); }
+
+/* §4.4 Combobox (S04 шаг 5): autocomplete ≤5 подсказок */
+.combobox { position: relative; }
+.combobox__list { position: absolute; left: 0; right: 0; top: 100%; z-index: 20; max-height: 220px; overflow-y: auto; margin-top: 4px; padding: 4px; background: var(--color-surface-overlay); border: 1px solid var(--color-border); border-radius: var(--radius-control); box-shadow: var(--shadow-overlay); }
+.combobox__option { display: flex; flex-direction: column; align-items: stretch; padding: 9px 10px; color: var(--color-text-primary); background: transparent; border: none; border-radius: 8px; font: inherit; text-align: left; cursor: pointer; min-width: 0; }
+.combobox__option:hover, .combobox__option:focus-visible { background: var(--hover-bg); }
+.combobox__city { color: var(--color-text-primary); font-weight: 600; font-size: var(--font-size-body); }
+.combobox__region { color: var(--color-text-muted); font-size: var(--font-size-caption); margin-top: 1px; }
+.combobox__status { margin-top: 5px; color: var(--color-text-muted); font-size: var(--font-size-caption); }
+.combobox[aria-expanded="false"] .combobox__list { display: none; }
+
+/* §4.5 ReviewRow (S04 проверка): label + value + edit */
+.review-list { display: grid; gap: 8px; }
+.review-row { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 12px; background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: var(--radius-control); }
+.review-row__label { color: var(--color-text-muted); font-size: var(--font-size-caption); flex: 0 0 auto; }
+.review-row__value { flex: 1; min-width: 0; color: var(--color-text-primary); font-size: var(--font-size-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.review-row__edit { flex: 0 0 auto; }
+
+/* §4.6 Onboarding shell (S03/S04 S01) */
+.onboarding { display: flex; flex-direction: column; min-height: 100%; padding: 16px; gap: 14px; }
+.onboarding__progress { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.onboarding__progress-meta { display: flex; align-items: center; justify-content: space-between; width: 100%; color: var(--color-text-muted); font-size: var(--font-size-label); }
+.onboarding__title { color: var(--color-text-primary); font: 700 22px/1.18 var(--font-display); letter-spacing: -.01em; margin: 0; }
+.onboarding__why { color: var(--color-text-soft); font-size: var(--font-size-body); line-height: 1.5; margin-top: 4px; }
+.onboarding__step { display: none; flex-direction: column; gap: 12px; }
+.onboarding__step[hidden] { display: none !important; }
+.onboarding__step:not([hidden]) { display: flex; }
+.onboarding__footer { margin-top: auto; padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.onboarding__footer-note--info { color: var(--color-text-muted); font-size: var(--font-size-caption); text-align: center; }
+.onboarding__footer .btn--block { width: 100%; }
+.intent-list { display: flex; flex-direction: column; gap: 8px; }
+.intent-card { display: flex; gap: 12px; align-items: center; min-height: 64px; padding: 12px; color: var(--color-text-primary); background: var(--color-surface-raised); border: 1px solid var(--color-border-control); border-radius: var(--radius-card); font: inherit; text-align: left; cursor: pointer; }
+.intent-card:hover, .intent-card:focus-visible { background: var(--hover-bg); border-color: var(--hover-border); }
+.intent-card__icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; background: rgba(255,255,255,.06); font-size: 20px; flex: 0 0 auto; }
+.intent-card__name { color: var(--color-text-primary); font-weight: 700; font-size: var(--font-size-body); }
+.intent-card__hint { color: var(--color-text-muted); font-size: var(--font-size-caption); line-height: 1.35; margin-top: 1px; }
+
+/* §4.7 Empty chat (S05): zero-messages state */
+.empty-chat { display: grid; justify-items: center; gap: 8px; padding: 22px 14px 12px; text-align: center; }
+.empty-chat__portrait { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 1px solid var(--color-border-control); }
+.empty-chat__greeting { color: var(--color-text-primary); font: 700 18px/1.2 var(--font-display); }
+.empty-chat__role { max-width: 300px; color: var(--color-text-soft); font-size: var(--font-size-body); line-height: 1.5; }
+.empty-chat__examples { display: grid; gap: 6px; width: 100%; max-width: 340px; margin-top: 6px; }
+.empty-chat__example { min-height: 40px; padding: 9px 12px; color: var(--color-text-secondary); background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: var(--radius-control); font: inherit; font-size: var(--font-size-body); text-align: left; cursor: pointer; }
+.empty-chat__example:hover, .empty-chat__example:focus-visible { color: var(--color-text-primary); background: var(--hover-bg); border-color: var(--hover-border); }
+
+/* §4.8 Session card (S07 история): 64px card + delete confirm */
+.session-card { display: flex; gap: 10px; align-items: center; min-height: 64px; padding: 10px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface-raised); cursor: pointer; min-width: 0; }
+.session-card:hover { background: var(--hover-bg); }
+.session-card__avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; border: 1px solid var(--color-border-control); }
+.session-card__body { flex: 1; min-width: 0; }
+.session-card__name { color: var(--color-text-primary); font-weight: 700; font-size: var(--font-size-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-card__preview { color: var(--color-text-muted); font-size: var(--font-size-caption); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+.session-card__time { color: var(--color-text-muted); font-size: 10px; flex: 0 0 auto; }
+.session-card__badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,.06); color: var(--color-text-soft); font-size: 10px; }
+.sessions__header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 10px; }
+.sessions__title { color: var(--color-text-primary); font: 700 18px/1.15 var(--font-display); }
+.sessions__actions { display: flex; gap: 6px; }
+
+/* §4.9 StatusBanner (S01 session expired): sticky, не перезаписывается */
+.status-banner { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: var(--radius-control); font-size: var(--font-size-caption); line-height: 1.35; }
+.status-banner--error { color: var(--color-error); background: rgba(241,164,170,.09); border: 1px solid rgba(241,164,170,.22); }
+.status-banner--info { color: var(--color-info); background: rgba(171,201,239,.09); border: 1px solid rgba(171,201,239,.22); }
+.status-banner__icon { flex: 0 0 auto; font-size: 16px; }
+.status-banner__title { font-weight: 700; }
+.status-banner__text { flex: 1; min-width: 0; }
+.status-banner__actions { display: flex; gap: 6px; flex: 0 0 auto; }
+
+/* §4.10 Chat states S06: error + streaming + new-message pivot */
+.msg__meta { display: flex; gap: 6px; margin-top: 6px; }
+.msg__action { color: var(--color-text-muted); background: transparent; border: none; font: inherit; font-size: var(--font-size-caption); cursor: pointer; padding: 2px 4px; border-radius: 6px; }
+.msg__action:hover { color: var(--color-text-primary); background: var(--hover-bg); }
+.msg--user .msg__action { color: rgba(255,255,255,.7); }
+.msg--user .msg__action:hover { color: #fff; background: rgba(255,255,255,.12); }
+.msg__retry { color: var(--color-error); }
+.msg__error { color: var(--color-error); font-size: var(--font-size-caption); margin-top: 4px; }
+.msg__streaming-caret { display: inline-block; width: 6px; height: 14px; background: var(--color-accent); margin-left: 2px; animation: caretPulse 1s step-end infinite; vertical-align: text-bottom; }
+@keyframes caretPulse { 50% { opacity: 0; } }
+.newmsg-pivot { display: flex; justify-content: center; padding: 6px; }
+.newmsg-pivot button { min-height: 32px; padding: 5px 12px; color: var(--color-accent); background: var(--hover-bg); border: 1px solid var(--color-border-control); border-radius: 999px; font: 600 var(--font-size-caption) var(--font-sans); cursor: pointer; }
+.newmsg-pivot button:hover { background: rgba(233,201,130,.14); }
+
+/* §4.11 Sheet tools (S10): full-width sheet, search */
+.sheet { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.sheet__header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--color-border); }
+.sheet__title { flex: 1; min-width: 0; color: var(--color-text-primary); font: 700 15px/1.2 var(--font-display); }
+.sheet__close { width: 32px; height: 32px; display: grid; place-items: center; color: var(--color-text-secondary); background: transparent; border: none; border-radius: 8px; cursor: pointer; }
+.sheet__close:hover { color: var(--color-text-primary); background: var(--hover-bg); }
+.sheet__search { padding: 8px 12px; }
+.sheet__search .field__input { background: var(--color-surface); }
+.sheet__body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
+.tool-row { display: flex; gap: 10px; align-items: center; min-height: 52px; padding: 10px; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface-raised); cursor: pointer; min-width: 0; }
+.tool-row:hover { background: var(--hover-bg); border-color: var(--hover-border); }
+.tool-row__icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; background: rgba(255,255,255,.06); font-size: 16px; flex: 0 0 auto; }
+.tool-row__body { flex: 1; min-width: 0; }
+.tool-row__name { color: var(--color-text-primary); font-weight: 700; font-size: var(--font-size-body); }
+.tool-row__benefit { color: var(--color-text-muted); font-size: var(--font-size-caption); margin-top: 1px; }
+.tool-row__meta { color: var(--color-text-muted); font-size: 10px; flex: 0 0 auto; }
+.tool-row__meta--locked { color: var(--color-accent); }
+
+/* §4.12 ScreenHeader (S06 reusable): back + avatar + actions */
+.screenheader__back { width: 36px; height: 36px; display: grid; place-items: center; color: var(--color-text-secondary); background: transparent; border: none; border-radius: 10px; font-size: 20px; cursor: pointer; }
+.screenheader__back:hover { color: var(--color-text-primary); background: var(--hover-bg); }
+
+/* §4.13 Composer row (S05 prototype variant: horizontal tools+input+send) */
+.composer__row { display: flex; gap: 8px; align-items: flex-end; padding: 10px 12px; border-top: 1px solid var(--color-border); background: var(--color-surface); }
+.composer__tools { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 0 10px; color: var(--color-text-soft); background: var(--color-surface-raised); border: 1px solid var(--color-border-control); border-radius: var(--radius-control); font: 600 12px var(--font-sans); cursor: pointer; }
+.composer__tools:hover { color: var(--color-text-primary); background: var(--hover-bg); }
+.composer__tools svg { flex: 0 0 auto; }
+.composer__input-wrap { flex: 1; min-width: 0; }
+.composer__input { width: 100%; min-height: 40px; padding: 8px 10px; color: var(--color-text-primary); background: var(--color-surface-raised); border: 1px solid var(--color-border-control); border-radius: var(--radius-control); font: inherit; resize: none; outline: none; }
+.composer__input:focus { border-color: var(--color-accent); box-shadow: var(--focus-ring); }
+.composer__send { width: 40px; height: 40px; display: grid; place-items: center; color: var(--color-on-accent); background: var(--grad-primary); border: none; border-radius: var(--radius-control); cursor: pointer; flex: 0 0 auto; }
+.composer__send:disabled { opacity: .45; cursor: not-allowed; }
+.composer__stop { color: var(--color-error); }
+
+/* §4.14 Chat feed (S06): messages layout */
+.chat__feed { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+.msg { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.msg--user { align-items: flex-end; }
+.msg--agent { align-items: flex-start; }
+.msg__head { display: flex; align-items: center; gap: 8px; }
+.msg__agent-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 1px solid var(--color-border-control); }
+.msg__agent-name { color: var(--color-text-muted); font-size: 11px; font-weight: 700; }
+.msg__bubble { max-width: 92%; padding: 10px 12px; border-radius: var(--radius-card); font-size: var(--font-size-body); line-height: 1.5; }
+.msg--user .msg__bubble { color: var(--color-on-accent); background: var(--grad-primary); border-radius: var(--radius-card) var(--radius-card) var(--radius-control) var(--radius-card); }
+.msg--agent .msg__bubble { color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-control) var(--radius-card) var(--radius-card) var(--radius-card); }
+
+/* Sidebar (S08/S09 agents): shared sheet */
+.sidebar { position: fixed; inset: 0; z-index: 60; display: flex; justify-content: flex-end; background: rgba(0,0,0,.45); }
+.sidebar__brand { padding: 18px 16px; border-bottom: 1px solid var(--color-border); }
+.sidebar__brand-mark { font-size: 18px; }
+.sidebar__brand-name { color: var(--color-text-primary); font: 700 14px var(--font-display); margin-left: 8px; }
+.sidebar__footer { padding: 12px 16px; border-top: 1px solid var(--color-border); margin-top: auto; }
+.sidebar__link { display: block; width: 100%; padding: 11px 12px; color: var(--color-text-soft); background: transparent; border: none; border-radius: var(--radius-control); font: inherit; text-align: left; cursor: pointer; }
+.sidebar__link:hover { color: var(--color-text-primary); background: var(--hover-bg); }
+.sidebar__new { display: flex; align-items: center; gap: 8px; padding: 11px 12px; color: var(--color-accent); font-weight: 700; }

@@ -347,6 +347,26 @@ const I18N = {
     introChartCopyName: 'Лилит посмотрит на твою карту, {name}.', introChartCopy: 'Твоя карта рождения откроет характер и путь.',
     introChartCopyTail: 'Планеты, дома и предназначение — по дате и времени рождения.',
     introStart: 'Начать ✨', introNext: 'Дальше →', introSkip: 'Пропустить',
+    // R06 p1 onboarding
+    obStep: 'Шаг {n} из {m}', obWhy: 'Зачем это нужно', obNext: 'Продолжить', obBack: 'Назад',
+    obIntentTitle: 'С чего начнём?', obIntentCopy: 'Выбери направление — остальное открывается постепенно.',
+    obNameTitle: 'Как к вам обращаться?', obNameCopy: 'Имя появится в обращениях агентов.', obNameHint: 'Не спрашиваем повторно, если имя уже известно.',
+    obNameError: 'Введите минимум 2 символа',
+    obDateTitle: 'Дата вашего рождения', obDateCopy: 'Нужна для астрологических расчётов. Таро и разговор работают без неё.', obDateHint: 'Случайная дата не подставляется.', obDateError: 'Такого дня не бывает',
+    obTimeTitle: 'Время рождения', obTimeCopy: 'Точное время делает карту точнее. «Не знаю» — допустимый ответ.',
+    obTimeExact: 'Точно', obTimeApprox: 'Примерно', obTimeDontKnow: 'Не знаю',
+    obTimeExactNote: 'часы и минуты', obTimeApproxNote: 'укажем интервал — без подстановки полудня', obTimeDontKnowNote: 'расчёт без времени; добавить можно позже',
+    obCityTitle: 'Город рождения', obCityCopy: 'Определяет часовой пояс карты.', obCityPlaceholder: 'Начните вводить…', obCityLoading: 'Подсказки…', obCityError: 'Укажите город рождения',
+    obReviewTitle: 'Проверьте данные', obReviewCopy: 'Каждый пункт можно исправить.', obStart: 'Начать',
+    // R06 p1 welcome
+    welcomeKicker: 'Добро пожаловать', welcomeSub: 'Твой мягкий ритуал дня', welcomeCta: 'Продолжить',
+    // R06 p1 sessions
+    sessionsTitle: 'История', sessionsEmpty: 'Первый разговор', sessionsEmptyCopy: 'Здесь появятся ваши диалоги.', sessionsConfirmDel: 'Удалить этот диалог?', sessionsClear: 'Очистить всё', sessionsClearCopy: 'Удалить все диалоги без возврата',
+    // R06 p1 sheet
+    sheetTitle: 'Инструменты', sheetSearch: 'Поиск…', sheetLocked: 'Нужна подписка',
+    // R06 p1 status banner
+    sessionExpiredTitle: 'Сессия истекла', sessionExpiredCopy: 'Войдите заново, чтобы продолжить.', sessionExpiredAction: 'Войти',
+    authBlockedTitle: 'Доступ ограничен', authBlockedCopy: 'Обратитесь в поддержку.', authBlockedAction: 'Помощь',
   },
   en: {
     today: 'Today', chats: 'Guides', mine: 'Mine', ritual: 'Ritual', guides: 'Guides', profile: 'Profile', paymentTab: 'Pay', paymentHint: 'Access and packs',
@@ -367,6 +387,26 @@ const I18N = {
     introChartCopyName: 'Lilith will look at your chart, {name}.', introChartCopy: 'Your birth chart reveals character and path.',
     introChartCopyTail: 'Planets, houses and purpose — from your date and time of birth.',
     introStart: 'Begin ✨', introNext: 'Next →', introSkip: 'Skip',
+    // R06 p1 onboarding
+    obStep: 'Step {n} of {m}', obWhy: 'Why this', obNext: 'Continue', obBack: 'Back',
+    obIntentTitle: 'Where shall we start?', obIntentCopy: 'Choose a direction — the rest unfolds gradually.',
+    obNameTitle: 'What should we call you?', obNameCopy: 'Your name will appear in the agents\' greetings.', obNameHint: 'We won\'t ask again if your name is already known.',
+    obNameError: 'Enter at least 2 characters',
+    obDateTitle: 'Your birth date', obDateCopy: 'Needed for astrological calculations. Tarot and conversation work without it.', obDateHint: 'No random date will be inserted.', obDateError: 'This day does not exist',
+    obTimeTitle: 'Time of birth', obTimeCopy: 'Exact time makes the chart more accurate. "Don\'t know" is a valid answer.',
+    obTimeExact: 'Exactly', obTimeApprox: 'Approximately', obTimeDontKnow: 'Don\'t know',
+    obTimeExactNote: 'hours and minutes', obTimeApproxNote: 'we\'ll use an interval — no noon substitution', obTimeDontKnowNote: 'calculation without time; can add later',
+    obCityTitle: 'City of birth', obCityCopy: 'Determines the chart time zone.', obCityPlaceholder: 'Start typing…', obCityLoading: 'Suggestions…', obCityError: 'Please enter your city of birth',
+    obReviewTitle: 'Review your details', obReviewCopy: 'Each item can be corrected.', obStart: 'Begin',
+    // R06 p1 welcome
+    welcomeKicker: 'Welcome', welcomeSub: 'Your gentle daily ritual', welcomeCta: 'Continue',
+    // R06 p1 sessions
+    sessionsTitle: 'History', sessionsEmpty: 'First conversation', sessionsEmptyCopy: 'Your dialogues will appear here.', sessionsConfirmDel: 'Delete this conversation?', sessionsClear: 'Clear all', sessionsClearCopy: 'Delete all conversations permanently',
+    // R06 p1 sheet
+    sheetTitle: 'Tools', sheetSearch: 'Search…', sheetLocked: 'Subscription required',
+    // R06 p1 status banner
+    sessionExpiredTitle: 'Session expired', sessionExpiredCopy: 'Log in again to continue.', sessionExpiredAction: 'Log in',
+    authBlockedTitle: 'Access restricted', authBlockedCopy: 'Contact support.', authBlockedAction: 'Help',
   },
 };
 const t = (key, fallback = '') => (I18N[oracleLang()] || I18N.ru)[key] || fallback || key;

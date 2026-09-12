@@ -118,9 +118,30 @@ app.initBgControls = function () {
     this.introMaybeAddChartSlide();
     this.loadAgents();
     this.loadToday();
-    this.go('home');
+    // BUS-1070 p1 R06: новичок (onboarded=false от /api/me) стартует с welcome,
+    // а не с домашней: welcome — вход в 5-шаговый онбординг.
+    if (this.me && this.me.onboarded === false && localStorage.getItem('oracle_onboarding_done') !== '1') {
+      this.startOnboarding();
+    } else {
+      this.go('home');
+    }
     if (qaMode) {
       if (qaView === 'chat') this.openChat(qaParams.get('qa_agent') || 'oracle');
+      else if (qaView === 'welcome') this.go('welcome');
+      else if (qaView === 'onboarding') {
+        this.startOnboarding();
+        const obStep = qaParams.get('qa_step');
+        if (obStep && typeof this.renderOnboarding === 'function') {
+          setTimeout(() => {
+            const main = document.getElementById('app-main');
+            if (main && document.querySelector('.onboarding')) {
+              this.renderOnboarding(main, obStep === 'review' ? 'review' : Number(obStep));
+            }
+          }, 120);
+        }
+      }
+      else if (qaView === 'sessions') this.go('sessions');
+      else if (qaView === 'sheet') this.go('sheet');
       else if (['home', 'hub', 'profile'].includes(qaView)) this.go(qaView);
       if (qaView === 'profile' && ['summary', 'chart', 'history', 'memory'].includes(qaTab)) {
         setTimeout(() => document.querySelector(`.ptab[data-tab="${qaTab}"]`)?.click(), 120);
@@ -526,6 +547,8 @@ app.initBgControls = function () {
       const tool = document.getElementById('tool-expand');
       if (tool && tool.classList.contains('open')) return () => app.setToolbox(false);
       if (app.chat && app.chat.key) return () => app.closeChat();
+      if (app.view === 'welcome' || app.view === 'onboarding') return () => app.go('home');
+      if (app.view === 'sessions') return () => app.go(app.chat && app.chat.key ? 'chat' : 'hub');
       if (app.view !== 'home') return () => app.go('home');
       return null;
     })();
@@ -554,6 +577,10 @@ app.initBgControls = function () {
     else if (v === 'hub') this.renderHub(main);
     else if (v === 'profile') { this.renderProfile(main); }
     else if (v === 'payment') { this.goPayment(); }
+    else if (v === 'welcome') this.renderWelcome(main);
+    else if (v === 'onboarding') this.startOnboarding();
+    else if (v === 'sessions') this.renderSessions(main);
+    else if (v === 'sheet') this.renderSheetTools(main);
   };
 
 
