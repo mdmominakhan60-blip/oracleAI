@@ -1605,6 +1605,16 @@ async def tick(bot, db) -> None:
     now_utc = datetime.now(timezone.utc)
     await _refresh_zones(db)
 
+    # BUS-313 F1: зависимости после крэша (sending дольше CLAIM_TIMEOUT_S)
+    # возвращаем в retry-очередь ДО выбора аудиторий — иначе зависшие строки
+    # навсегда блокируют доставку (claim берёт только failed).
+    try:
+        reclaimed = await comms.reclaim_stale_sending(db)
+        if reclaimed:
+            log.info("reclaim: %s зависших sending-доставок → failed", reclaimed)
+    except Exception as e:  # noqa: BLE001
+        log.warning("reclaim sending: %s", type(e).__name__)
+
     # Часы, ради которых вообще стоит будить сценарии по клиенткам
     hours = {settings_cache["morning_hour"], settings_cache["weekly_hour"],
              settings_cache["practice_hour"], 11}

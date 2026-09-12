@@ -159,9 +159,10 @@ CREATE TABLE IF NOT EXISTS deliveries (
     tg_id      BIGINT NOT NULL,
     kind       TEXT NOT NULL,                -- forecast|weekly|expiry|winback|broadcast|feedback_survey
     key        TEXT NOT NULL,                -- день/идентификатор повода
-    status     TEXT NOT NULL DEFAULT 'sent', -- sent|failed|forbidden
+    status     TEXT NOT NULL DEFAULT 'sent', -- sent|failed|forbidden|sending
     error      TEXT,                         -- класс исключения, без PII
     created_at TEXT,
+    claimed_at TEXT,                         -- момент захвата под отправку (BUS-313 F1 reclaim)
     PRIMARY KEY (tg_id, kind, key)
 );
 COMMENT ON TABLE deliveries IS 'Журнал дедупа исходящих: tg_id+kind+key уникальны. kind: forecast|weekly|expiry|winback|broadcast|feedback_survey. status: sent|failed|forbidden (BUS-308)';

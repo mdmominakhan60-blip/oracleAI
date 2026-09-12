@@ -8,13 +8,15 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.methods import SendMessage
 
+from app.data.session import utcnow
 from app.repo import comms, users
+from app.repo.comms import CLAIM_TIMEOUT_S
 from app.services import scheduler
 
 
@@ -266,3 +268,115 @@ async def test_error_one_user_does_not_break_sweep(db, monkeypatch):
         "падение первого юзера оборвало sweep: второй остался без прогноза"
     assert not await comms.already_sent(db, 3010, "forecast", day), \
         "упавший юзер получил отправку"
+
+
+# ─────────────────── BUS-313 F1: reclaim зависших sending-строк ─────────────────
+
+
+async def test_reclaim_stale_sending_moves_to_failed(db):
+    """Крэш между claim и mark: sending старше CLAIM_TIMEOUT_S → failed.
+
+    Следующий claim() пере-занимает failed → retry уходит (dedup не дублирует).
+    """
+    # Ручная вставка: имитируем крэш процесса — строка в sending без claimed_at.
+    past = (datetime.now(timezone.utc)
+            - timedelta(seconds=CLAIM_TIMEOUT_S + 30)).isoformat()
+    await db.execute(
+        "INSERT INTO deliveries(tg_id, kind, key, status, error, created_at) "
+        "VALUES(:tg_id, :kind, :key, 'sending', :token, :created_at) "
+        "ON CONFLICT (tg_id, kind, key) DO NOTHING",
+        {"tg_id": 3101, "kind": "winback2", "key": "crash1",
+         "token": "deadbeef", "created_at": past})
+
+    reclaimed = await comms.reclaim_stale_sending(db)
+    assert reclaimed == 1, f"ожидали 1 reclaim, получили {reclaimed}"
+
+    cur = await db.execute(
+        "SELECT status, error FROM deliveries "
+        "WHERE tg_id=3101 AND kind='winback2' AND key='crash1'")
+    row = await cur.fetchone()
+    assert row["status"] == "failed", \
+        f"sending не возвращён в retry: статус {row['status']!r}"
+    assert row["error"] == "reclaimed"
+
+    # Retry: claim пере-занимает failed → отправка уходит (dedup не дублирует).
+    assert await comms.claim(db, 3101, "winback2", "crash1"), \
+        "claim не пере-занял reclaimed-строку"
+    assert not await comms.claim(db, 3101, "winback2", "crash1"), \
+        "дубль claim прошёл: дедуп сломан после reclaim"
+
+
+async def test_reclaim_fresh_sending_not_touched(db):
+    """Sending младше CLAIM_TIMEOUT_S — живёт, следующий тик не трогает."""
+    fresh = utcnow()
+    await db.execute(
+        "INSERT INTO deliveries(tg_id, kind, key, status, error, created_at) "
+        "VALUES(:tg_id, :kind, :key, 'sending', :token, :created_at) "
+        "ON CONFLICT (tg_id, kind, key) DO NOTHING",
+        {"tg_id": 3102, "kind": "winback2", "key": "fresh1",
+         "token": "deadbeef", "created_at": fresh})
+
+    reclaimed = await comms.reclaim_stale_sending(db)
+    assert reclaimed == 0, f"свежая строка не должна быть reclaimed: {reclaimed}"
+
+    cur = await db.execute(
+        "SELECT status FROM deliveries "
+        "WHERE tg_id=3102 AND kind='winback2' AND key='fresh1'")
+    assert (await cur.fetchone())["status"] == "sending", \
+        "свежая sending-строка была затронута"
+
+
+async def test_reclaim_does_not_touch_sent_or_forbidden(db):
+    """Reclaim затронет только sending: sent и forbidden — терминальные."""
+    for status in ("sent", "forbidden"):
+        past = (datetime.now(timezone.utc)
+                - timedelta(seconds=CLAIM_TIMEOUT_S + 60)).isoformat()
+        await db.execute(
+            "INSERT INTO deliveries(tg_id, kind, key, status, created_at) "
+            "VALUES(:tg_id, :kind, :key, :status, :created_at) "
+            "ON CONFLICT (tg_id, kind, key) DO NOTHING",
+            {"tg_id": 3103, "kind": "winback2", "key": status,
+             "status": status, "created_at": past})
+
+    reclaimed = await comms.reclaim_stale_sending(db)
+    assert reclaimed == 0, f"терминальные строки не должны быть reclaimed: {reclaimed}"
+
+
+async def test_claim_writes_claimed_at(db):
+    """BUS-313 F1: claim() пишет claimed_at — основа reclaim по времени."""
+    assert await comms.claim(db, 3111, "winback2", "ck1")
+    cur = await db.execute(
+        "SELECT claimed_at FROM deliveries "
+        "WHERE tg_id=3111 AND kind='winback2' AND key='ck1'")
+    row = await cur.fetchone()
+    assert row["claimed_at"] is not None, "claim не записал claimed_at"
+    # Пере-claim failed-строки: claimed_at обновляется.
+    await db.execute(
+        "UPDATE deliveries SET status='failed' WHERE tg_id=3111 "
+        "  AND kind='winback2' AND key='ck1'")
+    assert await comms.claim(db, 3111, "winback2", "ck1")
+    cur = await db.execute(
+        "SELECT claimed_at FROM deliveries "
+        "WHERE tg_id=3111 AND kind='winback2' AND key='ck1'")
+    new_ts = await cur.fetchone()
+    assert new_ts["claimed_at"] != row["claimed_at"], \
+        "пере-claim не обновил claimed_at — reclaim будет неверным"
+
+
+async def test_reclaim_without_claimed_at_uses_created_at(db):
+    """Строки, занятые до BUS-313 F1 (без claimed_at): reclaim по created_at.
+
+    Консервативный фолбэк: строка без claimed_at считается старой, если
+    created_at старше cutoff — иначе мы пропустим зависшую отправку.
+    """
+    very_old = (datetime.now(timezone.utc)
+                - timedelta(seconds=CLAIM_TIMEOUT_S + 120)).isoformat()
+    await db.execute(
+        "INSERT INTO deliveries(tg_id, kind, key, status, error, created_at) "
+        "VALUES(:tg_id, :kind, :key, 'sending', :token, :created_at) "
+        "ON CONFLICT (tg_id, kind, key) DO NOTHING",
+        {"tg_id": 3112, "kind": "winback2", "key": "legacy1",
+         "token": "deadbeef", "created_at": very_old})
+
+    reclaimed = await comms.reclaim_stale_sending(db)
+    assert reclaimed == 1, f"legacy-строка без claimed_at не reclaimed: {reclaimed}"

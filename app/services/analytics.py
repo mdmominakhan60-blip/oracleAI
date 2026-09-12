@@ -53,9 +53,6 @@ E_VISIT = repo.E_VISIT
 E_SIGNUP = repo.E_SIGNUP
 E_ACTIVATION = repo.E_ACTIVATION
 E_SESSION_LINKED = repo.E_SESSION_LINKED
-E_LANDING_VIEW = repo.E_LANDING_VIEW
-E_CONTENT_VIEW = repo.E_CONTENT_VIEW
-E_VISITOR = repo.E_VISITOR
 E_REPEAT_PAID = repo.E_REPEAT_PAID
 E_FEEDBACK_SURVEY_SENT = repo.E_FEEDBACK_SURVEY_SENT
 E_FEEDBACK_SURVEY_COMPLETED = repo.E_FEEDBACK_SURVEY_COMPLETED
@@ -362,6 +359,11 @@ async def audience_segments(db) -> dict:
     five_days_ago_past = (now - timedelta(days=12)).isoformat()  # WB2-окно [5,7]д на -7д
     seven_days_ago_past = (now - timedelta(days=14)).isoformat()
 
+    # BUS-1019: Δ7д-выборка тоже users-таблица — без анти-тестового фильтра
+    # синтетика 999xxx/10001/10002 считалась в «прошлом», и дельта врала вниз
+    # даже при чистом текущем segment_count.
+    from ..repo.ltv_constants import not_synthetic_tg_sql
+
     segments = []
     for name in users_repo.SEGMENTS:
         count = await users_repo.segment_count(db, name)
@@ -392,7 +394,7 @@ async def audience_segments(db) -> dict:
                 params = {"from": week_ago, "in_3d": in_3d_past}
             cur = await db.execute(
                 "SELECT COUNT(*) c FROM users WHERE status <> 'deleted' "
-                f"AND ({past_where})", params)
+                f"AND ({past_where}) AND {not_synthetic_tg_sql('users')}", params)
             past = (await cur.fetchone())["c"]
             delta = count - past
         else:
