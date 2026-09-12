@@ -30,11 +30,11 @@ img { display: block; max-width: 100%; }
   transition: opacity var(--motion-slow) var(--ease);
 }
 /* L1: пара кадров по порогу 601px (R05 §1.2) */
-.sky[data-bg="welcome"] .sky__cosmos { background-image: url('../img/bg-cosmos.jpg'); opacity: 1; }
-.sky[data-bg="chat"]    .sky__cosmos { background-image: url('../img/bg-cosmos.jpg'); opacity: .7; }
+.sky[data-bg="welcome"] .sky__cosmos { background-image: url('../img/bg-cosmos.jpg?v=108'); opacity: 1; }
+.sky[data-bg="chat"]    .sky__cosmos { background-image: url('../img/bg-cosmos.jpg?v=108'); opacity: .7; }
 @media (min-width: 601px) {
-  .sky[data-bg="welcome"] .sky__cosmos { background-image: url('../img/bg-cosmos-2.jpg'); }
-  .sky[data-bg="chat"]    .sky__cosmos { background-image: url('../img/bg-cosmos-2.jpg'); }
+  .sky[data-bg="welcome"] .sky__cosmos { background-image: url('../img/bg-cosmos-2.jpg?v=108'); }
+  .sky[data-bg="chat"]    .sky__cosmos { background-image: url('../img/bg-cosmos-2.jpg?v=108'); }
 }
 .sky__stars {
   position: absolute;
