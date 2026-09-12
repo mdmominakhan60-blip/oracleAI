@@ -515,6 +515,12 @@ const PROFILE_I18N = {
     aspects: 'Аспекты (до 8)', aspectsCopy: 'Ключевые углы между планетами — как они разговаривают друг с другом.', conjunction: 'соединение', sextile: 'секстиль', trine: 'трин', square: 'квадрат', opposition: 'оппозиция', houses: 'Дома',
     askAstrologer: 'Спросить Астролога про карту', shareChart: '📸 Сохранить карту в сторис', simpleReading: '🧠 Разбор простыми словами', chartUnavailable: 'Карта пока недоступна', chartUnavailableCopy: 'Проверь соединение и попробуй открыть её чуть позже.', close: 'Закрыть', chartReading: 'Разбор карты', chartReadingUnavailable: 'Смысл пока не раскрылся', chartReadingUnavailableCopy: 'Попробуй ещё раз немного позже — твоя карта никуда не исчезнет.',
     saveGenderFailed: 'Не удалось сохранить пол', closeAria: 'Закрыть', changeLanguageFailed: 'Не удалось сменить язык', notifications: 'Уведомления', today: 'Сегодня', morningForecast: 'Утренний прогноз в боте', on: 'вкл', off: 'выкл', notificationCopy: 'Напоминания и прогнозы приходят в Telegram-боте. Включить их можно там же.', quiet: 'Пока тихо', quietCopy: 'Когда появится новый знак дня или важное напоминание, оно будет ждать тебя здесь.',
+    // BUS-650 Э8b: структурный рендер разбора карты (human-first контракт v2)
+    interpretTitle: 'Персональный разбор OracleAI', interpretIntro: 'Твоя карта, переведённая в смыслы: сначала человеческим языком, астрология — ниже, по желанию.',
+    interpretScaleNote: 'Выраженность темы в карте — не оценка «хорошо или плохо».', interpretScaleDrivers: 'Почему так:',
+    interpretHooksTitle: 'Тебе особенно интересно узнать', interpretDetails: 'Подробнее', interpretTechTitle: 'Астрологическая основа',
+    interpretTechCopy: 'Позиции твоей карты, на которых построен разбор.', interpretTechOpen: 'Показать', interpretTechClose: 'Скрыть',
+    interpretPrecisionNoTime: 'Время рождения не подтверждено: дома и углы скрыты, разбор честно опирается на дату.', interpretAskCta: 'Спросить Астролога про этот блок',
     memoryCount: '{count} записей · нажми, чтобы посмотреть и править', memoryEmpty: 'Пока пусто — нажми, чтобы добавить первое',
     account: 'Аккаунт', deleteAccount: 'Удалить аккаунт', deleteAccountCopy: 'Удаление необратимо: личные данные и материалы будут обезличены. Платёжные записи, которые нужно хранить по закону, могут остаться без связи с профилем.', deleteAccountConfirm: 'Удалить аккаунт и обезличить личные данные? Это действие нельзя отменить.', deleteAccountDone: 'Аккаунт удалён', deleteAccountDoneCopy: 'Личные данные обезличены. Если нужно уточнить остаточные платёжные или юридические записи, напиши в поддержку.', deleteAccountFailed: 'Не удалось завершить удаление. Проверь соединение и попробуй ещё раз.',
   },
@@ -551,6 +557,12 @@ const PROFILE_I18N = {
     aspects: 'Aspects (up to 8)', aspectsCopy: 'Key angles between planets — how they relate to one another.', conjunction: 'conjunction', sextile: 'sextile', trine: 'trine', square: 'square', opposition: 'opposition', houses: 'Houses',
     askAstrologer: 'Ask the Astrologer about my chart', shareChart: '📸 Save chart to story', simpleReading: '🧠 Explain in simple words', chartUnavailable: 'Chart is temporarily unavailable', chartUnavailableCopy: 'Check your connection and try opening it again a little later.', close: 'Close', chartReading: 'Chart reading', chartReadingUnavailable: 'Meaning has not unfolded yet', chartReadingUnavailableCopy: 'Try again a little later — your chart is still here.',
     saveGenderFailed: 'Could not save gender', closeAria: 'Close', changeLanguageFailed: 'Could not change language', notifications: 'Notifications', today: 'Today', morningForecast: 'Morning forecast in the bot', on: 'on', off: 'off', notificationCopy: 'Reminders and forecasts arrive in the Telegram bot. You can enable them there.', quiet: 'Quiet for now', quietCopy: 'A new sign of the day or an important reminder will wait for you here.',
+    // BUS-650 Э8b: structured chart interpretation rendering (human-first contract v2)
+    interpretTitle: 'Your personal OracleAI reading', interpretIntro: 'Your chart translated into meaning: human language first, astrology below — only if you want it.',
+    interpretScaleNote: 'How present a theme is in your chart — not a good or bad grade.', interpretScaleDrivers: 'Why:',
+    interpretHooksTitle: 'You may be especially curious about', interpretDetails: 'Details', interpretTechTitle: 'Astrological foundation',
+    interpretTechCopy: 'The chart positions this reading is built on.', interpretTechOpen: 'Show', interpretTechClose: 'Hide',
+    interpretPrecisionNoTime: 'Birth time is not confirmed: houses and angles are hidden, and the reading honestly relies on the date.', interpretAskCta: 'Ask the Astrologer about this block',
     memoryCount: '{count} entries · tap to view and edit', memoryEmpty: 'Nothing here yet — tap to add your first entry',
     account: 'Account', deleteAccount: 'Delete account', deleteAccountCopy: 'This cannot be undone: personal data and materials will be anonymized. Payment records required by law may remain without a link to your profile.', deleteAccountConfirm: 'Delete your account and anonymize personal data? This cannot be undone.', deleteAccountDone: 'Account deleted', deleteAccountDoneCopy: 'Your personal data has been anonymized. Contact support if you need to clarify retained payment or legal records.', deleteAccountFailed: 'The deletion could not be completed. Check your connection and try again.',
   },
@@ -562,13 +574,14 @@ const profileFormat = (key, values = {}) => Object.entries(values).reduce(
 const HOME_I18N = {
   ru: {
     ritualLabel: 'Твой мягкий ритуал дня', welcomeKicker: 'СЕГОДНЯ — БЕЗ СПЕШКИ', focusAskToday: 'Спросить о своём дне', focusExpand: 'Развернуть', focusCollapse: 'Свернуть', heroNextPrefix: 'Дальше', accMoonBadge: 'сегодня',
+    moonLoadError: 'Лунная неделя не загрузилась. Потяни вниз — обновим.', moonEmpty: 'Лунный календарь скоро подтянет свет 🌙',
     flipCardAria: 'Перевернуть карту',
     rhythmAria: 'Твой ритм на сегодня', rhythmKicker: 'Твой ритм', rhythmTitle: 'Вернуться к себе', stepsAria: '{count} из 2 бережных шагов',
     diaryDoneAria: 'Дневник заполнен, открыть записи', diaryOpenAria: 'Открыть дневник состояния', diaryDone: 'Дневник уже заполнен', diaryOpen: 'Отметить своё состояние',
     diaryDoneCopy: 'Дневник уже ждёт тебя в личной библиотеке.', diaryPromptFallback: 'Одно честное предложение о том, как ты сейчас.',
     practiceDoneAria: 'Отметить шаг практики', practiceStartAria: 'Начать практику', practiceStepFallback: 'Отметить маленький шаг', practiceFallback: 'Мягкая практика на сегодня',
     ritualNote: 'Без штрафов за пропуски. Это не чек-лист «идеальной жизни», а две мягкие точки опоры для тебя.',
-    week: 'Вся неделя', today: 'сегодня', lunarDay: '{day}-й лунный день', moonTitle: '🌙 Лунный календарь', moonWeek: 'Неделя',
+    week: 'Вся неделя', today: 'сегодня', lunarDay: '{day}-й лунный день', moonTitle: '🌙 Лунный календарь', moonWeek: 'Неделя', moonExpandHint: 'Тапни день — раскроется рекомендация движка',
     personal: 'Только для тебя', todaySign: 'Знак на сегодня', forecastFallbackTitle: 'Начни с того, что уже чувствуешь.', forecastFallbackCopy: 'Открой личный знак дня или задай Оракулу вопрос — это тоже хороший способ вернуться к себе.',
     daySymbol: 'Символ дня', cardNearby: 'Карта, которая рядом', cardCopy: 'Носи эту энергию сегодня — карта дня задаёт тон всему: от решений до встреч.', cardHint: 'Тапни карту — она развернётся со смыслом ↻',
     guidesTitle: 'Твои проводники', guidesCopy: 'Не нужно знать «правильный» вопрос. Выбери того, с кем хочется побыть сегодня — он поможет разложить мысли по местам.',
@@ -578,13 +591,14 @@ const HOME_I18N = {
   },
   en: {
     ritualLabel: 'Your gentle daily ritual', welcomeKicker: 'TODAY — WITHOUT RUSH', focusAskToday: 'Ask about your day', focusExpand: 'Expand', focusCollapse: 'Collapse', heroNextPrefix: 'Next up', accMoonBadge: 'today',
+    moonLoadError: 'The moon week didn’t load. Pull down to refresh.', moonEmpty: 'The moon calendar will catch its light soon 🌙',
     flipCardAria: 'Flip the card',
     rhythmAria: 'Your rhythm for today', rhythmKicker: 'Your rhythm', rhythmTitle: 'Return to yourself', stepsAria: '{count} of 2 gentle steps',
     diaryDoneAria: 'Diary completed, open entries', diaryOpenAria: 'Open mood diary', diaryDone: 'Diary completed', diaryOpen: 'Check in with yourself',
     diaryDoneCopy: 'Your entry is waiting in your private library.', diaryPromptFallback: 'One honest sentence about how you are right now.',
     practiceDoneAria: 'Mark this practice step', practiceStartAria: 'Start practice', practiceStepFallback: 'Mark one small step', practiceFallback: 'A gentle practice for today',
     ritualNote: 'No penalties for skipping. This is not an “ideal life” checklist — just two gentle anchors for your day.',
-    week: 'Full week', today: 'today', lunarDay: 'lunar day {day}', moonTitle: '🌙 Moon calendar', moonWeek: 'Week',
+    week: 'Full week', today: 'today', lunarDay: 'lunar day {day}', moonTitle: '🌙 Moon calendar', moonWeek: 'Week', moonExpandHint: 'Tap a day to reveal the engine’s guidance',
     personal: 'Just for you', todaySign: 'Today’s sign', forecastFallbackTitle: 'Begin with what you already feel.', forecastFallbackCopy: 'Open your personal sign for today or ask the Oracle a question — both are gentle ways to return to yourself.',
     daySymbol: 'Symbol of the day', cardNearby: 'A card by your side', cardCopy: 'Carry this energy through the day — this card sets a tone for choices and encounters.', cardHint: 'Tap the card to reveal its meaning ↻',
     guidesTitle: 'Your guides', guidesCopy: 'You do not need the “right” question. Choose the voice you want to spend time with today — it will help you sort through your thoughts.',
@@ -596,6 +610,26 @@ const HOME_I18N = {
 const homeT = (key, fallback = '') => (HOME_I18N[oracleLang()] || HOME_I18N.ru)[key] || fallback || key;
 const homeFormat = (key, values = {}) => Object.entries(values).reduce(
   (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), homeT(key));
+
+// BUS-649 Э7b: формула дня из структурированных параметров движка (Э7a).
+// Расчёты не дублируем — только форматируем то, что прислал /api/moon/week.
+// d — день ленты: { phase:{name,emoji}, moon_sign:{sign,element}|null,
+// lunar_day:{n,quality,path}, transit:{planet,aspect,glyph,code,orb}|null }.
+const moonQualityT = q => oracleLang() === 'en'
+  ? ({ 'тёмный': 'dark', 'обычный': 'usual' })[q] || q : q;
+const moonFormula = function(d) {
+  if (!d || !d.lunar_day) return '';
+  const en = oracleLang() === 'en';
+  const bits = [];
+  if (d.moon_sign && d.moon_sign.sign) {
+    const glyph = SIGNS[d.moon_sign.sign] || '';
+    bits.push((glyph ? glyph + ' ' : '') + d.moon_sign.sign);
+  }
+  bits.push((en ? 'day ' : '') + d.lunar_day.n + (en ? '' : '-й'));
+  if (d.lunar_day.quality) bits.push(moonQualityT(d.lunar_day.quality));
+  if (d.transit && d.transit.glyph) bits.push('☽' + d.transit.glyph + d.transit.planet);
+  return bits.join(' · ');
+};
 
 // P3: детерминированный вариант без сторонних трекеров. В событие уходят только
 // имя эксперимента и вариант; вопрос, дневник и другие личные данные не передаются.

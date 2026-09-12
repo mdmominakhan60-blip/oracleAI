@@ -314,16 +314,20 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
     const rows = arr.map((d, i) => {
       const today = i === 0;
       const m = months[parseInt(d.date.slice(5, 7), 10) - 1] || '';
+      const formula = moonFormula(d);
+      const signBit = d.moon_sign && d.moon_sign.sign
+        ? ` <span class="mc-sign">${esc(SIGNS[d.moon_sign.sign] || '')} ${esc(d.moon_sign.sign)}</span>` : '';
       return `<div class="md-row${today ? ' today' : ''}">
         <span class="md-ico">${moonSvg(d.emoji)}</span>
         <div class="md-main">
           <div class="md-wd">${wd[d.weekday]} · ${d.day_num} ${m}${today ? ' <em>· сегодня</em>' : ''}</div>
-          <div class="md-name"><b>${esc(d.name)}</b> · ${d.day}-й лунный день</div>
+          <div class="md-name"><b>${esc(d.name)}</b>${signBit} · ${d.day}-й лунный день</div>
+          ${formula ? `<div class="md-formula">${esc(formula)}</div>` : ''}
           <div class="md-adv">${esc(d.advice)}</div>
         </div>
       </div>`;
     }).join('');
-    this.showModal(`<h3>🌙 Лунный календарь</h3><button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button>
+    this.showModal(`<h3>${esc(homeT('moonTitle'))}</h3><button class="m-close" data-act="modal-close" aria-label="${esc(profileT('closeAria'))}">✕</button>
       <div class="moon-detail">${rows}</div>`);
   };
 

@@ -117,17 +117,19 @@
         ${this.moonWeek && this.moonWeek[0] ? (() => {
           const wd = oracleLang() === 'en' ? WD_SHORT_EN : WD_SHORT;
           const mon = oracleLang() === 'en' ? MON_EN : MON_RU;
-          const tv = t && t.moon ? t.moon : { name: this.moonWeek[0].name, day: this.moonWeek[0].day, advice: this.moonWeek[0].advice, emoji: this.moonWeek[0].emoji };
+          const tv = t && t.moon ? { ...this.moonWeek[0], name: t.moon.name, day: t.moon.day, advice: t.moon.advice, emoji: t.moon.emoji } : this.moonWeek[0];
           const rows = this.moonWeek.map((d, i) => {
             const wdS = wd[d.weekday];
             const monS = mon[parseInt(d.date.slice(5, 7), 10) - 1] || '';
             const today = t && t.moon && d.day === t.moon.day;
+            const formula = moonFormula(d);
             return `<div class="mc-day${today ? ' today' : ''}" data-i="${i}" data-act="moon-day">
               <div class="mc-row">
                 <span class="mc-ico">${moonSvg(d.emoji)}</span>
                 <span class="mc-main">
                   <span class="mc-wd">${wdS} · ${d.day_num} ${monS}${today ? ` <b>· ${homeT('today')}</b>` : ''}</span>
-                  <span class="mc-nm">${esc(d.name)} <em class="mc-ln">${homeFormat('lunarDay', { day: d.day })}</em></span>
+                  <span class="mc-nm">${esc(d.name)}${d.moon_sign && d.moon_sign.sign ? ` <span class="mc-sign">${esc(SIGNS[d.moon_sign.sign] || '')} ${esc(d.moon_sign.sign)}</span>` : ''}</span>
+                  ${formula ? `<span class="mc-formula">${esc(formula)}</span>` : ''}
                 </span>
                 <span class="mc-chev">▾</span>
               </div>
@@ -153,7 +155,11 @@
                   <span class="mc-ico mc-ico-sm">${moonSvg(tv.emoji)}</span>
                   <div class="mt-main">
                     <div class="mt-name">${esc(tv.name)} · ${homeFormat('lunarDay', { day: tv.day })}</div>
-                    <div class="mt-adv">${esc(tv.advice)}</div>
+                    ${(() => {
+                      const f = moonFormula(tv);
+                      return f ? `<div class="mt-formula">${esc(f)}</div><div class="mt-adv">${esc((tv.lunar_day && tv.lunar_day.path) || tv.advice)}</div>`
+                               : `<div class="mt-adv">${esc(tv.advice)}</div>`;
+                    })()}
                   </div>
                   <span class="mt-cta">${homeT('moonWeek')}<span class="mo-chev">›</span></span>
                 </div>
@@ -163,7 +169,28 @@
               </div>
             </div>
           </div>`;
-        })() : ''}
+        })() : `
+        <!-- BUS-649 Э7b: loading/error/empty по постановке. moonWeek===null — это
+             загрузка или ошибка API; различаем по флагу, который ставит loadToday. -->
+        ${(() => {
+          const st = this.moonWeekState || (this.moonWeek === null ? 'loading' : 'empty');
+          const headIco = '<span class="mc-ico mc-ico-sm" aria-hidden="true">' + moonSvg('🌑') + '</span>';
+          const head = `<button class="home-acc-head" type="button" data-act="home-acc" aria-expanded="false" aria-controls="home-acc-moon-body">
+              ${headIco}
+              <span class="home-acc-name">${homeT('moonTitle')}</span>
+              <span class="mo-chev" aria-hidden="true">▾</span>
+            </button>
+            <div class="home-acc-body" id="home-acc-moon-body" hidden>
+              <div class="moon-section">${
+                st === 'loading'
+                  ? '<div class="moon-state moon-state--loading" role="status" aria-live="polite"><div class="loader-ring"></div></div>'
+                  : st === 'error'
+                    ? `<div class="moon-state moon-state--error"><div class="ms-ico">☾</div><div class="ms-txt">${esc(homeT('moonLoadError'))}</div></div>`
+                    : `<div class="moon-state moon-state--empty"><div class="ms-ico">🌙</div><div class="ms-txt">${esc(homeT('moonEmpty'))}</div></div>`
+              }</div>
+            </div>`;
+          return `<div class="home-acc" id="home-acc-moon">${head}</div>`;
+        })()}`}
       </div>`;
   };
 

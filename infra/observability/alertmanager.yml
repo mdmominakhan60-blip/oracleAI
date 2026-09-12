@@ -3,9 +3,11 @@ global:
   http_config: {}
 
 # Единый receiver: Telegram канал оператора.
-# chat_id берётся из ADMIN_ID в .env (operator OracleAI).
-# Если нужен отдельный бот для алертов — заведите новый @BotFather-бот и
-# положите его токен в ALERT_BOT_TOKEN, сюда прокидывается через env-файл.
+# ВНИМАНИЕ: реальный конфиг генерирует alertmanager-entrypoint.sh из env при
+# старте контейнера — этот файл только справочный шаблон.
+# BUS-855: chat_id = ALERT_CHAT_ID (группа операторов, отрицательный id),
+# задан ОБЯЗАТЕЛЬНО — fallback на ADMIN_ID убран (identity владельца ≠ канал
+# алертов, см. BUS-851). Если нужен отдельный бот — ALERT_BOT_TOKEN в .env.
 route:
   receiver: telegram-operator
   group_wait: 30s

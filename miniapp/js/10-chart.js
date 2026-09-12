@@ -205,6 +205,11 @@
           <div>${lines || '<div style="color:var(--text-faint);font-size:12.5px">Планеты ещё не рассчитаны</div>'}</div>
         </div>
       </details>
+      <div class="chart-interpret-entry">
+        <button class="btn btn-primary" style="width:100%" data-act="explain-chart" aria-expanded="false" aria-controls="chart-interpret" data-label="${oracleLang() === 'en' ? '🧠 Personal OracleAI reading' : '🧠 Персональный разбор OracleAI'}" data-loading-label="${oracleLang() === 'en' ? 'Reading your chart…' : 'Читаю твою карту…'}">${oracleLang() === 'en' ? '🧠 Personal OracleAI reading' : '🧠 Персональный разбор OracleAI'}</button>
+        <p class="chart-interpret-entry__hint">${oracleLang() === 'en' ? 'One tap — your chart is translated into meaning: human language first, astrology on request.' : 'Один тап — твоя карта переводится в смыслы: сначала человеческим языком, астрология — по желанию.'}</p>
+        <div id="chart-interpret" style="margin-top:12px"></div>
+      </div>
       <div style="color:var(--text-faint);font-size:11.5px;margin:10px 0">✓ Сохранена в твоём профиле — всегда под рукой.</div>
       <div style="display:flex;gap:8px;margin-top:6px">
         <button class="btn btn-primary" style="flex:1" data-act="ask-chart">Спросить про карту</button>

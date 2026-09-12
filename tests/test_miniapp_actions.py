@@ -35,7 +35,13 @@ def test_every_static_miniapp_action_has_a_registered_handler() -> None:
     declared = {
         double or single
         for double, single in re.findall(r"data-act=(?:\"([^\"]+)\"|'([^']+)')", source)
+        # Статика only: шаблоны исключаем — "${" (template literals),
+        # конкатенацию "' +" / "+ '" (динамические data-act из p3-вьюх:
+        # значения 'go'/'reading'/'report' подставляются в рантайме и
+        # зарегистрированы в реестре поименно).
         if "${" not in (double or single)
+        and "' +" not in (double or single)
+        and "+ '" not in (double or single)
     }
     registered = _action_registry_keys()
 

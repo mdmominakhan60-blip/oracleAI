@@ -75,9 +75,16 @@ async def mark_sent(db, tg_id: int, kind: str, key: str,
 async def claim(db, tg_id: int, kind: str, key: str) -> bool:
     """Атомарно занимает право на отправку. True — отправляем, False — занято/уже ушло.
 
+    Stale-claim: процесс упал между claim и mark → строка застревает в
+    'sending'. Через CLAIM_TIMEOUT_S право возвращается в очередь
+    (аналог reclaim в next_targets для broadcast_targets). Активная отправка
+    короче 600 с, параллельные тики защищены lease — окно гонки пренебрежимо.
+
     Поддерживает обе схемы deliveries: со status (BUS-308) и без (старые миграции).
     """
     token = _claim_token()
+    cutoff = (datetime.now(timezone.utc) - timedelta(seconds=CLAIM_TIMEOUT_S)
+              ).isoformat()
     try:
         async with transaction(db):
             cur = await db.execute(
@@ -86,9 +93,12 @@ async def claim(db, tg_id: int, kind: str, key: str) -> bool:
                 "VALUES(:tg_id, :kind, :key, 'sending', :token, :now, :now) "
                 "ON CONFLICT (tg_id, kind, key) DO UPDATE SET "
                 "  status='sending', error=:token, claimed_at=:now "
-                "WHERE deliveries.status='failed'",
+                "WHERE deliveries.status='failed' "
+                "   OR (deliveries.status='sending' "
+                "       AND COALESCE(deliveries.claimed_at, "
+                "                    deliveries.created_at) < :cutoff)",
                 {"tg_id": tg_id, "kind": kind, "key": key,
-                 "token": token, "now": utcnow()})
+                 "token": token, "now": utcnow(), "cutoff": cutoff})
             return bool(cur.rowcount)
     except Exception:  # noqa: BLE001
         # Схема без status (миграции до 0012) — простая идемпотентная вставка.
@@ -140,11 +150,6 @@ async def mark_failed(db, tg_id: int, kind: str, key: str,
 
 
 # ───────────────────── forbidden: порог 3 дня + авто-очистка ───────────────────
-
-#: Заявка на отправку живёт дольше живой паузы, но не бесконечно: если процесс
-#: упал между claim и mark, заявку возвращаем в очередь.
-CLAIM_TIMEOUT_S = 600
-
 
 #: Количество дней подряд с Forbidden до hard-дляbidden (BUS-369 mvp6_w2).
 FORBIDDEN_THRESHOLD = 3
@@ -338,6 +343,11 @@ async def enqueue_targets(db, broadcast_id: int, ids: list[int]) -> int:
             "UPDATE broadcasts SET total=:total WHERE id=:id",
             {"total": len(ids), "id": broadcast_id})
     return len(ids)
+
+
+#: Заявка на отправку живёт дольше живой паузы, но не бесконечно: если процесс
+#: упал между claim и mark, заявку возвращаем в очередь.
+CLAIM_TIMEOUT_S = 600
 
 
 async def next_targets(db, broadcast_id: int, limit: int = 100) -> list[int]:

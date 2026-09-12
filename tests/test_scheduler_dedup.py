@@ -57,6 +57,49 @@ async def test_claim_race_single_winner(db):
     assert (await cur.fetchone())["status"] == "sending"
 
 
+async def test_claim_reclaims_stale_sending_after_timeout(db):
+    """BUS-313 F1: крэш процесса между claim и mark — строка застревает в
+    'sending' и никогда не пере-claimается (claim брал только failed).
+
+    Через CLAIM_TIMEOUT_S право возвращается: следующий тик пере-занимает
+    stale-sending и доотправляет. Дедуп держится — sent/forbidden по-прежнему
+    не пере-занимаются.
+    """
+    # Крэш-симуляция: claim прошёл, mark не случился.
+    assert await comms.claim(db, 3020, "onboard_nudge", "d3:3020")
+    cur = await db.execute(
+        "SELECT status, created_at FROM deliveries "
+        "WHERE tg_id=3020 AND kind='onboard_nudge' AND key='d3:3020'")
+    row = await cur.fetchone()
+    assert row["status"] == "sending"
+    crashed_at = datetime.fromisoformat(row["created_at"])
+
+    # Свежий claim (прошли секунды, а не CLAIM_TIMEOUT_S) ещё не пере-занимает:
+    # окно активной отправки защищено.
+    assert not await comms.claim(db, 3020, "onboard_nudge", "d3:3020"), \
+        "свежая sending-строка пере-занята — окно активной отправки нарушено"
+
+    # Прошло CLAIM_TIMEOUT_S: reclaim срабатывает.
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            fixed = crashed_at + timedelta(seconds=comms.CLAIM_TIMEOUT_S + 5)
+            return fixed.astimezone(tz) if tz else fixed
+
+    orig_now = comms.datetime
+    comms.datetime = FixedDatetime
+    try:
+        assert await comms.claim(db, 3020, "onboard_nudge", "d3:3020"), \
+            "stale-sending старше CLAIM_TIMEOUT_S не пере-занят: доставка зависла навсегда"
+    finally:
+        comms.datetime = orig_now
+
+    # Терминальные статусы reclaim не трогает — дедуп не потерян.
+    await comms.mark_sent(db, 3020, "onboard_nudge", "d3:3020")
+    assert not await comms.claim(db, 3020, "onboard_nudge", "d3:3020"), \
+        "sent-строка пере-занята после reclaim-фикса — дубль уйдёт клиентке"
+
+
 async def _vip_user(db, tg_id: int):
     await users.ensure(db, tg_id, f"Тик-{tg_id}")
     await users.update(db, tg_id, onboarded=1, tz="Europe/Moscow",

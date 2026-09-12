@@ -79,6 +79,8 @@
     'toggle-memory': () => call('toggleMemory'),
     'full-chart': () => call('openFullChart'),
     'fc-explain': () => call('explainChart'),
+    // BUS-650 Э8b: кнопка разбора на экране карты (в чате), отдельный контейнер
+    'explain-chart': (el) => call('explainChart', el),
     'del-mem': (el, data) => call('delMem', parseInt(data.id, 10)),
     'add-mem': () => call('addMem'),
     'pick-open': () => call('openSpreadPicker'),
@@ -149,6 +151,53 @@
     // BUS-1070 p1 R06: онбординг — шаги и review
     'ob-next': () => call('_obAdvance'),
     'ob-back': () => call('_obBack'),
+    // unify-all: история + sheet перенесены из 13-events делегирования —
+    // единая точка входа data-act (dispatch идёт первым, дублей нет)
+    'sess-del': (el, data) => {
+      const tr = (k) => (app.t ? app.t(k) : (typeof t === 'function' ? t(k) : k));
+      const row = el && el.closest ? el.closest('[data-sess-row], .session-card') : null;
+      if (!row) return;
+      if (row.dataset.confirmed !== '1') {
+        row.dataset.confirmed = '1';
+        row.style.outline = '2px solid var(--color-error)';
+        row.style.outlineOffset = '-2px';
+        const lbl = row.querySelector('.session-card__confirm-label');
+        if (lbl) { lbl.hidden = false; lbl.textContent = tr('sessionsConfirmDel'); }
+        el.setAttribute('aria-label', tr('sessionsConfirmDel'));
+        setTimeout(() => {
+          if (row.dataset.confirmed === '1') {
+            row.dataset.confirmed = '0';
+            row.style.outline = '';
+            row.style.outlineOffset = '';
+            const lbl2 = row.querySelector('.session-card__confirm-label');
+            if (lbl2) { lbl2.hidden = true; lbl2.textContent = ''; }
+          }
+        }, 3000);
+      } else if (typeof app.delSession === 'function') {
+        app.delSession(data.tid);
+      }
+    },
+    'sess-clear': (el) => {
+      const tr = (k) => (app.t ? app.t(k) : (typeof t === 'function' ? t(k) : k));
+      if (!el) return;
+      if (el.dataset.confirmed !== '1') {
+        el.dataset.confirmed = '1';
+        const span = el.querySelector('span');
+        if (span) span.textContent = tr('sessionsConfirmDel');
+        setTimeout(() => {
+          if (el.dataset.confirmed === '1') {
+            el.dataset.confirmed = '0';
+            if (span) span.textContent = tr('sessionsClear');
+          }
+        }, 3000);
+      } else if (typeof app.deleteAllSessions === 'function') {
+        app.deleteAllSessions();
+      }
+    },
+    'sheet-close': () => {
+      if (app.chat && app.chat.key) call('openChat', app.chat.key);
+      else call('go', 'hub');
+    },
     // BUS-1070 p2 R06: инструменты, результат, таро
     'tool-back': () => call('go', 'hub'),
     'tool-submit': (el, data) => {
