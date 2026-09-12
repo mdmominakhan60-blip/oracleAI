@@ -148,6 +148,26 @@ async def test_segment_count_excludes_synthetic(db):
     assert await users.segment_count(db, "all") == 0
 
 
+async def test_audience_segments_delta_past_excludes_synthetic(db):
+    """Δ7д past-счётчик аудиторий тоже отсекает синтетику (BUS-1019).
+
+    Синтетика со старым last_seen попала бы только в past-выборку
+    (sleeping_14d_push): текущий segment_count чист фильтром _segment_sql,
+    а дельта уходила в минус.
+    """
+    now = datetime.now(timezone.utc)
+    for tg_id, name in ((999000010, "Smoke D"), (10001, "Legacy D"),
+                        (555000222, "Real D")):
+        await users.ensure(db, tg_id, name)
+        await users.update(db, tg_id, morning_push=1,
+                           last_seen=_iso(now - timedelta(days=21)))
+    snapshot = await analytics.audience_segments(db)
+    row = {s["segment"]: s for s in snapshot["segments"]}
+    sleeping = row["sleeping_14d_push"]
+    assert sleeping["count"] == 1      # только реальный 555000222
+    assert sleeping["delta_7d"] == 0   # past = 1 (реальный), а не 3 (с синтетикой)
+
+
 # ──────────────────────── welcome-отбор (scheduler) ──────────────────────────
 
 async def test_welcome_audience_excludes_smoke(db):
