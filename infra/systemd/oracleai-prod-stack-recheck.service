@@ -1,0 +1,19 @@
+# Повторная проверка автозапуска прод-стека (BUS-440).
+# Перезапускает oracleai-prod-stack.service (идемпотентный up -d + ожидание
+# healthy). Вызывается таймером oracleai-prod-stack-recheck.timer на 5-й и
+# 12-й минутах после бута: ловит случай «контейнеры остановлены через ~90 с
+# после бута» (инцидент 2026-09-07 06:30 UTC), когда одиночный oneshot уже
+# отработал. Для здорового стека — no-op.
+# Логи: journalctl --user -u oracleai-prod-stack -u oracleai-prod-stack-recheck
+
+[Unit]
+Description=Re-check OracleAI prod stack after reboot (BUS-440 recheck)
+After=oracleai-prod-stack.service
+
+[Service]
+Type=oneshot
+# systemctl restart блокируется до конца oneshot-юнита: exit-код
+# prod-stack-up.sh становится кодом этой строки.
+ExecStart=systemctl --user restart oracleai-prod-stack.service
+StandardOutput=journal
+StandardError=journal

@@ -1,0 +1,23 @@
+# Таймер повторных проверок прод-стека (BUS-440).
+# OnBootSec=5min: первый ретрай после бута (ловит класс «контейнеры остановлены
+# через ~90 с после бута», инцидент 2026-09-07 06:30 UTC — одиночный oneshot
+# не спас бы). OnUnitActiveSec=7min: дальше проход повторяется КАЖДЫЕ 7 мин —
+# это постоянный низкочастотный watchdog, а не бутовый одноразовый ретрай.
+# Стоимость здорового прохода ~5 с (no-op up -d + мгновенный healthcheck).
+#
+# ВАЖНО при плановых работах со стеком (stop/пересоздание вручную): таймер
+# поднимет стек обратно в течение ≤7 мин. На время обслуживания гасить:
+#   systemctl --user stop oracleai-prod-stack-recheck.timer
+# и возвращать после работ.
+
+[Unit]
+Description=Re-check/watchdog timer for OracleAI prod stack (BUS-440)
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=7min
+AccuracySec=30s
+Unit=oracleai-prod-stack-recheck.service
+
+[Install]
+WantedBy=timers.target
