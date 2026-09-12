@@ -21,6 +21,7 @@ from httpx import ASGITransport, AsyncClient  # noqa: E402
 
 from app.api.deps import get_db  # noqa: E402
 from app.api.main import app, openapi_router  # noqa: E402
+from app.api.security import parse_init_data  # noqa: E402
 
 
 def _signed_init_data(tg_id: int = 1001) -> str:
@@ -100,6 +101,12 @@ def _body_ref(schema: dict, path: str) -> tuple[str, dict]:
     return name, schema["components"]["schemas"][name]
 
 
+async def test_openapi_requires_auth_when_dev_mode_off(prod_client):
+    """Без подписи Telegram — 401 (fail-closed), схема не отдаётся."""
+    response = await prod_client.get("/api/openapi.json")
+    assert response.status_code == 401
+
+
 async def test_openapi_serves_schema_under_signature(prod_client, user):
     """Авторизованная клиентка получает валидную схему с путями волны A."""
     response = await prod_client.get(
@@ -120,6 +127,7 @@ async def test_openapi_wave_a_request_models_match_contracts(prod_client, user):
     schema = response.json()
 
     from app.api.contracts import wave_a
+    from app.api.contracts.chat import AskIn
 
     # 1. POST /api/ask — тело AskIn (текст 1..1000, allow_paid по умолчанию)
     ask_model, ask_schema = _body_ref(schema, "/api/ask")

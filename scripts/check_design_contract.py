@@ -44,7 +44,7 @@ def main() -> int:
     expected_prefixes = ["00-", "01-", "02-", "03-", "04-", "05-", "06-", "07-",
                          "08-", "09-", "10-", "11-", "12-", "13-", "14-", "15-",
                          "16-", "16-", "17-", "18-", "18-", "19-", "20-", "21-",
-                         "22-", "22-", "23-"]
+                         "22-", "22-", "23-", "24-", "24-", "25-", "26-"]
     import_order_ok = (
         len(imports) == len(expected_prefixes)
         and len(imports) == len(list((ROOT / "miniapp" / "css").glob("*.css")))
@@ -61,6 +61,10 @@ def main() -> int:
         and imports[24] == "22-components.css"
         and imports[25] == "22-background-states.css"
         and imports[26] == "23-r06-tools.css"
+        and imports[27] == "24-r06-tokens.css"
+        and imports[28] == "24-r06-p1.css"
+        and imports[29] == "25-r06-p2.css"
+        and imports[30] == "26-r06-p3.css"
     )
     reduced_motion = "prefers-reduced-motion: reduce" in styles or any(
         "prefers-reduced-motion: reduce" in path.read_text(encoding="utf-8")
