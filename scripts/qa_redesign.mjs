@@ -46,6 +46,9 @@ try {
   await page.locator('#ob-day').fill('21'); await page.locator('#ob-month').fill('6');
   await next(page, 4);
   await page.locator('[data-time-choice="exact"]').click();
+  // A resumed profile may already contain a valid time; explicitly test blank input.
+  await page.locator('#ob-hour').fill('');
+  await page.locator('#ob-min').fill('');
   await page.locator('[data-act="ob-next"]').click();
   check('Blank exact time is not midnight', await page.locator('.onboarding').getAttribute('data-ob-step') === '4');
   await page.locator('[data-time-choice="approx"]').click();
