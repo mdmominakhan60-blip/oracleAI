@@ -300,7 +300,10 @@ async def test_today_returns_forecast_and_card(client, user):
 async def test_city_suggest_returns_matched_and_typo_tolerant(client, user):
     res = await client.get("/api/city/suggest", params=as_user(user, {"q": "моск"}))
     assert res.status_code == 200
-    assert {"key": "москва", "label": "Москва"} in res.json()["items"]
+    items = res.json()["items"]
+    moscow = next(i for i in items if i["key"] == "москва")
+    assert moscow["label"] == "Москва"
+    assert moscow["country"] == "Россия" and moscow["timezone"] == "Europe/Moscow"
     # опечатка («Масква») всё равно подсказывает нужный город
     typo = await client.get("/api/city/suggest", params=as_user(user, {"q": "Масква"}))
     assert "Москва" in [i["label"] for i in typo.json()["items"]]

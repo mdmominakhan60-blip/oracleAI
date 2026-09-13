@@ -7,6 +7,7 @@ import json
 import logging
 import re
 import time
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
@@ -27,6 +28,8 @@ from ...core.observability import log_event
 from ...services.repo_gateway import billing, readings, users
 from ...services import analytics, compatibility as compatibility_svc
 from ..common.validation import parse_birth_date
+from ..common.city_labels import COUNTRIES_BY_ZONE
+from ..common.onboarding import normalize_birth_time
 from ..contracts.compatibility import CompatIn
 from ..contracts.wave_a import ChartBuildIn, PartnerIn, ReportIn
 from ..deps import confirmed_age_user, active_user, get_db, rate_limit
@@ -82,6 +85,9 @@ def _chart_payload(data: dict, user, *, birth_date=_UNSET,
     одинаково понимать, можно ли показывать дома, ASC и MC.
     """
     known = bool(user["birth_time_known"]) if time_known is None else bool(time_known)
+    saved_precision = data.get("time_precision") or dict(user).get("birth_time_precision")
+    time_precision = "exact" if known else "approx" if saved_precision == "approx" else "unknown"
+    display_time = user["birth_time"] if birth_time is _UNSET else birth_time
     calculation_contract = public_calculation_contract(data)
     payload = {
         "natal_schema_version": 2,
@@ -115,9 +121,10 @@ def _chart_payload(data: dict, user, *, birth_date=_UNSET,
         "sections": astro.chart_sections(data, time_known=known),
         "birth": {
             "date": user["birth_date"] if birth_date is _UNSET else birth_date,
-            "time": user["birth_time"] if birth_time is _UNSET else birth_time,
+            "time": display_time if time_precision != "unknown" else None,
             "city": user["birth_city"] if birth_city is _UNSET else birth_city,
             "time_known": known,
+            "time_precision": time_precision,
         },
     }
     return {**meta, **payload}
@@ -234,9 +241,14 @@ async def city_suggest(q: str = Query(default="", min_length=0, max_length=60),
             return (2, key)
         return (3, key)
     for key in sorted(FALLBACK, key=rank):
-        if rank(key)[0] < 3 and key not in seen:
-            seen.add(key)
-            items.append({"key": key, "label": titles.get(key, key.title())})
+        coordinates = FALLBACK[key]
+        if rank(key)[0] < 3 and coordinates not in seen:
+            seen.add(coordinates)
+            zone = coordinates[2]
+            country = COUNTRIES_BY_ZONE.get(zone, "")
+            items.append({"key": key, "label": titles.get(key, key.title()),
+                          "country": country, "timezone": zone,
+                          "detail": " · ".join(filter(None, (country, zone)))})
         if len(items) >= 8:
             break
     return {"items": items}
@@ -284,6 +296,8 @@ async def build_chart(item: ChartBuildIn | None = None, user=Depends(confirmed_a
     birth_date = parse_birth_date(item.birth_date) if date_supplied and item.birth_date else user["birth_date"]
     if not birth_date:
         raise HTTPException(400, "укажи дату рождения — она нужна для расчёта карты")
+    if not date(1900, 1, 1) <= date.fromisoformat(birth_date) <= date.today():
+        raise HTTPException(400, "дата рождения должна быть с 1900 года и не позднее сегодняшнего дня")
 
     existing = users.chart_of(user)
     if existing and not supplied:
@@ -300,11 +314,14 @@ async def build_chart(item: ChartBuildIn | None = None, user=Depends(confirmed_a
         raise HTTPException(400, "укажи город рождения")
 
     raw_time = ((item.birth_time or "").strip() if time_supplied else (user["birth_time"] or "").strip())
-    if raw_time and not _TIME_RE.match(raw_time):
-        raise HTTPException(400, "время в формате ЧЧ:ММ, например 14:30")
-    time_known = bool(raw_time) if time_supplied else bool(user["birth_time_known"])
-    compute_time = raw_time or "12:00"
-    stored_time = raw_time or None
+    precision = item.birth_time_precision
+    if precision is None:
+        if time_supplied:
+            precision = "exact" if raw_time else "unknown"
+        else:
+            precision = "exact" if user["birth_time_known"] else dict(user).get("birth_time_precision") or "unknown"
+    stored_time, time_known = normalize_birth_time(raw_time, precision)
+    compute_time = stored_time or "12:00"
 
     _log_astro(logging.INFO, "astro_chart_compute_started", "начат расчёт натальной карты", started,
                mode="full", precision="exact" if time_known else "date_only",
@@ -325,9 +342,11 @@ async def build_chart(item: ChartBuildIn | None = None, user=Depends(confirmed_a
                    time_known=time_known, cache_hit=False, live=True, status="error",
                    error_type=type(exc).__name__, user_state="recompute")
         raise
+    chart["time_precision"] = precision
     await users.update(db, user["tg_id"], birth_date=birth_date, birth_city=city,
                        birth_lat=lat, birth_lon=lon, tz=tz, birth_time=stored_time,
                        birth_time_known=1 if time_known else 0,
+                       birth_time_precision=precision,
                        chart_json=json.dumps(chart, ensure_ascii=False))
     payload = _chart_payload(chart, user, birth_date=birth_date, birth_time=stored_time,
                              birth_city=city, time_known=time_known, ok=True, cached=False)

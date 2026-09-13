@@ -27,6 +27,7 @@ class OutcomeIn(BaseModel):
 class ChartBuildIn(BaseModel):
     birth_date: str | None = None
     birth_time: str | None = None
+    birth_time_precision: Literal["exact", "approx", "unknown"] | None = None
     birth_city: str | None = Field(default=None, max_length=60)
 
 
