@@ -26,13 +26,24 @@
   };
 
   app.startOnboarding = function () {
-    this.onboardingData = { intent: '', name: '', date: { day: '', month: '', year: '' }, time: '', timeKnown: null, city: '' };
+    const me = this.me || {};
+    const [by = "", bm = "", bd = ""] = (me.birth_date || '').split('-');
+    this.onboardingData = this.onboardingData || {
+      intent: ['oracle', 'astro', 'tarot', 'chiromant'].includes(me.intent || me.goal) ? (me.intent || me.goal) : '',
+      name: me.name || '',
+      date: { day: bd, month: bm, year: by },
+      time: me.birth_time || '',
+      timeKnown: me.birth_time_precision === 'unknown' ? 'dontknow' : (me.birth_time_precision || 'dontknow'),
+      city: me.birth_city || '',
+      cityKey: '',
+    };
     this.view = 'onboarding';
     this.syncBg();
     this.renderNav();
     this.syncBackButton();
     const main = document.getElementById('app-main');
-    if (main) this.renderOnboarding(main, 1);
+    const resume = { intent: 1, goal: 1, name: 2, date: 3, time: 4, city: 5 }[me.onboarding_step] || 1;
+    if (main) this.renderOnboarding(main, me.onboarded === false ? resume : 1);
   };
 
   app.renderOnboarding = function (main, step) {
@@ -352,10 +363,11 @@
       birth_date: (d.date && d.date.year && d.date.month && d.date.day)
         ? `${d.date.year}-${String(d.date.month).padStart(2, '0')}-${String(d.date.day).padStart(2, '0')}`
         : undefined,
-      birth_time: d.time || undefined,
-      birth_time_known: d.timeKnown === 'exact' ? 'exact' : d.timeKnown === 'approx' ? 'approx' : undefined,
-      city: d.city || undefined,
+      birth_time: d.timeKnown === 'dontknow' ? null : (d.time || undefined),
+      birth_time_precision: d.timeKnown === 'dontknow' ? 'unknown' : d.timeKnown,
+      city: d.cityKey || d.city || undefined,
       intent: d.intent || undefined,
+      onboarding_complete: true,
     };
     api('/api/profile', { method: 'POST', body: JSON.stringify(payload) }).catch(() => {});
     // Локальный маркер пройденного онбординга: без него новичок без
