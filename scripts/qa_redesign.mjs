@@ -77,6 +77,16 @@ try {
   check('Completed account is not re-onboarded', await page.locator('.onboarding').count() === 0);
   await context.close();
 
+  const resumed = await newPage('resume-time');
+  await resumed.page.waitForSelector('.onboarding[data-ob-step="4"]');
+  check('Partial bot profile resumes at missing time', await resumed.page.locator('.onboarding').getAttribute('data-ob-step') === '4');
+  await resumed.page.locator('[data-act="ob-back"]').click();
+  check('Partial bot profile retains its saved birth date',
+    await resumed.page.locator('#ob-day').inputValue() === '21' &&
+    await resumed.page.locator('#ob-month').inputValue() === '06' &&
+    await resumed.page.locator('#ob-year').inputValue() === '1990');
+  await resumed.context.close();
+
   for (const width of [360, 390, 768, 1440]) {
     const { context, page } = await newPage('saved', width, width >= 768 ? 1000 : 844);
     const colors = await page.evaluate(() => ({ accent: getComputedStyle(document.documentElement).getPropertyValue('--color-accent-hover').trim(), background: getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() }));

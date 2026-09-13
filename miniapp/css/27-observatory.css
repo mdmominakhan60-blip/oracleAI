@@ -17,6 +17,8 @@
   --grad-primary: var(--color-accent);
   --font-display: 'Manrope', sans-serif;
   --font-sans: 'Manrope', sans-serif;
+  --font-family-display: 'Manrope', sans-serif;
+  --font-family-body: 'Manrope', sans-serif;
   --nav-h: 72px;
 }
 * { box-sizing: border-box; }
@@ -112,6 +114,12 @@ button, .btn, .chip, .profile-row, .review-row__edit { min-height: 44px; }
 .onboarding__why { color: var(--color-text-secondary); font-size: 15px; line-height: 1.7; }
 .onboarding__footer { margin-top: auto; padding-top: 24px; position: static; background: none; }
 .onboarding__step { flex: none; }
+.onboarding [hidden] { display: none !important; }
+.onboarding button { min-height: 44px; }
+.onboarding :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.onboarding button:disabled { opacity: .55; cursor: wait; }
+.onboarding input[type="date"] { color-scheme: dark; }
+.onboarding .review-row__value { overflow-wrap: anywhere; min-width: 0; }
 .intent-card, .choice-row { min-height: 76px; border: 1px solid var(--color-border); background: var(--color-surface); border-radius: 12px; padding: 16px; color: var(--color-text-primary); }
 .intent-card[aria-pressed=true], .choice-row[aria-checked=true] { border-color: var(--color-accent); background: var(--color-surface-raised); box-shadow: none; }
 .intent-card__hint, .choice-row__note, .field__hint { color: var(--color-text-secondary); line-height: 1.6; }
@@ -151,8 +159,8 @@ button, .btn, .chip, .profile-row, .review-row__edit { min-height: 44px; }
 .today-card__meta { color: var(--color-text-secondary); line-height: 1.6; }
 .pay-plan, .pay-card, .plan-card { background: var(--color-surface); border-color: var(--color-border); box-shadow: none; }
 @media(min-width:768px) {
-  #app-root { padding-left: 88px; }
-  .app-nav, #app-root.nav-hidden .app-nav { position: absolute; inset: 0 auto 0 0; width: 88px; padding: 28px 8px; border-top: 0; border-right: 1px solid var(--color-border); }
+  #app-root { padding-left: 72px; }
+  .app-nav, #app-root.nav-hidden .app-nav { position: absolute; inset: 0 auto 0 0; width: 72px; padding: 28px 4px; border-top: 0; border-right: 1px solid var(--color-border); }
   .main-nav { display: flex; flex-direction: column; gap: 14px; }
   .nav-btn { min-height: 68px; }
   .screen { padding: 40px 36px; }
@@ -165,8 +173,8 @@ button, .btn, .chip, .profile-row, .review-row__edit { min-height: 44px; }
   .chat-messages { padding: 36px 28px; }
 }
 @media(min-width:1280px) {
-  #app-root { padding-left: 232px; }
-  .app-nav, #app-root.nav-hidden .app-nav { width: 232px; padding: 38px 20px; }
+  #app-root { padding-left: 224px; width: calc(100% - 48px); }
+  .app-nav, #app-root.nav-hidden .app-nav { width: 224px; padding: 38px 20px; }
   .app-nav::before { content: 'ORACLEAI'; display: block; color: var(--color-text-primary); font-size: 18px; letter-spacing: .15em; margin: 4px 12px 58px; }
   .nav-btn { flex-direction: row; justify-content: flex-start; gap: 16px; padding: 16px; min-height: 58px; }
   .nav-copy b { font-size: 14px; }
@@ -182,6 +190,42 @@ button, .btn, .chip, .profile-row, .review-row__edit { min-height: 44px; }
   .user-name { display: none; }
   .profile-row { gap: 8px; padding: 14px 12px; }
   .profile-row__value { max-width: 34%; }
+}
+/* Shell and live conversation: keep the reading area independent of legacy heroes. */
+h1, h2, h3, h4, h5, h6, .welcome-card__greeting, .agent-title, .intro-title { font-family: var(--font-sans); }
+.sidebar-new, .sidebar-history { display: none; }
+#app-root.is-chat .app-header, #app-root.nav-hidden .app-header { display: none; }
+#app-root .chat-shell { width: 100%; max-width: 760px; height: 100%; flex: 1; border: 0; border-radius: 0; }
+#app-root .chat-head { min-height: 64px; padding: 8px 16px; gap: 8px; }
+#app-root .chat-head .back { width: 44px; min-width: 44px; }
+#app-root .chat-head .agent-avatar { width: 36px; height: 36px; min-width: 36px; }
+.chat-guide-picker { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 0; background: none; border: 0; color: var(--color-text-primary); text-align: left; }
+.chat-guide-picker .cname, .chat-guide-picker .tsub { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#app-root .chat-messages { display: flex; flex-direction: column; width: 100%; max-width: none; padding: 24px 20px; }
+.chat-welcome { margin: auto 0; padding: 28px 0; max-width: 540px; }
+.chat-welcome > img { width: 64px; height: 64px; object-fit: cover; border-radius: 16px; }
+.chat-welcome h2 { font-size: clamp(24px, 3vw, 32px); font-weight: 600; letter-spacing: -.035em; margin: 20px 0 12px; }
+.chat-welcome p { color: var(--color-text-secondary); font-size: 15px; line-height: 1.75; margin: 0 0 20px; }
+.chat-welcome .suggest-chips { flex-wrap: wrap; overflow: visible; }
+.chat-welcome .suggest-chips .chip { flex: 1 1 150px; font-size: 12px; }
+#app-root .composer { padding: 4px 16px max(12px, env(safe-area-inset-bottom)); }
+#app-root .composer .ipt { font-size: 16px; }
+#app-root .composer-context { justify-content: flex-start; }
+.chat-thread-toggle { flex: none; }
+.sess-open { padding: 8px 0; }
+.sess-open .sess-copy { overflow: hidden; }
+.welcome-card { background: var(--color-surface); border: 1px solid var(--color-border); box-shadow: none; }
+.welcome-card::before, .welcome-card::after { content: none; }
+.welcome-card__greeting { color: var(--color-text-primary); text-shadow: none; }
+.welcome-card__greeting em { color: var(--color-accent); font-style: normal; }
+.ritual-cta { background: var(--color-accent); color: var(--color-on-accent); box-shadow: none; }
+@media(max-width:767px) {
+  #app-root.nav-hidden .app-nav { display: none; }
+  #app-root .chat-head { padding-top: max(8px, env(safe-area-inset-top)); }
+}
+@media(min-width:1280px) {
+  .sidebar-new, .sidebar-history { display: block; width: 100%; font-size: 12px; margin-bottom: 24px; }
+  .sidebar-history { margin-top: 24px; color: var(--color-text-secondary); }
 }
 @media(prefers-reduced-motion:reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }

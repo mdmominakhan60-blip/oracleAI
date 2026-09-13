@@ -45,7 +45,16 @@ export function createPreviewServer() {
     if (!id || !states.has(id)) {
       id = randomUUID();
       const scenario = url.searchParams.get('scenario') || 'saved';
-      states.set(id, { me: { ...initialMe(), onboarded: !['new', 'save-error'].includes(scenario) }, scenario, submissions: [] });
+      const me = initialMe();
+      if (['new', 'save-error'].includes(scenario)) {
+        Object.assign(me, { onboarded: false, birth_date: null, birth_time: null,
+          birth_time_precision: 'unknown', birth_time_known: false, birth_city: null,
+          chart_mode: null, chart_precision: null, sun: null });
+      } else if (scenario === 'resume-time') {
+        Object.assign(me, { onboarded: false, onboarding_step: 'time', birth_time: null,
+          birth_time_precision: 'unknown', birth_time_known: false, birth_city: null });
+      }
+      states.set(id, { me, scenario, submissions: [] });
       res.setHeader('Set-Cookie', `oracle_preview=${id}; HttpOnly; SameSite=Strict; Path=/`);
     }
     const state = states.get(id);
