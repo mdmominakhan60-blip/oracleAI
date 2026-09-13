@@ -240,7 +240,20 @@
     'pay-check-status': () => call('_payCheckStatus'),
     'tarot-cross-open': (el, data) => call('tarotCrossOpen', parseInt(data.pos, 10)),
     'r06-pay-stars': (el) => call('selectPaymentMethod', 'stars'),
-    'r06-pay-crypto': (el) => call('selectPaymentMethod', 'crypto')
+    'r06-pay-crypto': (el) => call('selectPaymentMethod', 'crypto'),
+    // BUS-1103 S14 R06: натальная карта (p4 макета BUS-1067)
+    'chart-open': () => call('openChartScene', 'chart-main'),
+    'chart-back': () => call('chartSceneBack'),
+    'chart-back-main': () => call('chartSceneBack'),
+    'chart-planet': (el, data) => call('chartPlanetZoom', parseInt(data.p, 10)),
+    'chart-interpret': () => call('go', 'chart-interpret'),
+    'chart-interpret-retry': () => call('chartInterpretRun'),
+    'chart-ask-agent': () => call('chartAskAgent'),
+    'chart-ask-about-planet': () => call('chartAskAboutPlanet'),
+    'chart-add-birth': () => call('chartAddBirth'),
+    'chart-no-time': () => call('chartNoTime'),
+    'chart-share': () => call('chartShare'),
+    'chart-reload': () => call('chartReload')
   };
 
   app.actionHandlers = actionHandlers;

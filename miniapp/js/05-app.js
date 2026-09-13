@@ -26,6 +26,7 @@ app.syncBg = function () {
   let bg = 'welcome';
   if (this.chat && this.chat.key) bg = this.chat.key === 'tarot' ? 'tarot' : 'chat';
   else if (['tarot-question', 'tarot-reveal', 'tarot-zoom', 'tarot-reading', 'tarot-cross'].includes(this.view)) bg = 'tarot';
+  else if (['chart-card', 'chart-loading', 'chart-empty', 'chart-main', 'chart-zoom', 'chart-interpret', 'chart-error'].includes(this.view)) bg = 'chat';
   else if (this.view === 'profile' || this.view === 'payment' || ['plan-r06', 'orders-r06', 'library', 'memory-r06', 'notifications-r06', 'paywall', 'pay-pending', 'states'].includes(this.view)) bg = 'work';
   if (root.dataset.bg !== bg) root.dataset.bg = bg;
   document.documentElement.dataset.bg = bg;
@@ -145,6 +146,10 @@ app.initBgControls = function () {
       else if (qaView === 'sheet') this.go('sheet');
       else if (['tool-quick', 'tool-form', 'tool-run', 'result', 'tarot-question', 'tarot-reveal', 'tarot-zoom', 'tarot-reading'].includes(qaView)) this.go(qaView);
       else if (['home', 'hub', 'profile', 'today', 'library', 'memory-r06', 'notifications-r06', 'plan-r06', 'paywall', 'pay-pending', 'orders-r06', 'tarot-cross', 'states'].includes(qaView)) this.go(qaView);
+      // BUS-1103 S14 QA: сцена грузит карту сама; ?fail=1 — QA-проба §11.2.
+      else if (['chart-card', 'chart-loading', 'chart-empty', 'chart-main', 'chart-zoom', 'chart-interpret', 'chart-error'].includes(qaView)) {
+        this.openChartScene(qaView, { fail: qaParams.get('fail') });
+      }
       if (qaView === 'profile' && ['summary', 'chart', 'history', 'memory'].includes(qaTab)) {
         setTimeout(() => document.querySelector(`.ptab[data-tab="${qaTab}"]`)?.click(), 120);
       }
@@ -560,6 +565,9 @@ app.initBgControls = function () {
       if (app.view === 'paywall' || app.view === 'pay-pending') return () => app.go(app._paywallReturn || 'plan-r06');
       if (app.view === 'today' || app.view === 'library' || app.view === 'states') return () => app.go('hub');
       if (app.view === 'tarot-cross') return () => app.go('tarot-question');
+      // BUS-1103 S14: подэкраны — к карте без потери состояния; виды — к разговору
+      if (app.view === 'chart-zoom' || app.view === 'chart-interpret') return () => app.go('chart-main');
+      if (['chart-card', 'chart-loading', 'chart-empty', 'chart-main', 'chart-error'].includes(app.view)) return () => app.go('hub');
       if (app.view !== 'home') return () => app.go('home');
       return null;
     })();
@@ -611,6 +619,16 @@ app.initBgControls = function () {
     else if (v === 'orders-r06') this.renderOrdersR06(main);
     else if (v === 'tarot-cross') this.renderTarotGrid(main);
     else if (v === 'states') this.renderStates(main);
+    // BUS-1103 S14 R06: натальная карта — 7 видов (p4 макета BUS-1067).
+    // Все виды рендерятся из состояния app.s14; вход через openChartScene
+    // грузит GET /api/chart один раз, повторные переходы бесплатны.
+    else if (v === 'chart-card') this.renderChartCardR06(main);
+    else if (v === 'chart-loading') this.renderChartLoadingR06(main);
+    else if (v === 'chart-empty') this.renderChartEmptyR06(main);
+    else if (v === 'chart-main') this.renderChartMainR06(main);
+    else if (v === 'chart-zoom') this.renderChartZoomR06(main);
+    else if (v === 'chart-interpret') this.renderChartInterpretR06(main);
+    else if (v === 'chart-error') this.renderChartErrorR06(main);
   };
 
 
