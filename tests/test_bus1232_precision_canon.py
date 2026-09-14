@@ -114,6 +114,30 @@ def test_bot_parser_emits_canon_only():
     assert normalize_birth_time_precision(legacy.precision) == "approx"
 
 
+def test_callback_time_key_matches_canon():
+    """Callback-ключ в onboarding.py quick-reply map совпадает с каноном."""
+    import ast
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parent.parent / "app/bot/onboarding.py").read_text()
+    tree = ast.parse(source)
+    # Найти onb_time_choice и собрать все Dict-ключи в её теле (не включая вложенные функции)
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "onb_time_choice":
+            keys: list[str] = []
+            for child in ast.walk(node):
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue  # skip nested functions
+                if isinstance(child, ast.Dict):
+                    for k in child.keys:
+                        if isinstance(k, ast.Constant) and isinstance(k.value, str):
+                            keys.append(k.value)
+            assert "approx" in keys, f"canonical key 'approx' not found in {keys}"
+            assert "approximate" not in keys, f"legacy key 'approximate' leaked: {keys}"
+            return
+    pytest.fail("onb_time_choice not found")
+
+
 def _literal_tokens(annotation) -> set:
     """Токены Literal внутри аннотации вида Literal[...] | None."""
     from typing import Literal, get_args, get_origin

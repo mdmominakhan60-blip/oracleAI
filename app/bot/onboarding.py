@@ -526,7 +526,7 @@ async def onb_date_pick(cb: CallbackQuery, state: FSMContext, db):
 async def onb_time_choice(cb: CallbackQuery, state: FSMContext, db):
     value = cb.data.split(":", 1)[1]
     labels = {"unknown": ("12:00", False, "unknown", "время не указано"),
-              "approximate": ("14:00", False, "approx", "примерно 14:00")}
+              "approx": ("14:00", False, "approx", "примерно 14:00")}
     if value == "exact":
         await cb.message.edit_text(_copy(await users.get(db, cb.from_user.id),
             "Напиши время, например 14:30.", "Type the time, for example 14:30."))
