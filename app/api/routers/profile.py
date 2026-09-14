@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from ...config import settings
 from ...core import agents
 from ...core.personas import persona_list
+from ...core.precision import normalize_birth_time_precision
 from ...data.session import healthcheck
 from ...services.repo_gateway import billing, content, dialog, readings, users
 from ...services.repo_gateway import monetization as monetization_repo
@@ -131,8 +132,10 @@ async def _me_payload(user, db, *, state) -> dict:
         "birth_date": user["birth_date"],
         "birth_city": user["birth_city"],
         "birth_time_known": bool(user["birth_time_known"]),
-        "birth_time": user["birth_time"] if user["birth_time_precision"] != "unknown" else None,
-        "birth_time_precision": user["birth_time_precision"] or ("exact" if user["birth_time_known"] else "unknown"),
+        "birth_time": user["birth_time"] if normalize_birth_time_precision(
+            user["birth_time_precision"], time_known=user["birth_time_known"]) != "unknown" else None,
+        "birth_time_precision": normalize_birth_time_precision(
+            user["birth_time_precision"], time_known=user["birth_time_known"]),
         "onboarding_step": user["onboarding_step"],
         "natal_technique": user["natal_technique"],
         "onboarded": bool(user["onboarded"]),
@@ -194,8 +197,10 @@ async def _me_payload_v2(user, db, *, state) -> dict:
             "birth_date": user["birth_date"],
             "birth_city": user["birth_city"],
             "birth_time_known": bool(user["birth_time_known"]),
-            "birth_time": user["birth_time"] if user["birth_time_precision"] != "unknown" else None,
-            "birth_time_precision": user["birth_time_precision"] or ("exact" if user["birth_time_known"] else "unknown"),
+            "birth_time": user["birth_time"] if normalize_birth_time_precision(
+                user["birth_time_precision"], time_known=user["birth_time_known"]) != "unknown" else None,
+            "birth_time_precision": normalize_birth_time_precision(
+                user["birth_time_precision"], time_known=user["birth_time_known"]),
             "onboarding_step": user["onboarding_step"],
             "natal_technique": user["natal_technique"],
             "onboarded": bool(user["onboarded"]),

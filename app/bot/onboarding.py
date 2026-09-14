@@ -16,6 +16,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 
 from ..core import astro, geo
+from ..core.precision import normalize_birth_time_precision
 from ..core.personas import persona_list
 from ..services import access, analytics, billing as billing_svc, referrals
 from ..repo import comms, content as content_repo, growth, readings, users
@@ -436,7 +437,8 @@ async def _advance_from_time(target: Message, state: FSMContext, db, parsed,
     # tg_id передаётся явно: у cb.message.from_user это бот, не человек
     user = await users.get(db, tg_id)
     await users.update(db, tg_id, birth_time=parsed.value,
-                       birth_time_known=int(parsed.known), birth_time_precision=parsed.precision,
+                       birth_time_known=int(parsed.known),
+                       birth_time_precision=normalize_birth_time_precision(parsed.precision),
                        onboarding_step="city")
     await analytics.track(db, "onboarding_step", tg_id,
                           props={"step": "time", "precision": parsed.precision}, surface="bot")
@@ -524,7 +526,7 @@ async def onb_date_pick(cb: CallbackQuery, state: FSMContext, db):
 async def onb_time_choice(cb: CallbackQuery, state: FSMContext, db):
     value = cb.data.split(":", 1)[1]
     labels = {"unknown": ("12:00", False, "unknown", "время не указано"),
-              "approximate": ("14:00", False, "approximate", "примерно 14:00")}
+              "approximate": ("14:00", False, "approx", "примерно 14:00")}
     if value == "exact":
         await cb.message.edit_text(_copy(await users.get(db, cb.from_user.id),
             "Напиши время, например 14:30.", "Type the time, for example 14:30."))

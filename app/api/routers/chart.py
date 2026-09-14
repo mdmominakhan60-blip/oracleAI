@@ -25,6 +25,7 @@ from ...core.chart_contract import (
 )
 from ...core.matrix import compute_matrix
 from ...core.observability import log_event
+from ...core.precision import normalize_birth_time_precision
 from ...services.repo_gateway import billing, readings, users
 from ...services import analytics, compatibility as compatibility_svc
 from ..common.validation import parse_birth_date
@@ -85,7 +86,8 @@ def _chart_payload(data: dict, user, *, birth_date=_UNSET,
     одинаково понимать, можно ли показывать дома, ASC и MC.
     """
     known = bool(user["birth_time_known"]) if time_known is None else bool(time_known)
-    saved_precision = data.get("time_precision") or dict(user).get("birth_time_precision")
+    saved_precision = normalize_birth_time_precision(
+        data.get("time_precision") or dict(user).get("birth_time_precision"), time_known=known)
     time_precision = "exact" if known else "approx" if saved_precision == "approx" else "unknown"
     display_time = user["birth_time"] if birth_time is _UNSET else birth_time
     calculation_contract = public_calculation_contract(data)
@@ -319,7 +321,9 @@ async def build_chart(item: ChartBuildIn | None = None, user=Depends(confirmed_a
         if time_supplied:
             precision = "exact" if raw_time else "unknown"
         else:
-            precision = "exact" if user["birth_time_known"] else dict(user).get("birth_time_precision") or "unknown"
+            precision = ("exact" if user["birth_time_known"]
+                         else normalize_birth_time_precision(dict(user).get("birth_time_precision"),
+                                                             time_known=user["birth_time_known"]))
     stored_time, time_known = normalize_birth_time(raw_time, precision)
     compute_time = stored_time or "12:00"
 
