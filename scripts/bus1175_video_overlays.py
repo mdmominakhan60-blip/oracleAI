@@ -355,7 +355,8 @@ def verify_video(path: Path, raw_path: Path, accent: str, subtitle_top: int) -> 
         """Доля пикселей бокса, ставших заметно темнее после оверлея.
         Метрика не зависит от яркости фона: среднее lum падает в провал, когда
         белые глифы на тёмном raw-кадре перекрывают затемнение backdrop'а."""
-        fc = fin.crop(box).convert("L"); rc = raw.crop(box).convert("L")
+        fc = fin.crop(box).convert("L")
+        rc = raw.crop(box).convert("L")
         fp, rp = fc.load(), rc.load()
         hits = sum(1 for y in range(fc.height) for x in range(fc.width)
                    if fp[x, y] < rp[x, y] * 0.85 - 2)
