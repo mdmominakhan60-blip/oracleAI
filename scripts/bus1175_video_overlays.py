@@ -351,25 +351,28 @@ def verify_video(path: Path, raw_path: Path, accent: str, subtitle_top: int) -> 
                                "-ss", str(t), "-i", str(video), "-frames:v", "1", str(img_p)])
         return Image.open(img_p).convert("RGB")
 
-    def lum(im: Image.Image, box) -> float:
-        crop = im.crop(box).convert("L")
-        px = crop.load()
-        total = sum(px[x, y] for y in range(crop.height) for x in range(crop.width))
-        return total / (crop.width * crop.height)
+    def darkened_frac(fin: Image.Image, raw: Image.Image, box) -> float:
+        """Доля пикселей бокса, ставших заметно темнее после оверлея.
+        Метрика не зависит от яркости фона: среднее lum падает в провал, когда
+        белые глифы на тёмном raw-кадре перекрывают затемнение backdrop'а."""
+        fc = fin.crop(box).convert("L"); rc = raw.crop(box).convert("L")
+        fp, rp = fc.load(), rc.load()
+        hits = sum(1 for y in range(fc.height) for x in range(fc.width)
+                   if fp[x, y] < rp[x, y] * 0.85 - 2)
+        return hits / (fc.width * fc.height)
 
     with tempfile.TemporaryDirectory(prefix="bus1175-verify-") as td:
-        # §2.3 backdrop 45% и §4.2 дисклеймер 60% — затемняют полосу ~на тот же %
-        # Блок субтитров центрирован по горизонтали (§2.1), зона блока 100px
-        # (§2.1) + padding 12 сверху/снизу → окно -10..+110; backdrop 45%
-        # затемняет всю полосу → сверка по средней яркости.
+        # Пороги = доля площади backdrop-полосы (не средняя яркость, см. выше):
+        # backdrop субтитров покрывает окно с запасом → ≥0.5; дисклеймер-полоса
+        # почти целиком в disc_box → ≥0.8 (округлые углы/поля дают запас).
         sub_box = (340, subtitle_top - 10, 740, subtitle_top + 110)
         disc_box = (340, 1780, 740, 1840)  # §4.1 (центрированная часть полосы)
         cta_box = (100, 1520, 980, 1640)   # §3.1
         fin6, raw6 = sample(path, 6.0, "fin"), sample(raw_path, 6.0, "raw")
-        if lum(fin6, sub_box) > lum(raw6, sub_box) * 0.92 + 4:
+        if darkened_frac(fin6, raw6, sub_box) < 0.5:
             problems.append("t=6s: backdrop субтитров не затемняет зону §2.1")
         fin10, raw10 = sample(path, 10.0, "fin"), sample(raw_path, 10.0, "raw")
-        if lum(fin10, disc_box) > lum(raw10, disc_box) * 0.75 + 4:
+        if darkened_frac(fin10, raw10, disc_box) < 0.8:
             problems.append("t=10s: дисклеймер-полоса (§4) не найдена")
         # CTA: пиксели в пределах ±30/40 от accent-цвета текста агента
         ar, ag, ab, _ = hex_to_rgba(accent, 100)
