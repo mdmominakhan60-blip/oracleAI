@@ -183,7 +183,7 @@ def test_chat_surface_has_explicit_ru_en_copy_contract() -> None:
     chat = (ROOT / "miniapp" / "js" / "07-chat.js").read_text(encoding="utf-8")
     assert "const CHAT_I18N =" in chat
     assert "const CHAT_AGENT_EN =" in chat
-    assert "Write to " in chat and "Напиши " in chat
+    assert "Write a question" in chat and "Напиши вопрос" in chat
     assert "What matters most to notice in this situation?" in chat
     assert "DIALOGUE TOOLS" in chat and "ИНСТРУМЕНТЫ ДИАЛОГА" in chat
 

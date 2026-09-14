@@ -226,6 +226,7 @@
                 <strong>${esc(chatAgentField(a, 'name'))}</strong>
                 <span>${esc(outcomes[a.code] || a.tagline || '')}</span>
                 <span class="guide-entry__link">${oracleLang() === 'en' ? 'Open conversation' : 'Открыть разговор'} ↗</span>
+                <span class="agent-proof-row">${(a.capabilities || []).map(c => `<span class="agent-proof-badge">${esc(c)}</span>`).join('')}</span>
               </span>
             </button>`).join('')}
         </div>
