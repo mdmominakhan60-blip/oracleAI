@@ -714,6 +714,24 @@ async def test_admin_payment_health_is_aggregated_and_read_only(client, db):
     assert "tg_id" not in str(body).lower()
 
 
+async def test_admin_analytics_daily_stats_returns_recent_rows(client, db):
+    await users.ensure(db, 1, "Владелец")
+    result = await client.get("/api/admin/analytics/daily-stats", params={"dev_user": 1})
+    assert result.status_code == 200
+    body = result.json()
+    assert isinstance(body, list)
+
+
+async def test_admin_analytics_backfill_is_owner_only(client, db, user):
+    await users.ensure(db, 1, "Владелец")
+    forbidden = await client.post("/api/admin/analytics/backfill", params={"dev_user": user["tg_id"]}, json={"days": 3})
+    assert forbidden.status_code == 403
+    allowed = await client.post("/api/admin/analytics/backfill", params={"dev_user": 1}, json={"days": 3})
+    assert allowed.status_code == 200
+    body = allowed.json()
+    assert "backfilled" in body and "results" in body
+
+
 async def test_admin_reconciliation_and_notification_settings_are_owner_only(client, db, user):
     await users.ensure(db, 1, "Владелец")
     settings = await client.get("/api/admin/payment-notifications", params={"dev_user": 1})

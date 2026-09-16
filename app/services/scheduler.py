@@ -1700,7 +1700,7 @@ async def tick(bot, db) -> None:
             if purged:
                 log.info("аналитика: удалено %s старых событий", purged)
     except Exception as e:  # noqa: BLE001
-        log.warning("агрегация метрик: %s", e)
+        log.exception("агрегация метрик упала: %s", e)
 
 
 async def run(bot, db) -> None:
