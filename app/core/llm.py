@@ -372,8 +372,9 @@ async def _stream_chat(client, model: str, messages: list[dict], max_tokens: int
     for n, call in enumerate(calls):          # некоторые серверы не шлют id
         call["id"] = call["id"] or f"call_{n}"
     if not text and not calls:
-        raise RuntimeError("модель отдала только размышления без ответа"
-                           if reasoned else "пустой ответ модели")
+        if reasoned:
+            return "", []
+        raise RuntimeError("пустой ответ модели")
     return text, calls
 
 
@@ -635,12 +636,13 @@ async def _run_anthropic(system, messages, tools, execute, tier, max_tokens,
                     {"type": "tool_result", "tool_use_id": b.id, "content": out}
                     for b, out in zip(blocks, outputs)]})
             except Exception as e:  # noqa: BLE001
-                # Бюджет (tool-use/стоимость/дедлайн) — лимит всей workflow, а не
-                # сетевой сбой: возвращаем уже собранный текст вместо офлайн-шаблона.
+                # Бюджет (tool-use/стоимость/дедлайн) — лимит всей workflow.
+                # Не маскируем это как обычный ответ: пробрасываем вверх,
+                # чтобы caller понял, что это прерывание, а не завершение.
                 if ("budget exceeded" in str(e).lower()
                         or "workflow deadline exceeded" in str(e).lower()):
                     log.info("anthropic: исчерпан бюджет workflow — частичный ответ")
-                    return kept or _fallback_text()
+                    raise RuntimeError("LLM workflow budget exceeded during tool execution") from e
                 raise
         return kept or _fallback_text()
     finally:
@@ -695,7 +697,7 @@ async def _run_openai_like(provider, system, messages, tools, execute,
                     meter.completion - before_completion,
                 )
             if not calls:
-                return text
+                return text or kept or _fallback_text()
             msgs.append({
                 "role": "assistant",
                 "content": text,
@@ -719,11 +721,11 @@ async def _run_openai_like(provider, system, messages, tools, execute,
         return kept or _fallback_text()
     except Exception as e:  # noqa: BLE001
         # Исчерпан бюджет (tool-use/стоимость) или дедлайн всей workflow — это
-        # не «провайдер без tool-use» (в pre-tool каскад ломиться нельзя: он
-        # снова упрётся в тот же бюджет). Возвращаем уже собранный текст.
+        # не «провайдер без tool-use» и не обычный ответ. Пробрасываем вверх,
+        # чтобы caller явно понял, что это прерывание, а не завершение.
         if "budget exceeded" in str(e).lower() or "workflow deadline exceeded" in str(e).lower():
-            log.info("%s: исчерпан бюджет workflow — возвращаю частичный ответ", provider)
-            return kept or _fallback_text()
+            log.info("%s: исчерпан бюджет workflow — частичный ответ", provider)
+            raise RuntimeError("LLM workflow budget exceeded during tool execution") from e
         # сервер не умеет tools (400/устаревший API) → pre-tool режим
         if "tool" not in str(e).lower() and "function" not in str(e).lower():
             raise
