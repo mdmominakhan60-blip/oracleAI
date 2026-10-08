@@ -211,58 +211,27 @@
       { code: 'chiromant', name: 'Мира', title: 'Проводник ладони', emoji: '✋', accent: '#e2a45e', avatar: '/static/img/agents/chiromant.jpg' },
     ]).map(a => this.normalizeAgent(a, a.code));
     main.innerHTML = `
-      <div class="screen">
-        <div class="hub-head">
-          <h1>${homeT('guidesTitle')}</h1>
-          <p>${homeT('guidesCopy')}</p>
+      <div class="screen guide-screen">
+        <header class="hub-head">
+          <span class="section-kicker">${oracleLang() === 'en' ? 'YOUR CONVERSATIONS' : 'ТВОИ РАЗГОВОРЫ'}</span>
+          <h1>${oracleLang() === 'en' ? 'What is on your mind?' : 'О чём хочется поговорить?'}</h1>
+          <p>${oracleLang() === 'en' ? 'Choose a guide. Start with a question, a thought, or what you feel.' : 'Выбери проводника. Начни с вопроса, мысли или того, что чувствуешь.'}</p>
+        </header>
+        <div class="observatory-guides">
+          ${list.map((a, i) => `
+            <button type="button" class="guide-entry ${i === 0 ? 'guide-entry--featured' : ''}" data-act="chat" data-chat="${esc(a.code)}">
+              <img src="${['oracle', 'astro', 'tarot', 'chiromant'].includes(a.code) ? '/static/img/agents/' + a.code + '-photo.webp' : esc(a.avatar)}" alt="" width="190" height="220" decoding="async">
+              <span class="guide-entry__copy">
+                <span class="section-kicker">${esc(chatAgentField(a, 'title'))}</span>
+                <strong>${esc(chatAgentField(a, 'name'))}</strong>
+                <span>${esc(outcomes[a.code] || a.tagline || '')}</span>
+                <span class="guide-entry__link">${oracleLang() === 'en' ? 'Open conversation' : 'Открыть разговор'} ↗</span>
+                <span class="agent-proof-row">${(a.capabilities || []).map(c => `<span class="agent-proof-badge">${esc(c)}</span>`).join('')}</span>
+              </span>
+            </button>`).join('')}
         </div>
-        <div class="agent-list">
-          ${list.map(a => `
-            <div class="agent-card agent-card--${esc(a.code)} ${this.chat.key === a.code ? 'glow' : ''}" style="${this.agentThemeStyle(a, a.code)}" data-act="chat" data-chat="${a.code}">
-              <div class="ac-top">
-                <div class="agent-avatar">${agentSprite(a)}</div>
-                <div style="flex:1;min-width:0">
-                  <div class="ac-head">
-                    <div class="agent-title">${esc(a.name)}</div>
-                  </div>
-                  <div class="agent-role">${esc(a.title || a.code)}</div>
-                  <div class="agent-outcome">${esc(outcomes[a.code] || (oracleLang() === 'en' ? 'A gentle next step' : 'Бережный следующий шаг'))}</div>
-                  <div class="agent-last">${esc(a.last_text || a.tagline || homeT('listening'))}</div>
-                  <div class="agent-proof-row" role="group" aria-label="${homeT('profileQuality')}">
-                    <span class="agent-proof-badge">✦ ${homeT('evidenceFirst')}</span>
-                    ${(a.capabilities && a.capabilities.length) ? `<span class="agent-proof-count">${homeFormat('toolCount', { count: a.capabilities.length })}</span>` : ''}
-                  </div>
-                  <span class="online-label">${homeT('nearby')}</span>
-                </div>
-                <button class="btn btn-ghost" style="padding:7px 12px;font-size:12px" data-act="chat" data-chat="${a.code}" aria-label="${homeFormat('openChatAria', { name: esc(a.name) })}">${homeT('start')}</button>
-              </div>
-              ${(a.suggestions && a.suggestions.length) ? `
-              <div class="agent-ask-chips">
-                ${a.suggestions.slice(0, 3).map(s => `
-                  <button type="button" class="ask-chip" data-act="ask" data-chat="${a.code}" data-q="${esc(s)}">${esc(s)}</button>`).join('')}
-              </div>` : ''}
-              <div class="section-kicker" style="margin:15px 0 7px;color:var(--ac)">${homeT('ask')}</div>
-              <div class="agent-chips">
-                ${(FEATURES[a.code] || []).slice(0, 4).map(f => `
-                  <button class="tool" style="${this.agentThemeStyle(a, a.code)}" data-act="chat-fn" data-chat="${a.code}" data-fn="${f.h}" aria-label="${esc(f.t)}: ${esc(f.d || '')}">
-                    <span class="tool-ico" aria-hidden="true">${sigilIcon(f.id)}</span>
-                    <span class="tool-txt"><span class="tool-t">${esc(f.t)}</span>${f.d ? `<span class="tool-d">${esc(f.d)}</span>` : ''}</span>
-                  </button>`).join('')}
-              </div>
-              ${a.code === 'astro' ? `<section class="vedic-surface" aria-label="${oracleLang() === 'en' ? 'Vedic capabilities' : 'Ведические возможности'}">
-                <div class="vedic-surface__head"><div><div class="section-kicker">${oracleLang() === 'en' ? 'Vedic / Lahiri' : 'Ведическая · Лахири'}</div><h2>${oracleLang() === 'en' ? 'Calculated, then interpreted' : 'Сначала расчёт, потом смысл'}</h2></div><span class="vedic-proof">29 tools · evidence</span></div>
-                <div class="vedic-grid">
-                  <button class="vedic-card" data-act="chat-fn" data-chat="astro" data-fn="featureVedicChart"><b>☊</b><span>${oracleLang() === 'en' ? 'Kundli' : 'Кундали'}</span><small>${oracleLang() === 'en' ? 'Lahiri sidereal chart' : 'Сидерическая карта Лахири'}</small></button>
-                  <button class="vedic-card" data-act="chat-fn" data-chat="astro" data-fn="featureVedicDasha"><b>◷</b><span>Vimshottari</span><small>${oracleLang() === 'en' ? 'Dasha timeline' : 'Таймлайн даша'}</small></button>
-                  <button class="vedic-card" data-act="chat-fn" data-chat="astro" data-fn="featureVedicPanchang"><b>◐</b><span>Panchang</span><small>${oracleLang() === 'en' ? 'Tithi · Rahu Kaal' : 'Титхи · Раху-кала'}</small></button>
-                  <button class="vedic-card" data-act="chat-fn" data-chat="astro" data-fn="featureVedicGuna"><b>∞</b><span>Guna Milan</span><small>${oracleLang() === 'en' ? 'Ashtakoot breakdown' : 'Разбор аштакуты'}</small></button>
-                </div>
-                <p class="vedic-surface__note">${oracleLang() === 'en' ? 'Tradition, time quality and limitations stay visible in every calculation.' : 'Традиция, точность времени и ограничения видны в каждом расчёте.'}</p>
-              </section>` : ''}
-            </div>`).join('')}
-        </div>
+        <button class="btn btn-ghost guide-history" data-act="go" data-goto="sessions">${oracleLang() === 'en' ? 'Conversation history' : 'История разговоров'}</button>
       </div>`;
   };
 
   /* ═══ ЧАТ — ГЛАВНЫЙ ИНСТРУМЕНТ ═══ */
-

@@ -32,7 +32,8 @@ def test_birth_time_parser_keeps_precision_honest():
     unknown = parse_birth_time("не знаю")
     assert unknown.value == "12:00" and not unknown.known and unknown.precision == "unknown"
     approximate = parse_birth_time("примерно")
-    assert approximate.value == "14:00" and not approximate.known and approximate.precision == "approximate"
+    # BUS-1232: канон токена — 'approx' (API Literal), ботные парсеры не пишут 'approximate'.
+    assert approximate.value == "14:00" and not approximate.known and approximate.precision == "approx"
 
 
 def test_main_menu_has_no_visible_age_gate_and_localizes_primary_actions():

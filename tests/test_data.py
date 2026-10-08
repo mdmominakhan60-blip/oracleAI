@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 import pytest
 
@@ -193,6 +194,50 @@ async def test_prune_analytics_uses_small_batches(db):
     assert (await cur.fetchone())["c"] == 0
     cur = await db.execute("SELECT COUNT(*) c FROM llm_usage WHERE purpose='new'")
     assert (await cur.fetchone())["c"] == 1
+
+
+async def test_rollup_day_writes_daily_stats(db):
+    """BUS-1324: rollup_day aggregates metrics into daily_stats."""
+    from app.repo import analytics
+
+    day = "2026-09-10"
+    await db.executemany(
+        "INSERT INTO events(tg_id, name, day, created_at) VALUES(?,?,?,?)",
+        [(1, "visit", day, f"{day}T10:00:00+00:00"),
+         (2, "visit", day, f"{day}T11:00:00+00:00")],
+    )
+    await db.commit()
+
+    result = await analytics.rollup_day(db, day)
+    assert result["active"] == 2
+
+    row = await db.execute(
+        "SELECT stats_json FROM daily_stats WHERE day=:day",
+        {"day": day})
+    stats = json.loads((await row.fetchone())["stats_json"])
+    assert stats["active"] == 2
+
+
+async def test_rollup_backfill_fills_gaps(db):
+    """BUS-1324: backfill fills missing days in daily_stats."""
+    from app.services import analytics as analytics_svc
+
+    days = ["2026-09-08", "2026-09-09", "2026-09-10"]
+    for day in days:
+        await db.executemany(
+            "INSERT INTO events(tg_id, name, day, created_at) VALUES(?,?,?,?)",
+            [(i, "visit", day, f"{day}T10:00:00+00:00") for i in range(1, 4)],
+        )
+    await db.commit()
+
+    results = await analytics_svc.backfill(db, days=3)
+    assert len(results) == 3
+    for day, result in zip(reversed(days), results):
+        assert result["active"] == 3
+        row = await db.execute(
+            "SELECT 1 FROM daily_stats WHERE day=:day",
+            {"day": day})
+        assert (await row.fetchone()) is not None
 
 
 async def test_overview_dau_wau_on_day(db):

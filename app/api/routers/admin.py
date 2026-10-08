@@ -224,6 +224,36 @@ async def payment_health(ctx=Depends(require("dashboard")), db=Depends(get_db)):
     return await payment_monitor.admin_snapshot(db)
 
 
+class BackfillRequest(BaseModel):
+    days: int = Field(default=7, ge=1, le=30, description="Days to backfill (1-30)")
+
+
+@router.post("/analytics/backfill")
+async def analytics_backfill(
+    req: BackfillRequest,
+    ctx=Depends(require("owner")),
+    db=Depends(get_db),
+):
+    """Backfill daily_stats for the last N days. Owner-only."""
+    results = await analytics_svc.backfill(db, req.days)
+    return {"backfilled": len(results), "results": results}
+
+
+@router.get("/analytics/daily-stats")
+async def analytics_daily_stats(
+    days: int = Query(default=7, ge=1, le=30),
+    ctx=Depends(require("dashboard")),
+    db=Depends(get_db),
+):
+    """Recent daily_stats snapshots for KPI dashboards."""
+    since = (date.today() - timedelta(days=days)).isoformat()
+    rows = await db.execute(
+        "SELECT day, stats_json, updated_at FROM daily_stats "
+        "WHERE day>=:since ORDER BY day DESC",
+        {"since": since})
+    return [dict(r) for r in await rows.fetchall()]
+
+
 @router.get("/reconciliation")
 async def reconciliation(ctx=Depends(current_admin), db=Depends(get_db)):
     if ctx.role != "owner":

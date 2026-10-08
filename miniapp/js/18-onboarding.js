@@ -7,7 +7,6 @@
   'use strict';
 
   const ONB_STEPS = 5;
-  const CITY_SUGGESTIONS = ['Казань', 'Караганда', 'Касабланка'];
 
   app.renderWelcome = function (main) {
     if (!main) return;
@@ -26,17 +25,30 @@
   };
 
   app.startOnboarding = function () {
-    this.onboardingData = { intent: '', name: '', date: { day: '', month: '', year: '' }, time: '', timeKnown: null, city: '' };
+    const me = this.me || {};
+    const [by = "", bm = "", bd = ""] = (me.birth_date || '').split('-');
+    this.onboardingData = this.onboardingData || {
+      intent: ['oracle', 'astro', 'tarot', 'chiromant'].includes(me.intent || me.goal) ? (me.intent || me.goal) : '',
+      name: me.name || '',
+      date: { day: bd, month: bm, year: by },
+      time: me.birth_time || '',
+      timeKnown: me.birth_time_precision === 'unknown' ? 'dontknow' : (me.birth_time_precision || (me.birth_time ? 'exact' : 'dontknow')),
+      city: me.birth_city || '',
+      cityKey: '',
+    };
     this.view = 'onboarding';
     this.syncBg();
     this.renderNav();
     this.syncBackButton();
     const main = document.getElementById('app-main');
-    if (main) this.renderOnboarding(main, 1);
+    const resume = { intent: 1, goal: 1, language: 1, name: 2, gender: 3, date: 3, time: 4, city: 5, confirm: 5, technique: 5, persona: 5 }[me.onboarding_step] || 1;
+    if (main) this.renderOnboarding(main, me.onboarded === false ? resume : 1);
   };
 
   app.renderOnboarding = function (main, step) {
-    if (!main) return;
+    if (!main || this._obSaving) return;
+    this._obCityRequest = (this._obCityRequest || 0) + 1;
+    clearTimeout(this._obCityTimer);
     const isReview = step === 'review';
     const s = isReview ? ONB_STEPS + 1 : Number(step);
     if (isNaN(s) || s < 1 || s > ONB_STEPS + 1) return;
@@ -80,25 +92,14 @@
           <h2 class="onboarding__title">${esc(title)}</h2>
           <p class="onboarding__why">${esc(copy)}</p>
         </div>
-        <div class="onboarding__step" ${isReview ? 'hidden' : ''}>
-          ${bodyHtml}
-        </div>
-        ${isReview ? `<div>${bodyHtml}</div>` : ''}
-        <div class="onboarding__footer" ${isReview ? 'hidden' : ''}>
+        <div class="onboarding__step">${bodyHtml}</div>
+        <div class="onboarding__footer">
           <p class="onboarding__footer-note--info" data-ob-error hidden role="alert" aria-live="polite"></p>
           <div style="display:flex;gap:8px">
             ${showBack ? `<button class="btn btn-ghost" style="flex:1" data-act="ob-back" type="button">${esc(t('obBack'))}</button>` : ''}
             <button class="btn btn-primary" style="flex:1" data-act="ob-next" type="button">${esc(nextLabel)}</button>
           </div>
         </div>
-        ${isReview ? `
-        <div class="onboarding__footer">
-          <p class="onboarding__footer-note--info" data-ob-error hidden role="alert" aria-live="polite"></p>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-ghost" style="flex:1" data-act="ob-back" type="button">${esc(t('obBack'))}</button>
-            <button class="btn btn-primary" style="flex:1" data-act="ob-next" type="button">${esc(t('obStart'))}</button>
-          </div>
-        </div>` : ''}
       </div>`;
 
     // фокус на первый управляемый элемент
@@ -119,7 +120,7 @@
     ];
     return `<div style="display:flex;flex-direction:column;gap:8px" role="list" aria-label="${esc(t('obIntentTitle'))}">
       ${intents.map(i => `
-        <button class="intent-card" type="button" role="listitem" data-intent="${i.code}" aria-label="${esc(i.name)}" aria-pressed="false">
+        <button class="intent-card" type="button" data-intent="${i.code}" aria-label="${esc(i.name)}" aria-pressed="${d.intent === i.code}">
           <span class="intent-card__icon" aria-hidden="true">${i.icon}</span>
           <span style="min-width:0;text-align:left">
             <span class="intent-card__name">${esc(i.name)}</span>
@@ -143,7 +144,12 @@
   app._obStep3 = function (d) {
     const en = oracleLang() === 'en';
     const dd = d.date || {};
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const value = dd.year && dd.month && dd.day ? `${dd.year}-${String(dd.month).padStart(2, '0')}-${String(dd.day).padStart(2, '0')}` : '';
     return `<div style="display:flex;flex-direction:column;gap:6px">
+      <label class="field__label" for="ob-date-picker">${en ? 'Choose a date or enter it below' : 'Выбери дату или введи ниже'}</label>
+      <input class="field__input" id="ob-date-picker" type="date" min="1900-01-01" max="${today}" value="${esc(value)}">
       <label class="field__label">${esc(t('obDateTitle'))}</label>
       <p class="field__hint" style="margin-bottom:4px">${esc(t('obDateHint'))}</p>
       <div class="date-seg" role="group" aria-label="${en ? 'Day, month, year' : 'День, месяц, год'}">
@@ -202,9 +208,11 @@
       <label class="field__label" for="ob-city">${esc(t('obCityTitle'))}</label>
       <p class="field__hint" style="margin-bottom:2px">${esc(t('obCityCopy'))}</p>
       <input class="field__input combobox__input" id="ob-city" type="text" autocomplete="off" inputmode="text"
-        value="${esc(d.city || '')}" placeholder="${esc(t('obCityPlaceholder'))}" aria-autocomplete="list" aria-controls="ob-city-list" role="combobox">
+        value="${esc(d.city || '')}" maxlength="60" placeholder="${esc(t('obCityPlaceholder'))}" aria-autocomplete="list" aria-expanded="false" aria-controls="ob-city-list" aria-describedby="ob-city-status" role="combobox">
       <ul class="combobox__list" id="ob-city-list" role="listbox" style="display:none"></ul>
-      <p class="combobox__status" data-ob-city-status hidden>${esc(t('obCityLoading'))}</p>
+      <p class="combobox__status" id="ob-city-status" data-ob-city-status role="status">${esc(d.cityKey ? (en ? 'Confirmed: ' : 'Выбран: ') + [d.city, d.cityDetail].filter(Boolean).join(', ') : (en ? 'Type at least 2 characters and select a result.' : 'Введи от 2 букв и выбери город из списка.'))}</p>
+      <button class="btn btn-ghost" type="button" data-ob-city-search>${en ? 'Find / change city' : 'Найти / изменить город'}</button>
+      <button class="btn btn-ghost" type="button" data-ob-city-retry hidden>${en ? 'Retry search' : 'Повторить поиск'}</button>
     </div>`;
   };
 
@@ -212,7 +220,7 @@
     const en = oracleLang() === 'en';
     const dd = d.date || {};
     const dateStr = dd.day && dd.month && dd.year ? `${dd.day}.${dd.month}.${dd.year}` : (en ? 'not specified' : 'не указана');
-    const timeStr = d.timeKnown === 'dontknow' ? (en ? 'unknown' : 'не знаю') : (d.time || (en ? 'not specified' : 'не указано'));
+    const timeStr = d.timeKnown === 'dontknow' ? (en ? 'unknown' : 'не знаю') : (d.time || (en ? 'not specified' : 'не указано')) + (d.timeKnown === 'approx' ? (en ? ' · approximate' : ' · примерно') : (en ? ' · exact' : ' · точно'));
     const intentLabels = { oracle: en ? 'Conversation & Oracle' : 'Разговор и Оракул', astro: en ? 'Astrology & Natal chart' : 'Астрология и натальная карта', tarot: en ? 'Tarot readings' : 'Таро и расклады' };
     const nameLabel = t('obNameTitle').replace('?', '').replace('?', '').trim();
     return `<div style="display:flex;flex-direction:column;gap:8px" aria-label="${esc(t('obReviewTitle'))}">
@@ -260,29 +268,30 @@
     const showErr = (msg) => {
       if (!errEl) return false;
       errEl.hidden = false;
-      const span = errEl.querySelector('span:last-child');
-      if (span) span.textContent = msg;
+      errEl.textContent = msg;
       return false;
     };
     const clearErr = () => { if (errEl) errEl.hidden = true; };
 
+    if (step === 1 && !this.onboardingData.intent) return showErr(t('obIntentTitle'));
     if (step === 2) {
       const name = (document.getElementById('ob-name')?.value || '').trim();
-      if (name.length < 2) {
+      if (name.length < 2 || name.length > 60) {
         const input = document.getElementById('ob-name');
         if (input) { input.setAttribute('aria-invalid', 'true'); input.focus(); }
         return showErr(t('obNameError'));
       }
       this.onboardingData.name = name;
+      document.getElementById('ob-name')?.setAttribute('aria-invalid', 'false');
       clearErr();
     }
     if (step === 3) {
-      const day = parseInt(document.getElementById('ob-day')?.value, 10);
-      const month = parseInt(document.getElementById('ob-month')?.value, 10);
-      const year = parseInt(document.getElementById('ob-year')?.value, 10);
+      const day = Number(document.getElementById('ob-day')?.value);
+      const month = Number(document.getElementById('ob-month')?.value);
+      const year = Number(document.getElementById('ob-year')?.value);
       if (!day || !month || !year) return showErr(t('obDateError'));
       const date = new Date(year, month - 1, day);
-      if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+      if (year < 1900 || date > new Date() || date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
         return showErr(t('obDateError'));
       }
       this.onboardingData.date = { day: String(day), month: String(month), year: String(year) };
@@ -294,6 +303,9 @@
       if (choice !== 'dontknow') {
         const h = document.getElementById('ob-hour')?.value || '';
         const m = document.getElementById('ob-min')?.value || '';
+        if (!/^\d{1,2}$/.test(h) || !/^\d{1,2}$/.test(m) || Number(h) > 23 || Number(m) > 59) {
+          return showErr(oracleLang() === 'en' ? 'Enter hours (0–23) and minutes (0–59), or choose unknown.' : 'Укажи часы (0–23) и минуты (0–59) или выбери «Не знаю».');
+        }
         this.onboardingData.time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
       } else {
         this.onboardingData.time = '';
@@ -301,7 +313,7 @@
     }
     if (step === 5) {
       const city = (document.getElementById('ob-city')?.value || '').trim();
-      if (!city) {
+      if (!city || !this.onboardingData.cityKey || city !== this.onboardingData.city) {
         const input = document.getElementById('ob-city');
         if (input) { input.setAttribute('aria-invalid', 'true'); input.focus(); }
         return showErr(t('obCityError'));
@@ -313,6 +325,7 @@
   };
 
   app._obAdvance = function () {
+    if (this._obSaving) return;
     const container = document.querySelector('.onboarding');
     const currentStep = container ? (container.dataset.obStep === 'review' ? 'review' : Number(container.dataset.obStep)) : 1;
 
@@ -333,6 +346,8 @@
   };
 
   app._obBack = function () {
+    if (this._obSaving) return;
+    this._obCaptureDraft();
     const container = document.querySelector('.onboarding');
     const currentStep = container ? (container.dataset.obStep === 'review' ? ONB_STEPS + 1 : Number(container.dataset.obStep)) : 1;
 
@@ -345,28 +360,117 @@
     }
   };
 
-  app._obSubmit = function () {
+  app._obSubmit = async function () {
+    if (this._obSaving) return;
     const d = this.onboardingData || {};
+    // Bot steps can arrive out of order; never submit an incomplete resume.
+    const dd = d.date || {};
+    const missing = !d.intent ? 1 : !d.name || d.name.trim().length < 2 ? 2 : !dd.year || !dd.month || !dd.day ? 3 : !d.cityKey ? 5 : null;
+    if (missing) {
+      this.renderOnboarding(document.getElementById('app-main'), missing);
+      return;
+    }
     const payload = {
       name: d.name || undefined,
       birth_date: (d.date && d.date.year && d.date.month && d.date.day)
         ? `${d.date.year}-${String(d.date.month).padStart(2, '0')}-${String(d.date.day).padStart(2, '0')}`
         : undefined,
-      birth_time: d.time || undefined,
-      birth_time_known: d.timeKnown === 'exact' ? 'exact' : d.timeKnown === 'approx' ? 'approx' : undefined,
-      city: d.city || undefined,
+      birth_time: d.timeKnown === 'dontknow' ? null : (d.time || undefined),
+      birth_time_precision: d.timeKnown === 'dontknow' ? 'unknown' : d.timeKnown,
+      city: d.cityKey || undefined,
       intent: d.intent || undefined,
+      onboarding_complete: true,
     };
-    api('/api/profile', { method: 'POST', body: JSON.stringify(payload) }).catch(() => {});
-    // Локальный маркер пройденного онбординга: без него новичок без
-    // ответа сервера увидит welcome повторно при следующем заходе.
-    try { localStorage.setItem('oracle_onboarding_done', '1'); } catch (e) {}
+    this._obSaving = true;
+    const container = document.querySelector('.onboarding');
+    const buttons = container ? [...container.querySelectorAll('button')] : [];
+    const next = container?.querySelector('[data-act="ob-next"]');
+    const error = container?.querySelector('[data-ob-error]');
+    if (error) error.hidden = true;
+    buttons.forEach(button => { button.disabled = true; });
+    container?.setAttribute('aria-busy', 'true');
+    if (next) next.textContent = oracleLang() === 'en' ? 'Saving…' : 'Сохраняем…';
+    try {
+      await api('/api/profile', { method: 'POST', body: JSON.stringify(payload) });
+    } catch (e) {
+      if (error) { error.hidden = false; error.textContent = oracleLang() === 'en' ? 'Could not save. Your entries are kept. Please retry.' : 'Не удалось сохранить. Данные остались в форме. Попробуй ещё раз.'; }
+      return;
+    } finally {
+      this._obSaving = false;
+      container?.removeAttribute('aria-busy');
+      buttons.forEach(button => { button.disabled = false; });
+      if (next) next.textContent = oracleLang() === 'en' ? 'Retry' : 'Повторить';
+    }
+    this.me = { ...this.me, ...payload, birth_city: d.city, onboarded: true, onboarding_step: null };
+    this.onboardingData = null;
     if (d.intent && d.intent !== 'oracle') {
       this.openChat(d.intent);
     } else {
       this.go('hub');
     }
     haptic('success');
+  };
+
+  app._obCaptureDraft = function () {
+    const d = this.onboardingData;
+    if (!d) return;
+    const value = id => document.getElementById(id)?.value;
+    if (value('ob-name') !== undefined) d.name = value('ob-name');
+    if (value('ob-day') !== undefined) d.date = { day: value('ob-day'), month: value('ob-month'), year: value('ob-year') };
+    if (value('ob-hour') !== undefined) d.time = `${value('ob-hour')}:${value('ob-min')}`;
+  };
+
+  app._obSearchCity = async function (input) {
+    const request = this._obCityRequest = (this._obCityRequest || 0) + 1;
+    const q = input.value.trim();
+    const list = document.getElementById('ob-city-list');
+    const status = document.querySelector('[data-ob-city-status]');
+    const retry = document.querySelector('[data-ob-city-retry]');
+    if (!list || !status) return;
+    const en = oracleLang() === 'en';
+    this.onboardingData.city = q;
+    this.onboardingData.cityKey = '';
+    this.onboardingData.cityDetail = '';
+    this._obCities = [];
+    this._obCityIndex = -1;
+    list.style.display = 'none';
+    list.innerHTML = '';
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    retry.hidden = true;
+    status.hidden = false;
+    status.textContent = q.length < 2 ? (en ? 'Type at least 2 characters.' : 'Введи минимум 2 буквы.') : t('obCityLoading');
+    if (q.length < 2) return;
+    try {
+      const result = await api('/api/city/suggest?q=' + encodeURIComponent(q));
+      if (request !== this._obCityRequest || !input.isConnected) return;
+      this._obCities = (result.items || []).filter(city => city.key && city.label);
+      list.innerHTML = this._obCities.map((city, i) => `<li class="combobox__option" id="ob-city-option-${i}" role="option" data-city-pick="${i}" aria-selected="false"><span>${esc(city.label)}</span><small>${esc(city.detail || city.country || '')}</small></li>`).join('');
+      list.style.display = this._obCities.length ? 'block' : 'none';
+      input.setAttribute('aria-expanded', String(!!this._obCities.length));
+      status.textContent = this._obCities.length ? (en ? 'Select your city.' : 'Выбери свой город.') : (en ? 'No cities found. Try another spelling.' : 'Город не найден. Попробуй другое написание.');
+    } catch (e) {
+      if (request !== this._obCityRequest || !input.isConnected) return;
+      status.textContent = en ? 'Search failed. Please retry.' : 'Не удалось найти город. Повтори поиск.';
+      retry.hidden = false;
+    }
+  };
+
+  app._obSelectCity = function (index) {
+    const city = this._obCities?.[index];
+    const input = document.getElementById('ob-city');
+    if (!city || !input) return;
+    this._obCityRequest++;
+    this.onboardingData.city = city.label;
+    this.onboardingData.cityKey = city.key;
+    this.onboardingData.cityDetail = city.detail || city.country || '';
+    input.value = city.label;
+    input.setAttribute('aria-invalid', 'false');
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    document.getElementById('ob-city-list').style.display = 'none';
+    document.querySelector('[data-ob-city-status]').textContent = (oracleLang() === 'en' ? 'Confirmed: ' : 'Выбран: ') + [city.label, city.detail || city.country].filter(Boolean).join(', ');
+    input.focus();
   };
 
 })();

@@ -30,7 +30,7 @@ class ParsedDate:
 class ParsedTime:
     value: str
     known: bool
-    precision: str  # exact | approximate | unknown
+    precision: str  # exact | approx | unknown (канон: app/core/precision.py)
     label: str
 
 
@@ -86,7 +86,7 @@ def parse_birth_time(raw: str, *, lang: str = "ru") -> ParsedTime:
     if text in UNKNOWN_TIME:
         return ParsedTime("12:00", False, "unknown", "неизвестное время")
     if text in APPROX_TIME:
-        return ParsedTime("14:00", False, "approximate", "примерно 14:00")
+        return ParsedTime("14:00", False, "approx", "примерно 14:00")
     match = re.fullmatch(r"(\d{1,2})\s*[:.]?\s*(\d{2})", text)
     if match:
         hour, minute = int(match.group(1)), int(match.group(2))

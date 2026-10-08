@@ -46,11 +46,12 @@ def main() -> int:
     # + S13 крест + состояния §11.2).
     # 25-r06-s14 — BUS-1103 (волна B: S14 натальная карта, G-кадр explain-chart,
     # макет BUS-1067 p4).
+    # 27-observatory — BUS-1236 (обсерватория; импорт добавлен в 66d1d43).
     expected_prefixes = ["00-", "01-", "02-", "03-", "04-", "05-", "06-", "07-",
                          "08-", "09-", "10-", "11-", "12-", "13-", "14-", "15-",
                          "16-", "16-", "17-", "18-", "18-", "19-", "20-", "21-",
                          "22-", "22-", "23-", "24-", "24-", "25-", "26-", "24-",
-                         "25-"]
+                         "25-", "27-"]
     import_order_ok = (
         len(imports) == len(expected_prefixes)
         and len(imports) == len(list((ROOT / "miniapp" / "css").glob("*.css")))
@@ -73,6 +74,7 @@ def main() -> int:
         and imports[30] == "26-r06-p3.css"
         and imports[31] == "24-r06-p3.css"
         and imports[32] == "25-r06-s14.css"
+        and imports[33] == "27-observatory.css"
     )
     reduced_motion = "prefers-reduced-motion: reduce" in styles or any(
         "prefers-reduced-motion: reduce" in path.read_text(encoding="utf-8")

@@ -113,7 +113,7 @@ def test_agent_quality_proof_is_visible_on_hub_and_chat() -> None:
     base = (ROOT / "app" / "core" / "agents" / "base.py").read_text(encoding="utf-8")
     assert "agent-proof-row" in home
     assert "agent-proof-badge" in home
-    assert "chat-proof-strip" in chat
+    assert "message-proof" in chat
     assert '"capabilities"' in base and '"quality"' in base
     assert "evidenceFirst" in (ROOT / "miniapp" / "js" / "01-utils.js").read_text(encoding="utf-8")
 
@@ -144,7 +144,8 @@ def test_chiromant_is_present_on_all_agent_surfaces() -> None:
         assert "chiromant" in source or "mira" in source
     assert "chiromant.jpg" in app
     assert "palm_scanner" in mira
-    assert "agents.slice(0, 4)" in chat
+    assert "chiromant" in home
+    assert "palm-quick-upload" in chat
 
 
 def test_palm_photo_flow_and_agent_theme_contract() -> None:

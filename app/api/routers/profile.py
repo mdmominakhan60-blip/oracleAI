@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from ...config import settings
 from ...core import agents
 from ...core.personas import persona_list
+from ...core.precision import normalize_birth_time_precision
 from ...data.session import healthcheck
 from ...services.repo_gateway import billing, content, dialog, readings, users
 from ...services.repo_gateway import monetization as monetization_repo
@@ -25,6 +26,7 @@ from ..deps import (
     rate_limit,
     touched_user,
 )
+from ..common.onboarding import onboarding_fields
 
 router = APIRouter(prefix="/api", tags=["profile"])
 
@@ -130,6 +132,12 @@ async def _me_payload(user, db, *, state) -> dict:
         "birth_date": user["birth_date"],
         "birth_city": user["birth_city"],
         "birth_time_known": bool(user["birth_time_known"]),
+        "birth_time": user["birth_time"] if normalize_birth_time_precision(
+            user["birth_time_precision"], time_known=user["birth_time_known"]) != "unknown" else None,
+        "birth_time_precision": normalize_birth_time_precision(
+            user["birth_time_precision"], time_known=user["birth_time_known"]),
+        "onboarding_step": user["onboarding_step"],
+        "natal_technique": user["natal_technique"],
         "onboarded": bool(user["onboarded"]),
         "sun": chart.get("sun"),
         "ascendant": chart.get("ascendant"),
@@ -189,6 +197,12 @@ async def _me_payload_v2(user, db, *, state) -> dict:
             "birth_date": user["birth_date"],
             "birth_city": user["birth_city"],
             "birth_time_known": bool(user["birth_time_known"]),
+            "birth_time": user["birth_time"] if normalize_birth_time_precision(
+                user["birth_time_precision"], time_known=user["birth_time_known"]) != "unknown" else None,
+            "birth_time_precision": normalize_birth_time_precision(
+                user["birth_time_precision"], time_known=user["birth_time_known"]),
+            "onboarding_step": user["onboarding_step"],
+            "natal_technique": user["natal_technique"],
             "onboarded": bool(user["onboarded"]),
             "morning_push": bool(user["morning_push"]),
             "memory_enabled": bool(user["memory_enabled"]),
@@ -345,6 +359,13 @@ async def delete_account(item: AccountDeletionIn, user=Depends(deletion_user), d
 
 
 class ProfileIn(BaseModel):
+    name: str | None = Field(default=None, max_length=60)
+    birth_date: str | None = Field(default=None, max_length=10)
+    birth_time: str | None = Field(default=None, max_length=5)
+    birth_time_precision: Literal["exact", "approx", "unknown"] | None = None
+    city: str | None = Field(default=None, max_length=60)
+    intent: Literal["oracle", "astro", "tarot", "chiromant"] | None = None
+    onboarding_complete: bool = False
     oracle_name: str | None = Field(default=None, max_length=30)
     persona: str | None = None
     morning_push: bool | None = None
@@ -388,11 +409,14 @@ async def update_profile(item: ProfileIn, user=Depends(current_user),
         except Exception:
             raise HTTPException(400, "неизвестная таймзона")
         fields["tz"] = item.tz
+    # All validation and chart computation precede the single repo update.
+    fields.update(await onboarding_fields(item, user, db))
     if fields:
         await users.update(db, user["tg_id"], **fields)
         await analytics.track(db, "profile_update", user["tg_id"],
                               props={"fields": list(fields)}, surface="miniapp")
-    return {"ok": True, "updated": list(fields)}
+    return {"ok": True, "updated": list(fields),
+            "onboarded": bool(fields.get("onboarded", user["onboarded"]))}
 
 
 @router.get("/personas")

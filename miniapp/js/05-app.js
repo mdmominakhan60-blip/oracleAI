@@ -462,7 +462,7 @@ app.initBgControls = function () {
         <div class="header-status" data-header-status hidden></div>
       </header>
       <main id="app-main" tabindex="-1"></main>
-      <nav class="app-nav" aria-label="${oracleLang() === 'en' ? 'Main navigation' : 'Основная навигация'}"><div class="main-nav" id="main-nav"></div></nav>`;
+      <nav class="app-nav" aria-label="${oracleLang() === 'en' ? 'Main navigation' : 'Основная навигация'}"><button class="sidebar-new btn btn-ghost" data-act="go" data-goto="hub">${oracleLang() === 'en' ? '＋ New conversation' : '＋ Новый разговор'}</button><div class="main-nav" id="main-nav"></div><button class="sidebar-history btn btn-ghost" data-act="go" data-goto="sessions">${oracleLang() === 'en' ? 'Conversation history' : 'История разговоров'}</button></nav>`;
     this.renderNav();
     this.refreshHeaderStatus();
     this.refreshBellDot();
@@ -524,15 +524,15 @@ app.initBgControls = function () {
 
   app.navItems = function() {
     return [
+      { k: 'hub', ico: 'hub', t: oracleLang() === 'en' ? 'Chat' : 'Чат', hint: t('guides') },
       { k: 'home', ico: 'home', t: t('today'), hint: t('ritual') },
-      { k: 'hub', ico: 'hub', t: t('chats'), hint: t('guides') },
-      { k: 'payment', ico: 'monthly', t: t('paymentTab'), hint: t('paymentHint') },
-      { k: 'profile', ico: 'profile', t: t('mine'), hint: t('profile') }
+      { k: 'library', ico: 'monthly', t: oracleLang() === 'en' ? 'Library' : 'Библиотека', hint: oracleLang() === 'en' ? 'Saved readings' : 'Сохранённые разборы' },
+      { k: 'profile', ico: 'profile', t: oracleLang() === 'en' ? 'Profile' : 'Профиль', hint: t('profile') }
     ];
   };
 
   app.renderNav = function() {
-    const active = this.chat.key ? 'hub' : this.view;
+    const active = this.chat.key ? 'hub' : this.view === 'today' ? 'home' : ['payment', 'plan-r06', 'orders-r06', 'memory-r06', 'notifications-r06'].includes(this.view) ? 'profile' : this.view;
     const nav = document.getElementById('main-nav');
     const items = this.navItems();
     const activeIndex = Math.max(0, items.findIndex(n => n.k === active));
@@ -710,4 +710,3 @@ app.initBgControls = function () {
   };
 
   /* ═══ ЭКРАН «СЕГОДНЯ» — статичная база ═══ */
-
