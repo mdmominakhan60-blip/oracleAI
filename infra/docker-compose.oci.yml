@@ -48,6 +48,15 @@ services:
   bot:
     extra_hosts:
       - "host.docker.internal:host-gateway"
+  # BUS-1528: tier="lite" LLM-вызовы (oracle.llm.forecast) обрабатываются
+  # worker'ом, а не api. Без extra_hosts в worker/beat host.docker.internal
+  # не резолвится → connection refused → llm_usage ok=0 на CUSTOM_LLM_MODEL_LITE.
+  worker:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  beat:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
   node-exporter:
     volumes: !override
       - /:/host:ro,rslave

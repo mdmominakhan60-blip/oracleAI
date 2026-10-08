@@ -73,15 +73,85 @@ chmod 600 .env
 4. Проверьте health endpoint и основные пользовательские пути.
 5. После успешной проверки настройте Telegram Mini App URL и webhook согласно выбранному режиму бота.
 
+## Публичный URL (BUS-1529)
+
+Канонический production-хост — **`app.primebond.bond`**. Он резолвится и отдаёт 200 через наш Caddy (`via: 1.1 Caddy`, заголовки из `infra/Caddyfile`):
+
+```bash
+curl -fsS https://app.primebond.bond/            # 200
+curl -fsS https://app.primebond.bond/api/health  # {"ok":true}
+```
+
+`DOMAIN` в `.env` **не нужно менять** — Caddy берёт его из `env_file: ../.env` и по умолчанию `${DOMAIN:-localhost}`; на VPS-проде значение `DOMAIN` не задан, но публичный хост уже работает через Cloudflare → Caddy. Не перепутайте его с `oracleai.trycloudflare.com`:
+
+- `oracleai.trycloudflare.com` — **не резолвится** (`getent` пусто, curl HTTP 000). Это quick-tunnel hostname, который не настроен и не документирован. Не используйте его как production URL.
+- `*.trycloudflare.com` — легитимны **только для staging** (`infra/staging/staging-public-tunnel.sh`, `PUBLIC_URL.txt`). Staging URL меняется при каждом рестарте туннеля; production Quick Tunnel не даёт стабильный hostname.
+
+`WEBAPP_URL` и `PUBLIC_URL` задаются отдельно — это URL, которые бот вставляет в клавиатуру «Открыть Оракула» и которые используются gate'ами.
+
+### Caddy access log
+
+До BUS-1529 Caddy не вёл `access_log` — весь публичный трафик был не наблюдаем (0 строк за 30 дней). Лог пишется в `infra/Caddyfile`:
+
+```caddyfile
+log {
+    output file /var/log/oracleai/caddy-access.log
+}
+```
+
+Том `oracle_logs` монтируется в `infra/docker-compose.yml:187` (`oracle_logs:/var/log/oracleai:rw`) — тот же том, что и у остальных сервисов, с ротацией `json-file`-драйвера. Проверка:
+
+```bash
+curl -fsS https://app.primebond.bond/api/health >/dev/null
+docker compose -p infra exec caddy sh -c 'tail -n 5 /var/log/oracleai/caddy-access.log'
+```
+
 ```bash
 cd /srv/oracleAI
 git fetch --all --tags
 git checkout <approved-commit-or-tag>
-docker compose -f infra/docker-compose.yml build --pull
-docker compose -f infra/docker-compose.yml up -d
-docker compose -f infra/docker-compose.yml ps
+# BUS-833: VPS-прод поднимается С УЧЁТОМ OCI-оверрайда. `docker-compose.oci.yml`
+# задаёт `BACKUP_REQUIRE_OFFSITE: "0"` для профиля `backup` (offsite D4 отложен,
+# карточка 4ac3cd86). Без `-f infra/docker-compose.oci.yml` стек поднимется по
+# `.env.production.example`, где `BACKUP_REQUIRE_OFFSITE=1` и без S3-обвязки
+# `backup-postgres.sh:32` упадёт с exit 1 → бэкап-цикл мёртв, алерты мёртвы.
+# То же самое, если репо откатится на коммит до 4b45cf6 — оверрайд пропадёт.
+docker compose -p infra \
+  -f infra/docker-compose.yml -f infra/docker-compose.oci.yml \
+  --env-file ../.env \
+  build --pull
+docker compose -p infra \
+  -f infra/docker-compose.yml -f infra/docker-compose.oci.yml \
+  --env-file ../.env \
+  up -d --remove-orphans
+docker compose -p infra \
+  -f infra/docker-compose.yml -f infra/docker-compose.oci.yml \
+  --env-file ../.env \
+  ps
 curl --fail --silent --show-error https://YOUR_DOMAIN/api/health
 ```
+
+### Проверка соответствия running container ↔ репо (BUS-833)
+
+После каждого деплоя проверяйте, что оверрайд в репо совпадает с тем, что применился в контейнере. Иначе следующий `prod-stack-up.sh` (автозапуск после ребута, BUS-440) может поднять стек без оверрайда, и бэкап-цикл упадёт без предупреждения:
+
+```bash
+# 1. В репо (на commit, на который перешёл checkout):
+grep -n 'BACKUP_REQUIRE_OFFSITE' infra/docker-compose.oci.yml
+# ожидание: строка 74  →  BACKUP_REQUIRE_OFFSITE: "0"
+
+# 2. В running container:
+docker compose -p infra \
+  -f infra/docker-compose.yml -f infra/docker-compose.oci.yml \
+  --env-file ../.env \
+  config | grep -A30 'services:\n  backup' | grep -A3 BACKUP_REQUIRE_OFFSITE
+# ожидание: BACKUP_REQUIRE_OFFSITE=0
+
+# 3. Самый свежий дамп должен быть локальным (без offsite), но существовать:
+ls -t /srv/oracle/backups/*.dump.enc 2>/dev/null | head -1
+```
+
+Если п.1 или п.2 покажет `1` — **остановите деплой и эскалируйте DevOps**: оверрайд не применился, и `backup-postgres.sh:32` отвергнет цикл. Контрольная точка: `infra/docker-compose.oci.yml:74` и `infra/prod-stack-up.sh:27-31` (COMPOSE_ARGS включает OCI-файл явно).
 
 Минимальный smoke test включает: успешный `migrate`, `GET /api/health` с ответом `{"ok":true}`, `celery -A app.queue:celery_app inspect ping`, открытие русского и английского лендинга, запуск Mini App из Telegram, смену языка, выключение/включение памяти и один ответ проводника. Для web checkout сначала создайте Paddle transaction через серверный API и проверьте sandbox webhook только по `transaction.completed`; не подставляйте `tg_id` или тариф вручную в hosted URL.
 
@@ -122,6 +192,112 @@ curl --fail --silent --show-error https://YOUR_DOMAIN/api/health
 # 3) Верификация деплоя (anti-recidive BUS-194/350/373)
 bash infra/verify-deploy.sh $(git rev-parse --short HEAD) --symbol '<служебная_строка_из_дельты_коммита>'
 ```
+
+## Compose-оверрайды (VPS-специфика) и проверка соответствия
+
+На VPS (`deploy@130.162.245.223`, BUS-704) прод-стек запускается с OCI-оверрайдом
+`infra/docker-compose.oci.yml`. Он задаёт VPS-специфику, которую нет в общем
+`infra/docker-compose.yml` (ПК-стек):
+
+- `node-exporter` — монтирует `/var/lib/oracleai/textfile` вместо ПК-пути
+  `engineering-platform`, без которого бэкап-метрики BUS-833 не скрейпятся.
+- `prometheus` — сеть `oracle_internal`, `extra_hosts: []` (ПК-специфика BUS-270).
+- `backup` — профиль `backup`, VPS-пути `/srv/oracle/backups` и
+  `/etc/oracle/backup.key`, OVERRIDE `BACKUP_REQUIRE_OFFSITE=0` (BUS-833, D4
+  отложен карточкой 4ac3cd86).
+- `api`/`bot`/`worker`/`beat` — `extra_hosts host.docker.internal:host-gateway`
+  для LLM-канала (BUS-1528).
+
+**Правило: оверрайд применяется только если depoy-скрипт подключает `-f`
+оверрайда.** Compose merge-ует files в порядке передачи, и
+`environment:` в оверрайде перекрывает `env_file: ../.env` — но если `-f`
+отсутствует, оверрайд мёртв, а прод берёт значения из `.env`. Источник
+истины — `docker compose config`, а не `.env` и не `docker inspect` (BUS-1520:
+`docker inspect` env и `compose config` не всегда сходятся).
+
+### Канонический recipe: как поднять прод с оверрайдом
+
+**Однозначный способ:** `docker compose ... -f infra/docker-compose.yml -f infra/docker-compose.oci.yml`.
+`-f` передаётся **дважды, в виде массива**, иначе `"-f a.yml -f b.yml"` уходит в один
+аргумент и compose распарсит его как путь к одному файлу (BUS-1534).
+
+```bash
+# Канонический прод — VPS. prod-stack-up.sh уже подключает оверрайд,
+# но при ручном подъёме укажите оба -f явно:
+docker compose -p infra \
+  -f infra/docker-compose.yml -f infra/docker-compose.oci.yml \
+  --env-file .env --profile backup \
+  up -d --build --remove-orphans
+```
+
+### Проверка соответствия running container vs репо
+
+После любого деплоя (особенно если оверрайд или `.env` менялись) — проверить,
+что **running** контейнер имеет значения из оверрайда, а не из `.env`:
+
+```bash
+# 1) Статика: compose-файлы резолвят ожидаемые значения независимо от .env
+python3 scripts/check_compose_overrides.py
+# 2) Живая проверка: running контейнер совпадает с резолвом compose
+docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' infra-backup-1 \
+  | grep -E 'BACKUP_REQUIRE_OFFSITE|BACKUP_S3_URL|BACKUP_S3_ACCESS_KEY|BACKUP_S3_SECRET_KEY|BACKUP_S3_BUCKET'
+# Ожидание: BACKUP_REQUIRE_OFFSITE=0, S3-переменные пустые.
+```
+
+`scripts/check_compose_overrides.py` проверяет шесть пройти (код возврата:
+`0` — все пройдены, `1` — есть FAIL; две проверки опциональны и пропускаются
+по умолчанию, см. ниже):
+
+- **static** — `docker compose -f ... -f ... --profile backup config` резолвит
+  `BACKUP_REQUIRE_OFFSITE: "0"` и пустые S3-переменные в сервисе `backup`
+  (независимо от `.env`, placeholder-файл генерируется из
+  `.env.production.example` на время проверки).
+- **live** — `docker inspect infra-backup-1` имеет те же значения.
+  **Опционально** (`CHECK_LIVE=1`): проверяет running-контейнер, которого нет на
+  dev-стеке; fail-closed — отсутствие контейнера = FAIL, пропуск без флага =
+  PASS.
+- **wiring** — `infra/prod-stack-up.sh` и `.github/workflows/deploy.yml`
+  оба подключают `-f infra/docker-compose.oci.yml`.
+- **env** — VPS `.env` не дублирует оверрайд-переменные. Источник истины —
+  compose; `.env` может содержать `BACKUP_REQUIRE_OFFSITE=1` для ПК-стека с
+  MinIO, но на VPS дублирование запрещено (BUS-1534 §3).
+  **Опционально** (`CHECK_ENV=1`): по умолчанию пропускается, чтобы не мешать
+  локальному `.env` разработчика.
+- **repo-file** — checkout содержит `infra/docker-compose.oci.yml` с
+  `BACKUP_REQUIRE_OFFSITE: "0"` (независимо от того, куда указывает HEAD).
+- **repo-sync** — `git rev-parse HEAD` является ancestor'ом `dev` или `master`.
+  Detached-HEAD на коммит, который не лежит ни на одной из веток (VPS 2026-10-09
+  был на 9023cd1, ancestor'ом neither), — drift: checkout жив, но устарел, и
+  следующий `prod-stack-up.sh` может поднять стек без оверрайда → прод
+  вернётся к =1 без S3/R2.
+
+### VPS-репо и detached-HEAD (BUS-1534 §1)
+
+На VPS (`/opt/oracleAI`) репо должно быть привязано к `oracleAI/dev` и
+переходить на одобренный commit/тег при деплое. Detached-HEAD на старый commit
+намеренный только если он подтверждён и совместим со схемой; иначе — drift.
+
+**Проверка, что оверрайд есть в checkout'е (независимо от того, куда указывает HEAD):**
+
+```bash
+# 1) HEAD репо совпадает с одобренным commit/тегом
+git rev-parse HEAD
+git cat-file -t 4b45cf666d5f643f0705c4a60ce3e62a8006eeee
+# ожидание: commit (если object не найден — checkout старше фикса BUS-833)
+
+# 2) Оверрайд-файл присутствует и содержит оверрайд
+grep -n 'BACKUP_REQUIRE_OFFSITE' infra/docker-compose.oci.yml
+# ожидание: строка 74  →  BACKUP_REQUIRE_OFFSITE: "0"
+
+# 3) Резолв compose на checkout'е (без .env-дублирования):
+python3 scripts/check_compose_overrides.py
+```
+
+Если п.1 или п.2 покажет отсутствие — **остановите деплой и эскалируйте DevOps**:
+checkout устарел, и `prod-stack-up.sh` поднимет стек без оверрайда →
+`backup-postgres.sh:32` отвергнет цикл. Контрольная точка:
+`infra/docker-compose.oci.yml:74` и `infra/prod-stack-up.sh:38`
+(`COMPOSE_ARGS` включает OCI-файл явно).
 
 **Критические правила при обновлении:**
 

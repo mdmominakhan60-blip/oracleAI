@@ -183,6 +183,8 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      # BUS-1529: access_log пишется в /var/log/oracleai/caddy-access.log.
+      - oracle_logs:/var/log/oracleai:rw
     networks:
       - oracle_internal
     restart: unless-stopped

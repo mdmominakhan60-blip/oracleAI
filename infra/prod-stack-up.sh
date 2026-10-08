@@ -27,7 +27,15 @@ set -euo pipefail
 
 INFRA_DIR="$(cd "$(dirname "$0")" && pwd)"
 ENV_FILE="$INFRA_DIR/../.env"
-COMPOSE_FILE="$INFRA_DIR/docker-compose.yml"
+# BUS-1534: OCI-оверрайд (VPS-специфика) подключается явно. Без него
+# node-exporter монтирует ПК-путь /home/softis/.../textfile, которого на
+# VPS нет — бэкап-метрики BUS-833 не скрейпятся, алерты мертвы. Без него
+# также не применяется OVERRIDE BACKUP_REQUIRE_OFFSITE=0 (BUS-833): прод
+# брал значение из .env, и при следующем оверрайде, заданном только в
+# compose, прод мог вернуться к =1 без S3/R2 → backup-postgres.sh упадёт.
+# Массив: иначе quoted "$COMPOSE_FILE" ушёл бы в один аргумент и compose
+# распарсил "-f a.yml -f b.yml" как путь к одному файлу.
+COMPOSE_ARGS=("-f" "$INFRA_DIR/docker-compose.yml" "-f" "$INFRA_DIR/docker-compose.oci.yml")
 PROJECT="infra"
 
 # BUS-1018: скрипт не принимает аргументов. Инцидент 2026-09-11 21:12Z:
@@ -80,7 +88,7 @@ echo "$(date -u +%FT%TZ) prod-stack: поднимаю compose-проект '$PRO
 # После основного подъёма tunnel-оверлей поднимать заново осознанно:
 #   docker compose -p infra -f docker-compose.yml -f docker-compose.tunnel.yml up -d
 docker compose -p "$PROJECT" \
-  -f "$COMPOSE_FILE" \
+  -f "${COMPOSE_ARGS[@]}" \
   --env-file "$ENV_FILE" \
   --profile backup \
   up -d --no-build --remove-orphans
