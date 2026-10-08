@@ -53,6 +53,23 @@ services:
       - /:/host:ro,rslave
       - /var/lib/oracleai/textfile:/textfile:ro
   backup:
+    profiles: ["backup"]
+    environment:
+      # BUS-833: offsite D4 отложен по решению карточки 4ac3cd86 (answered 2026-10-08T19:57Z,
+      # ответ "later" — работаем без offsite). R2-токен не создаётся через CF API (проба
+      # 9109 Unauthorized, только CF dash = действие человека), владелец не передавал
+      # ключи с 10.09. ОVERRIDE-ом задаём 0, чтобы VPS-прод не требовал S3-обвязку,
+      # несмотря на BACKUP_REQUIRE_OFFSITE=1 в .env (там она для ПК-стека с MinIO).
+      # Риск: без offsite прод остаётся с единственной копией данных (volumes VPS) —
+      # это зафиксированный остаточный риск, а не закрытый DoD (см. BUS-833).
+      BACKUP_REQUIRE_OFFSITE: "0"
+      # S3/R2-vygruzka otkljuchena (sm. vyshe). Peremennye ostavljajutsja pustymi namerno:
+      # backup-postgres.sh:20 smotrit na ich nalichie i pri BACKUP_REQUIRE_OFFSITE=0
+      # offsite-vetku ne aktiviruet. Pustye znaceniya ne lomat pgdump/shifrovanie.
+      BACKUP_S3_URL: ""
+      BACKUP_S3_ACCESS_KEY: ""
+      BACKUP_S3_SECRET_KEY: ""
+      BACKUP_S3_BUCKET: ""
     volumes: !override
       - /srv/oracle/backups:/backups
       - /etc/oracle/backup.key:/run/secrets/oracle-backup-key:ro
