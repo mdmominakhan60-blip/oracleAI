@@ -76,6 +76,7 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
     const root = document.getElementById('app-root');
     if (!root) return;
     root.classList.toggle('nav-hidden', !!chatActive);
+    root.classList.toggle('is-chat', !!chatActive);
     if (!chatActive) {
       // Вышли из чата — шапки показываем сразу, иначе «застрянут» скрытыми.
       root.classList.remove('heads-hidden');
@@ -402,7 +403,8 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
     const messages = this.chat.messages;
     const busy = this.chat.busy;
     const pending = this.chat.pending;
-    const agents = this.agents.length ? this.agents : AGENT_FALLBACK;
+    const portrait = ['oracle', 'astro', 'tarot', 'chiromant'].includes(a.code)
+      ? '/static/img/agents/' + a.code + '-photo.webp' : a.avatar;
     const suggest = (chatLang() === 'en' ? CHAT_SUGGESTIONS_EN[a.code] : null)
       || (TEMPLATES[a.code] || a.suggestions || []).slice(0, 3);
     const displayName = chatAgentField(a, 'name');
@@ -414,48 +416,23 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
 
     // виджет-сообщение (спидометр любви и т.п.) — это готовый HTML, не текст:
     // rich() его экранировал бы, поэтому рендерим как есть в .msg.assistant
-    const body = messages.map(m =>
+    const initialGreeting = messages.length === 1 && messages[0].role === 'assistant' && !messages[0].widget && !this.chat.tid && messages[0].text === a.greeting;
+    const isEmpty = !busy && !pending && (!messages.length || initialGreeting);
+    const body = (isEmpty ? [] : messages).map(m =>
       m.widget ? `<div class="msg assistant">${m.widget}</div>`
         : `<div class="msg ${m.role === 'user' ? 'user' : 'assistant'}">${richMd(m.text)}${m.routing ? this.routingHtml(m.routing) : ''}${m.proof ? this.proofHtml(m.proof) : ''}</div>`).join('');
 
-    // Первый экран чата — короткая, персональная точка входа вместо универсального hero-текста.
-    const introGuides = chatLang() === 'en' ? {
-      oracle: { kicker: 'A SPACE FOR CLARITY', title: 'Start with what matters most right now', text: 'Write one thought, feeling or question — together we will find a gentle orientation.' },
-      astro: { kicker: 'AN ASTROLOGICAL ORIENTATION', title: 'See your rhythm through the chart', text: 'Build your natal chart or ask about a coming period — using only the data available.' },
-      tarot: { kicker: 'A READING FOR YOUR QUESTION', title: 'Shape your question for the cards', text: 'Choose a spread and look at the situation from several calm perspectives.' },
-      chiromant: { kicker: 'A CAREFUL PALM READING', title: 'Start with what is actually visible', text: 'Share a palm photo: Mira will read visible zones and connect them to your question.' },
-    } : {
-      oracle: { kicker: 'ТВОЁ ПРОСТРАНСТВО ДЛЯ ЯСНОСТИ', title: 'Начни с того, что сейчас важнее всего', text: 'Можно написать одну мысль, чувство или вопрос — вместе найдём бережный ориентир.' },
-      astro: { kicker: 'АСТРОЛОГИЧЕСКИЙ ОРИЕНТИР', title: 'Посмотри на свой ритм через карту', text: 'Собери натальную карту или задай вопрос о ближайшем периоде — только на основе доступных данных.' },
-      tarot: { kicker: 'РАСКЛАД ПО СЮЖЕТУ ВОПРОСА', title: 'Сформулируй вопрос к картам', text: 'Выберем схему и спокойно посмотрим на ситуацию с разных сторон.' },
-      chiromant: { kicker: 'БЕРЕЖНОЕ ЧТЕНИЕ ЛАДОНИ', title: 'Сначала — что действительно видно', text: 'Пришли фото ладони: Мира разберёт видимые зоны и свяжет их с твоим вопросом.' },
-    };
-    const introGuide = introGuides[a.code] || introGuides.oracle;
-    // R-8 (BUS-509): диалог начался — подсказки не нужны (intro уже не
-    // рендерится по тому же условию), композер становится компактнее.
-    document.getElementById('app-root').classList.toggle('chat-live', messages.length >= 2);
-    // BUS-993 (R05 §1.3): расклад на столе → bg:tarot, иначе bg:chat.
-    // Вызов после вставки innerHTML не нужен — syncBg не зависит от DOM-контента.
+    document.getElementById('app-root').classList.toggle('chat-live', !isEmpty);
     this.syncBg();
-
-    // R-8 (BUS-509): intro рендерится уже зная viewport — при открытой
-    // клавиатуре/малой высоте сразу свёрнут в kicker (не дожидаясь события).
-    const introCollapsed = !!(this._viewportCompact);
-    const introHtml = messages.length <= 1 ? `
-        <section class="agent-intro agent-intro--compact ${introCollapsed ? 'agent-intro--collapsed' : ''} agent-intro--${esc(a.code)}" style="${this.agentThemeStyle(a, a.code)}" aria-label="${esc(chatLang() === 'en' ? 'Guide introduction' : 'Знакомство с проводником')}">
-          <span class="ai-kicker">${introGuide.kicker}</span>
-          <div class="ai-persona">
-            <div class="ai-face">${agentSprite(a, false)}</div>
-            <div class="ai-persona-copy">
-              <div class="ai-name">${esc(displayName || (chatLang() === 'en' ? 'Guide' : 'Проводник'))}</div>
-              <div class="ai-role">${esc(displayTitle)}</div>
-            </div>
-          </div>
-          <div class="ai-next">
-            <b>${introGuide.title}</b>
-            <span>${introGuide.text}</span>
-          </div>
-        </section>` : '';
+    const introHtml = isEmpty ? `
+      <section class="chat-welcome">
+        <img src="${esc(portrait)}" alt="" width="64" height="64">
+        <h2>${chatLang() === 'en' ? 'Where shall we begin?' : 'С чего начнём?'}</h2>
+        <p>${esc(chatAgentField(a, 'greeting') || displayTitle)}</p>
+        ${suggest.length ? `<div class="suggest-chips" role="group" aria-label="${esc(chatT('ideas'))}">
+          ${suggest.slice(0, 3).map(text => `<button type="button" class="chip tpl" data-act="fill" data-val="${esc(text)}">${esc(text)}</button>`).join('')}
+        </div>` : ''}
+      </section>` : '';
 
     const pendHtml = pending ? this.pendingHtml(pending) : '';
 
@@ -463,18 +440,10 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
       <div class="chat-shell chat-shell--${esc(a.code)}" style="${this.agentThemeStyle(a, a.code)}">
         <div class="chat-head">
           <button class="back" data-act="back" aria-label="${esc(chatT('back'))}" title="${esc(chatT('toGuides'))}">‹</button>
-          <div class="agent-avatar" style="${this.agentThemeStyle(a, a.code)}">${agentSprite(a, cheer)}</div>
-          <div style="flex:1;min-width:0">
-            <h1 class="cname">${esc(displayName || (chatLang() === 'en' ? 'Guide' : 'Проводник'))}</h1>
-            <div class="tsub">${esc(displayTitle)}</div>
-            <div class="chat-proof-strip" role="group" aria-label="${homeT('profileQuality')}">
-              <span>✦ ${homeT('evidenceFirst')}</span>${(a.capabilities && a.capabilities.length) ? `<span>· ${homeFormat('toolCount', { count: a.capabilities.length })}</span>` : ''}
-            </div>
-          </div>
+          <div class="agent-avatar" style="${this.agentThemeStyle(a, a.code)}"><img class="agent-face" src="${esc(portrait)}" alt="" width="36" height="36"></div>
+          <span class="cname">${esc(displayName || (chatLang() === 'en' ? 'Guide' : 'Проводник'))}</span>
           <button type="button" class="chat-thread-toggle chat-space-picker" data-act="sessions" aria-expanded="false" aria-controls="sess-panel" aria-label="${esc(chatT('myChatsAria'))}">
-            <span class="chat-thread-toggle__icon">${sigilIcon('monthly')}</span>
-            <span class="chat-thread-toggle__copy"><small>${esc(chatT('space'))}</small><b>${esc(displayName || chatT('myChats'))}</b><em>${esc(chatCount(sessionCount))}</em></span>
-            <span class="chat-thread-toggle__chevron" aria-hidden="true">⌄</span>
+            <span>${chatLang() === 'en' ? 'History' : 'История'}</span>
           </button>
           <button type="button" class="chat-new-session" data-act="new-session" aria-label="${esc(chatT('startChat'))}" title="${esc(chatT('startChat'))}">
             ${sigilIcon('spark')}<span>${esc(chatT('newChat'))}</span>
@@ -487,21 +456,15 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
           </div>
           <div class="sess-list">
             ${sessionCount ? (this.chat.sessions || []).map(s => `
-              <div class="sess-row ${s.id === this.chat.tid ? 'active' : ''}" data-act="open-session" data-tid="${s.id}">
+              <div class="sess-row ${s.id === this.chat.tid ? 'active' : ''}"><button type="button" class="sess-open" data-act="open-session" data-tid="${esc(s.id)}">
                 <span class="sess-status" aria-hidden="true"></span>
-                <div class="sess-copy"><div class="sess-t">${esc(s.title || (chatLang() === 'en' ? 'New conversation' : 'Новый разговор'))}</div><div class="sess-prev">${esc(s.last_text || chatT('continueDialog'))}</div></div>
+                <div class="sess-copy"><div class="sess-t">${esc(s.title || (chatLang() === 'en' ? 'New conversation' : 'Новый разговор'))}</div><div class="sess-prev">${esc(s.last_text || chatT('continueDialog'))}</div></div></button>
                 <button type="button" class="sess-del" data-act="del-session" data-tid="${s.id}" aria-label="${esc(chatT('deleteChat'))}" title="${esc(chatT('deleteChatTitle'))}">✕</button>
               </div>            `).join('') : `<div class="sess-empty">${esc(chatT('firstConversation'))}</div>`}
 
           </div>
           ${sessionCount ? `<button type="button" class="sess-clear" data-act="delete-all-sessions"><span>${esc(chatT('deleteAllChats'))}</span><small>${esc(chatT('deleteAllChatsCopy'))}</small></button>` : ''}
         </section>
-        <div class="agent-tabs" role="tablist" aria-label="${esc(chatT('chooseGuide'))}">
-          ${agents.slice(0, 4).map(b => `
-            <button type="button" class="atab ${b.code === a.code ? 'active' : ''}" style="${this.agentThemeStyle(b, b.code)}" data-act="chat" data-chat="${b.code}" role="tab" aria-selected="${b.code === a.code ? 'true' : 'false'}">
-              <span class="atab-face"><img src="${esc(b.avatar || `/static/img/agents/${b.code}.jpg`)}" alt="" width="24" height="24" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/static/img/oracle-mark.png'"></span><span>${esc(chatAgentField(b, 'name').split(' ')[0])}</span>
-            </button>`).join('')}
-        </div>
         <div class="chat-messages" id="chat-messages" tabindex="0" role="log" aria-label="${esc(chatLang() === 'en' ? 'Conversation history' : 'История разговора')}">
           ${introHtml}
           ${body}
@@ -514,7 +477,6 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
         </div>
         <div class="composer">
                       <div class="composer-context">
-            <span class="composer-presence"><i aria-hidden="true"></i>${esc(displayName || chatT('presence'))} ${esc(chatT('presence'))}</span>
             <div class="composer-context-actions">
               ${a.code === 'chiromant' ? `<button type="button" class="palm-quick-upload" data-act="palm-start" aria-label="${esc(chatT('addPalm'))}"><span aria-hidden="true">✋</span><span>${esc(chatT('palmPhoto'))}</span></button>` : ''}
               <button type="button" class="composer-tools-copy" data-act="tool-toggle" aria-label="${esc(chatT('tools'))}" aria-expanded="false" aria-controls="tool-expand"><span class="composer-tools-copy__icon">${sigilIcon('spark')}</span><span>${esc(chatT('tools'))}</span><span class="composer-tools-copy__chevron" aria-hidden="true">↑</span></button>
@@ -522,13 +484,9 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
           </div>
 
           <div class="composer-top">
-            <textarea class="ipt" id="chat-input" rows="1" maxlength="1000" placeholder="${esc(chatLang() === 'en' ? 'Write to ' : 'Напиши ')}${esc(displayName || (chatLang() === 'en' ? 'your guide' : 'Проводник'))} — ${chatLang() === 'en' ? 'just as it is…' : 'как есть…'}" autocomplete="off" spellcheck="true" aria-label="${esc(chatT('messageFor'))} ${esc(displayName || (chatLang() === 'en' ? 'your guide' : 'Проводник'))}">${esc(this.chat.draft || '')}</textarea>
+            <textarea class="ipt" id="chat-input" rows="1" maxlength="1000" placeholder="${chatLang() === 'en' ? 'Write a question…' : 'Напиши вопрос…'}" autocomplete="off" spellcheck="true" aria-label="${esc(chatT('messageFor'))} ${esc(displayName || (chatLang() === 'en' ? 'your guide' : 'Проводник'))}">${esc(this.chat.draft || '')}</textarea>
             ${busy ? `<button class="send-btn" id="send-btn" data-act="cancel-chat" aria-label="${esc(chatT('stop'))}">×</button>` : `<button class="send-btn" id="send-btn" data-act="send" aria-label="${esc(chatT('send'))}">➤</button>`}
           </div>
-          ${suggest.length ? `
-          <div class="suggest-chips" role="group" aria-label="${esc(chatT('ideas'))}">
-            ${suggest.map(s => `<button type="button" class="chip tpl" data-act="fill" data-val="${esc(s)}">${esc(s)}</button>`).join('')}
-          </div>` : ''}
         </div>
         <div class="tool-expand" id="tool-expand" aria-hidden="true">
           <div class="te-mask" data-act="tool-toggle"></div>
@@ -929,4 +887,3 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
   app.pendingQ = function(v) { if (this.chat.pending) { this.chat.pending.q = v; this.chat.pending.err = ''; } };
 
   // Полноэкранный выбор схемы расклада — весь список с описаниями (премium)
-

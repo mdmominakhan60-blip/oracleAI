@@ -87,15 +87,13 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 /* ── бейджи ── */
 .badge {
   display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px;
-  border: 1px solid var(--line-strong); color: var(--muted); white-space: nowrap;
+  background: var(--panel); border: 1px solid var(--line-strong);
+  color: var(--muted); white-space: nowrap;
 }
-.badge.on { color: var(--green); border-color: rgba(127, 216, 168, .4);
-            background: rgba(127, 216, 168, .1); }
+.badge.on { color: var(--green); border-color: rgba(127, 216, 168, .4); }
 .badge.off { color: var(--muted); }
-.badge.warn { color: var(--gold); border-color: var(--gold-dim);
-              background: var(--gold-dim); }
-.badge.bad { color: var(--red); border-color: rgba(232, 143, 143, .4);
-             background: rgba(232, 143, 143, .1); }
+.badge.warn { color: var(--gold); border-color: var(--gold-dim); }
+.badge.bad { color: var(--red); border-color: rgba(232, 143, 143, .4); }
 .badge.tag { color: var(--violet); border-color: rgba(183, 139, 232, .4); }
 
 /* ── формы ── */

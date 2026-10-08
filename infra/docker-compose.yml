@@ -34,7 +34,7 @@ x-app-common: &app-common
   networks:
     - oracle_internal
   init: true
-  restart: unless-stopped
+  restart: always
   security_opt:
     - no-new-privileges:true
   logging: *observability-logging

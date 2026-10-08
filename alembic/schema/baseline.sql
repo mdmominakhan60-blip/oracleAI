@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS users (
     birth_date       TEXT,
     birth_time       TEXT,
     birth_time_known BIGINT DEFAULT 1,
-    birth_time_precision TEXT DEFAULT 'exact', -- exact|approximate|unknown
+    birth_time_precision TEXT DEFAULT 'exact', -- exact|approx|unknown (канон: app/core/precision.py)
     birth_city       TEXT,
     birth_lat        DOUBLE PRECISION,
     birth_lon        DOUBLE PRECISION,

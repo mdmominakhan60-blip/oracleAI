@@ -55,6 +55,10 @@ def flatten_v2(payload: dict) -> dict:
     flat["chart_precision"] = chart["precision"]
     flat["chart_note"] = chart["note"]
     flat["planets"] = chart["planets"]
+    flat["birth_time"] = payload["profile"]["birth_time"]
+    flat["birth_time_precision"] = payload["profile"]["birth_time_precision"]
+    flat["onboarding_step"] = payload["profile"]["onboarding_step"]
+    flat["natal_technique"] = payload["profile"]["natal_technique"]
     sub = payload["subscription"]
     flat["plan"] = sub["plan"]
     flat["allowance"] = sub["allowance"]
@@ -131,7 +135,9 @@ async def test_me_v2_unknown_user_404(db, user):
 
 GOLDEN_ME_KEYS = {
     "tg_id", "name", "username", "oracle_name", "persona", "tz",
-    "birth_date", "birth_city", "birth_time_known", "onboarded",
+    "birth_date", "birth_city", "birth_time_known", "birth_time",
+    "birth_time_precision", "onboarding_step", "natal_technique",
+    "onboarded",
     "sun", "ascendant", "chart_mode", "chart_precision", "chart_note",
     "planets", "crystals", "sub_active", "sub_days_left",
     "plan", "allowance", "questions_left", "questions_total",
