@@ -234,15 +234,24 @@ async def _expiring_audience(db, now_utc: datetime) -> list:
     WB2-оффер — истёкшим 5+ дней назад, кому тёплый уже ушёл. Третья когорта
     самоочищается: отметка kind='winback2' в deliveries исключает повторный
     отбор навсегда (до новой подписки с новым sub_until).
+
+    BUS-1511/1527: отбор не привязан к onboarded. Оплативший подписку, но не
+    прошедший онбординг (onboarded=0) юзер навсегда выпадал из когорты
+    уведомлений об истечении — coverage-дефект, не аут планировщика. Платный
+    tier (PAID_SUB_LEVELS) хватает для отбора сам по себе.
     """
     soon = (now_utc + timedelta(days=2)).isoformat()
     now_iso = now_utc.isoformat()
     wb2_cutoff = (now_utc - timedelta(days=WINBACK2_AFTER_DAYS)).isoformat()
+    # Значения только из константы кода (не из пользовательского ввода), поэтому
+    # прямая подстановка в SQL безопасна — asyncpg не поддерживает IN :param.
+    paid_levels_sql = ", ".join(f"'{level}'" for level in PAID_SUB_LEVELS)
     out: list = []
     last_id = 0
     while True:
         cur = await db.execute(
-            "SELECT * FROM users WHERE onboarded=1 AND status='active' AND tg_id>:last_id "
+            f"SELECT * FROM users WHERE (onboarded=1 OR sub_level IN ({paid_levels_sql})) "
+            "AND status='active' AND tg_id>:last_id "
             "AND sub_until IS NOT NULL AND ("
             f"  {not_synthetic_tg_sql('users')} "
             "  AND ((sub_until > :now AND sub_until <= :soon AND COALESCE(expiry_notified,0) = 0)"
@@ -459,6 +468,11 @@ async def _expiry_warning(bot, db, user, now_utc) -> None:
 #: WB2 (BUS-197): оффер-подарок уходит, когда подписка истекла 5+ дней назад,
 #: а тёплый winback (expiry_notified=2) юзер уже видел.
 WINBACK2_AFTER_DAYS = 5
+#: BUS-1511/1527: платные tier-коды, которых достаточно для отбора в
+#: _expiring_audience независимо от onboarded. Канон (limits.py:100) +
+#: legacy-алиасы из monetization_catalog.py:231. free/trial/NULL — не платные.
+PAID_SUB_LEVELS = ("vip_core", "vip_plus", "pro", "concierge_v2",
+                   "vip", "vip_year", "guide")
 #: Анти-абьюз BUS-197: redemption winback-кода закрывает оффер на 90 дней.
 WINBACK2_ANTIBUSE_DAYS = 90
 #: Размер партии winback-кодов на месяц (BUS-197 §4: сегмент ~10-20 юзеров/мес).
@@ -1563,19 +1577,35 @@ async def acquire_scheduler_lease(db, owner: str, *, now: datetime | None = None
 
 async def finish_scheduler_lease(db, owner: str, *, status: str,
                                  error: str | None = None,
-                                 now: datetime | None = None) -> bool:
-    """Release only the lease owned by this process and record the outcome."""
+                                 now: datetime | None = None,
+                                 lease_seconds: int = LEASE_SECONDS) -> bool:
+    """Release only the lease owned by this process and record the outcome.
+
+    BUS-1533: при статусе `ok` lease_until ПРОДЛЯЕТСЯ на LEASE_SECONDS, а не
+    сбрасывается в `now`. Раньше после успешного тика lease_until == now, и
+    следующий acquire (через TICK_SECONDS=600) не мог захватить lease — owner
+    каждый тик новый (uuid), а условие `lease_until <= now` ложно, поэтому
+    планировщик уходил в standby навсегда. daily_stats писалась ровно один
+    раз (21:51:58Z после ребута), потом — ни одного тика. При `error`
+    lease_until сбрасывается в now: lease освобождается для recovery-owner.
+    """
     if status not in {"ok", "error"}:
         raise ValueError("scheduler lease status must be ok or error")
     stamp = (now or datetime.now(timezone.utc)).isoformat()
     message = (error or "")[:500] or None
+    # ok → lease_until = now + lease_seconds (продлеваем, следующий тик может
+    # захватить); error → lease_until = now (освобождаем для recovery).
+    lease_until = stamp if status == "error" else (
+        now or datetime.now(timezone.utc) + timedelta(seconds=lease_seconds)
+    ).isoformat()
     async with transaction(db):
         cursor = await db.execute(
-            "UPDATE scheduler_leases SET lease_until=:stamp, last_finished_at=:stamp2, "
-            "last_status=:status, last_error=:error, "
+            "UPDATE scheduler_leases SET lease_until=:lease_until, "
+            "last_finished_at=:stamp, last_status=:status, last_error=:error, "
             "failure_count=failure_count + :fail_inc "
             "WHERE name=:name AND owner=:owner",
-            {"stamp": stamp, "stamp2": stamp, "status": status, "error": message,
+            {"lease_until": lease_until, "stamp": stamp, "status": status,
+             "error": message,
              "fail_inc": 1 if status == "error" else 0,
              "name": SCHEDULER_NAME, "owner": owner},
         )

@@ -53,8 +53,18 @@ class Settings:
     custom_base_url: str = os.getenv("CUSTOM_LLM_BASE_URL", "").rstrip("/")
     custom_api_key: str = os.getenv("CUSTOM_LLM_API_KEY", "")
     custom_model_main: str = os.getenv("CUSTOM_LLM_MODEL", "")
-    custom_model_lite: str = os.getenv("CUSTOM_LLM_MODEL_LITE",
-                                       os.getenv("CUSTOM_LLM_MODEL", ""))
+    # BUS-1533/1528: `or`-цепочка, а не default-аргумент os.getenv: пустая
+    # строка `CUSTOM_LLM_MODEL_LITE=` (явно задана, но не заполнена) должна
+    # откатываться на CUSTOM_LLM_MODEL и далее на дефолт. default-аргумент
+    # срабатывает только когда переменная вообще не задана — при пустом
+    # значении он возвращает эту пустую строку (грабль, выявлен тестом).
+    custom_model_lite: str = os.getenv("CUSTOM_LLM_MODEL_LITE") or \
+        os.getenv("CUSTOM_LLM_MODEL") or "oc/claude-sonnet-5"
+    # BUS-1533/1528: дефолт lite-модели — живая модель из текущего live-каталога
+    # прокси (верифицировано 09.10: antigravity/gemini-3.6-flash-high → 400
+    # "not available in the active live catalog"). Prod/окружения без явного
+    # CUSTOM_LLM_MODEL_LITE больше не упадут на catalog-drifted модель. Явное
+    # значение в .env переопределяет дефолт без деплоя кода.
     # Defaults follow the current provider catalog; production may override them
     # explicitly after a live capability probe.
     anthropic_main: str = os.getenv("ANTHROPIC_MODEL_MAIN", "claude-sonnet-4-6")

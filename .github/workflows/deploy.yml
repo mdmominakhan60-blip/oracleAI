@@ -93,6 +93,38 @@ jobs:
               exit 1
             fi
           done
+          # BUS-1529: Caddy должен вести access_log в oracle_logs-том — иначе
+          # весь публичный трафик не наблюдаем (0 строк за 30 дней, verified live).
+          # Проверяем, что Caddyfile содержит `log`-блок с output file, а caddy-сервис
+          # монтирует oracle_logs:/var/log/oracleai. Иначе деплой не уходит.
+          if ! grep -qE '^\s*log \{' infra/Caddyfile; then
+            echo "::error title=caddy-access-log BUS-1529::в Caddyfile нет `log { ... }` блока — Caddy не ведёт access_log"
+            exit 1
+          fi
+          if ! grep -qE 'output file /var/log/oracleai/caddy-access.log' infra/Caddyfile; then
+            echo "::error title=caddy-access-log BUS-1529::в Caddyfile log-блок не пишет в /var/log/oracleai/caddy-access.log"
+            exit 1
+          fi
+          # caddy-сервис должен монтируть oracle_logs:/var/log/oracleai — иначе
+          # access_log не будет писаться. Проверяем РЕАЛЬНЫЙ mount (а не комментарий
+          # или env-переменная): source=oracle_logs и target=/var/log/oracleai:rw
+          # в пределах блока caddy. `:rw` важен — без него том read-only и логи
+          # молча не пишутся (verified: gate A=PASS, B/C=FAIL на broken-конфигах).
+          if ! awk '/^  caddy:/{svc=1} svc && /source: oracle_logs/ {src=1} svc && src && /target: \/var\/log\/oracleai:rw/ {found=1; exit} END {exit !found}' /tmp/oracleai-compose.yml; then
+            echo "::error title=caddy-access-log BUS-1529::caddy-сервис не монтирует oracle_logs:/var/log/oracleai — логи не будут писаться"
+            exit 1
+          fi
+          # BUS-1529: канонический публичный хост и поведение access_log должны быть
+          # задокументированы в DEPLOYMENT.md, иначе следующий инцидент с URL/Caddy
+          # будет непонятен. Проверяем оба facta.
+          if ! grep -qE 'app\.primebond\.bond' docs/DEPLOYMENT.md; then
+            echo "::error title=caddy-access-log BUS-1529::в DEPLOYMENT.md нет канонического хоста app.primebond.bond"
+            exit 1
+          fi
+          if ! grep -qE 'caddy-access\.log' docs/DEPLOYMENT.md; then
+            echo "::error title=caddy-access-log BUS-1529::в DEPLOYMENT.md нет документирования caddy-access.log"
+            exit 1
+          fi
           rm -f .env
           # BUS-1534: оверрайд должен резолвиться в compose config, а не только
           # в .env. Если оверрайд (BACKUP_REQUIRE_OFFSITE=0, пустые S3-переменные)
