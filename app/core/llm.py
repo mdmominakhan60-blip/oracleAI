@@ -233,7 +233,13 @@ async def record_usage(db, *, provider: str, model: str, purpose: str,
             "crystal_spend": 0,
             "overage": int(ctx.charged_source == "crystals")})
     except Exception as e:  # noqa: BLE001
-        log.debug("расход LLM не записан: %s", e)
+        # BUS-1533: `log.debug` превращал молчаливое проваливание записи в
+        # llm_usage в невидимую точку остановки метрик — после ребута бота
+        # пайплайн писался ровно один раз (21:51:58Z) и стоп, а алерты
+        # (OracleAILLMFailureRateHigh / ops_alerts) не среагировали, потому что
+        # сбои не попадали ни в логи, ни в prometheus. Пишем warning: это не
+        # влияет на ответ клиентке, но даёт оператору сигнал.
+        log.warning("расход LLM не записан в llm_usage: %s", e)
     try:
         from . import product_cost
         await product_cost.record_llm(

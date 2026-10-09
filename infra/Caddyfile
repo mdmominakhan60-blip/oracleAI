@@ -3,6 +3,13 @@
 {$DOMAIN} {
 	encode zstd gzip
 
+	# BUS-1529: Caddy не вёл access_log — весь публичный трафик был
+	# не наблюдаем (0 строк за 30 дней). Пишем в oracle_logs-том, который
+	# уже монтируется у остальных сервисов и ротируется json-file-драйвером.
+	log {
+		output file /var/log/oracleai/caddy-access.log
+	}
+
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"

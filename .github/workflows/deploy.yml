@@ -65,13 +65,88 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp .env.example .env
+          cp .env.production.example .env
           # Compose resolves env_file: ../.env and ${VAR:?} interpolation only via
           # --env-file when the compose file lives in a subdirectory; empty required
           # values are filled with placeholders — this step checks syntax, not secrets.
+          # DATABASE_URL_ADMIN is referenced by compose as ${DATABASE_URL_ADMIN:?...}
+          # but is NOT declared in .env.production.example (BUS-755: it is injected
+          # only into the migrate service); without it here `compose config` aborts
+          # with "must be set to an admin (DDL) PostgreSQL URL" and the whole
+          # validation step fails on a template problem, not on our wiring.
           sed -i 's#^DATABASE_URL=$#DATABASE_URL=postgresql+asyncpg://placeholder:placeholder@postgres:5432/placeholder#; s#^DATABASE_URL_ADMIN=$#DATABASE_URL_ADMIN=postgresql+asyncpg://placeholder:placeholder@postgres:5432/placeholder#; s#^POSTGRES_PASSWORD=$#POSTGRES_PASSWORD=placeholder#; s#^GRAFANA_ADMIN_PASSWORD=$#GRAFANA_ADMIN_PASSWORD=placeholder#' .env
-          docker compose --env-file .env -f infra/docker-compose.yml config >/tmp/oracleai-compose.yml
+          grep -q '^DATABASE_URL_ADMIN=' .env || echo 'DATABASE_URL_ADMIN=postgresql+asyncpg://placeholder:placeholder@postgres:5432/placeholder' >> .env
+          # BUS-1520: OCI-оверрайд включается — иначе валидация пропускала
+          # VPS-специфику (textfile-путь, prometheus-сеть, backup-профиль).
+          docker compose --env-file .env -f infra/docker-compose.yml -f infra/docker-compose.oci.yml config >/tmp/oracleai-compose.yml
+          # BUS-1528: every app-контейнер, чей код зовёт LLM (api/bot/worker/beat),
+          # должен резолвить host.docker.internal — иначе tier="lite" LLM-вызовы
+          # (oracle.llm.forecast, обрабатываемые worker'ом) валипают с
+          # connection refused → llm_usage ok=0. Проверяем, что extra_hosts
+          # покрывает все четыре сервиса, иначе деплой не уходит.
+          for svc in api bot worker beat; do
+            if ! awk -v svc="$svc" '
+              /^  [a-z]/ {cur=$1; sub(":$","",cur)}
+              cur==svc && /^    extra_hosts:/ {found=1; exit}
+            END {exit !found}' /tmp/oracleai-compose.yml; then
+              echo "::error title=extra_hosts BUS-1528::сервис '$svc' не имеет extra_hosts host.docker.internal:host-gateway — LLM-канал мёртв"
+              exit 1
+            fi
+          done
+          # BUS-1529: Caddy должен вести access_log в oracle_logs-том — иначе
+          # весь публичный трафик не наблюдаем (0 строк за 30 дней, verified live).
+          # Проверяем, что Caddyfile содержит `log`-блок с output file, а caddy-сервис
+          # монтирует oracle_logs:/var/log/oracleai. Иначе деплой не уходит.
+          if ! grep -qE '^\s*log \{' infra/Caddyfile; then
+            echo "::error title=caddy-access-log BUS-1529::в Caddyfile нет `log { ... }` блока — Caddy не ведёт access_log"
+            exit 1
+          fi
+          if ! grep -qE 'output file /var/log/oracleai/caddy-access.log' infra/Caddyfile; then
+            echo "::error title=caddy-access-log BUS-1529::в Caddyfile log-блок не пишет в /var/log/oracleai/caddy-access.log"
+            exit 1
+          fi
+          # caddy-сервис должен монтируть oracle_logs:/var/log/oracleai — иначе
+          # access_log не будет писаться. Проверяем РЕАЛЬНЫЙ mount (а не комментарий
+          # или env-переменная): source=oracle_logs и target=/var/log/oracleai:rw
+          # в пределах блока caddy. `:rw` важен — без него том read-only и логи
+          # молча не пишутся (verified: gate A=PASS, B/C=FAIL на broken-конфигах).
+          if ! awk '/^  caddy:/{svc=1} svc && /source: oracle_logs/ {src=1} svc && src && /target: \/var\/log\/oracleai:rw/ {found=1; exit} END {exit !found}' /tmp/oracleai-compose.yml; then
+            echo "::error title=caddy-access-log BUS-1529::caddy-сервис не монтирует oracle_logs:/var/log/oracleai — логи не будут писаться"
+            exit 1
+          fi
+          # BUS-1529: канонический публичный хост и поведение access_log должны быть
+          # задокументированы в DEPLOYMENT.md, иначе следующий инцидент с URL/Caddy
+          # будет непонятен. Проверяем оба facta.
+          if ! grep -qE 'app\.primebond\.bond' docs/DEPLOYMENT.md; then
+            echo "::error title=caddy-access-log BUS-1529::в DEPLOYMENT.md нет канонического хоста app.primebond.bond"
+            exit 1
+          fi
+          if ! grep -qE 'caddy-access\.log' docs/DEPLOYMENT.md; then
+            echo "::error title=caddy-access-log BUS-1529::в DEPLOYMENT.md нет документирования caddy-access.log"
+            exit 1
+          fi
           rm -f .env
+          # BUS-1534: оверрайд должен резолвиться в compose config, а не только
+          # в .env. Если оверрайд (BACKUP_REQUIRE_OFFSITE=0, пустые S3-переменные)
+          # не попал в резолв — wiring сломан (deploy-скрипт не подключает -f
+          # oci.yml), и прод может вернуться к =1 без S3/R2 → backup упадёт.
+          # Проверяем на том же резолве, что и extra_hosts выше.
+          for kv in 'BACKUP_REQUIRE_OFFSITE: "0"' 'BACKUP_S3_URL: ""' \
+                    'BACKUP_S3_ACCESS_KEY: ""' 'BACKUP_S3_SECRET_KEY: ""' \
+                    'BACKUP_S3_BUCKET: ""'; do
+            if ! grep -qF "$kv" /tmp/oracleai-compose.yml; then
+              echo "::error title=compose-override BUS-1534::в резолве compose нет '$kv' — оверрайд не применяется на VPS"
+              exit 1
+            fi
+          done
+          # BUS-1534: единый чекер compose-оверрайдов (static/wiring/env/repo).
+          # Статика уже резолвилась выше; чекер повторяет её независимо и
+          # добавляет проверки, которые не ловит grep-проба: wiring (оба
+          # deploy-скрипта подключают -f oci.yml), repo-file/repo-sync (checkout
+          # не на коммите старше 4b45cf6 и не на detached-HEAD в сторону дрейфа).
+          # CHECK_REPO=. — чекер должен проверять ТОТ checkout, в котором
+          # запускается workflow (actions/checkout), а не разработчика.
+          CHECK_REPO="$GITHUB_WORKSPACE" python3 scripts/check_compose_overrides.py
 
       - name: Prepare SSH trust
         if: steps.gate.outputs.deploy_enabled == 'true'
@@ -112,14 +187,24 @@ jobs:
           # Приватный репо: клон/fetch только по SSH через read-only deploy key,
           # установленный на VPS (~deploy/.ssh/config → IdentityFile).
           REPO_URL="git@github.com:mdmominakhan60-blip/oracleAI.git"
-          COMPOSE_FILE="infra/docker-compose.yml"
+          # BUS-1534: OCI-оверрайд (VPS-специфика: textfile-путь,
+          # prometheus-сеть, backup-профиль, OVERRIDE BACKUP_REQUIRE_OFFSITE=0)
+          # подключается явно — без него `docker compose config` резолвит
+          # ПК-путь /home/softis/.../textfile, которого на VPS нет, и
+          # node-exporter не скрейпит бэкап-метрики. Ранее (BUS-1520) тут был
+          # один -f docker-compose.yml — оверрайд никогда не применялся, и
+          # прод-контейнер брал BACKUP_REQUIRE_OFFSITE из .env (тогда =0, но
+          # при следующем оверрайде, заданном только в compose, прод мог
+          # вернуться к =1 без S3/R2 → backup-postgres.sh упадёт).
+          # Массив: quoted "infra/... -f infra/..." ушёл бы в один аргумент.
+          COMPOSE_ARGS=("-f" "infra/docker-compose.yml" "-f" "infra/docker-compose.oci.yml")
           PREVIOUS_SHA=""
 
           rollback() {
             echo "Deployment failed; attempting rollback to ${PREVIOUS_SHA:-none}" >&2
             if [ -n "$PREVIOUS_SHA" ]; then
               git checkout --detach "$PREVIOUS_SHA" || true
-              docker compose --env-file .env -f "$COMPOSE_FILE" up -d --build --remove-orphans || true
+              docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" up -d --build --remove-orphans || true
             fi
           }
           trap rollback ERR
@@ -140,24 +225,24 @@ jobs:
             exit 1
           }
 
-          docker compose --env-file .env -f "$COMPOSE_FILE" config >/tmp/oracleai-compose-resolved.yml
-          docker compose --env-file .env -f "$COMPOSE_FILE" pull --ignore-pull-failures
-          docker compose --env-file .env -f "$COMPOSE_FILE" up -d --build --remove-orphans
+          docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" config >/tmp/oracleai-compose-resolved.yml
+          docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" pull --ignore-pull-failures
+          docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" up -d --build --remove-orphans
 
           for attempt in $(seq 1 36); do
-            if docker compose --env-file .env -f "$COMPOSE_FILE" exec -T api curl -fsS http://127.0.0.1:8080/api/health >/tmp/oracleai-health.json; then
+            if docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" exec -T api curl -fsS http://127.0.0.1:8080/api/health >/tmp/oracleai-health.json; then
               break
             fi
             if [ "$attempt" -eq 36 ]; then
-              docker compose --env-file .env -f "$COMPOSE_FILE" ps
-              docker compose --env-file .env -f "$COMPOSE_FILE" logs --no-color --tail=120 api migrate worker beat caddy
+              docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" ps
+              docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" logs --no-color --tail=120 api migrate worker beat caddy
               exit 1
             fi
             sleep 5
           done
 
           grep -q '"ok"[[:space:]]*:[[:space:]]*true' /tmp/oracleai-health.json
-          docker compose --env-file .env -f "$COMPOSE_FILE" ps
+          docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" ps
           docker image prune -f
           trap - ERR
           echo "Deployment ${DEPLOY_SHA} is healthy"

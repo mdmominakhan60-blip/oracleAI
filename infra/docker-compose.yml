@@ -183,6 +183,8 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      # BUS-1529: access_log пишется в /var/log/oracleai/caddy-access.log.
+      - oracle_logs:/var/log/oracleai:rw
     networks:
       - oracle_internal
     restart: unless-stopped
@@ -196,6 +198,16 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
+    # BUS-1529: caddy — единственный build-сервис без healthcheck (до этого
+    # комментарий в verify-deploy.sh: «beat вообще без healthcheck» — caddy
+    # тоже). Caddy слушает admin API на localhost:2019, поэтому проверяем
+    # через него, а не через публичный 443 (там TLS-handshake + SNI).
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:2019/config/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # Observability is part of the default stack. Grafana is bound to loopback
   # by default; use an SSH tunnel instead of exposing Prometheus/Loki publicly.

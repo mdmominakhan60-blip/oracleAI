@@ -240,3 +240,26 @@ async def test_scheduler_lease_recovers_after_expiry_and_records_failure(db):
     assert status["status"] == "error"
     assert status["failure_count"] == 1
     assert status["last_error"] == "fixture failure"
+
+
+async def test_scheduler_lease_renews_on_ok_so_next_tick_can_claim(db):
+    """BUS-1533: successful tick must PROLONG the lease, not reset it to now.
+
+    `run()` calls finish_scheduler_lease(status="ok") every tick with a fresh
+    owner uuid. If lease_until were reset to `now`, the next acquire 600 s later
+    could never claim it (owner differs, lease_until <= now is false) and the
+    scheduler silently went standby after one tick — daily_stats was written
+    exactly once (21:51:58Z) and never again.
+    """
+    first = datetime(2026, 8, 3, 5, 0, tzinfo=timezone.utc)
+    next_tick = first + timedelta(seconds=scheduler.TICK_SECONDS)
+    assert await scheduler.acquire_scheduler_lease(db, "owner-a", now=first)
+    assert await scheduler.finish_scheduler_lease(
+        db, "owner-a", status="ok", now=first)
+    # A different process (new owner uuid, as run() does every tick) must be
+    # able to claim the lease on the next tick — renewal keeps it claimable.
+    assert await scheduler.acquire_scheduler_lease(
+        db, "owner-b", now=next_tick)
+    status = await scheduler.scheduler_status(db)
+    assert status["status"] == "running"
+    assert status["run_count"] == 2
