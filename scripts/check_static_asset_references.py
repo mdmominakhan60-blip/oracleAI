@@ -38,6 +38,12 @@ def _path_for_url(value: str) -> Path | None:
 def _check_absolute(path: Path, text: str, source: Path, errors: list[str]) -> None:
     for match in URL_RE.finditer(text):
         value = match.group("url")
+        # JS single-quoted strings escape an inner quote as \', so a reference
+        # such as ...this.src='/static/img/oracle-mark.png\' is matched with a
+        # trailing backslash. The backslash is not part of the path — strip it
+        # before resolution, otherwise every such reference is a false positive
+        # (BUS-1540: CI quality/frontend-quality jobs failed on this).
+        value = value.rstrip("\\")
         if _is_dynamic(value):
             continue
         target = _path_for_url(value)
