@@ -83,6 +83,7 @@ document.addEventListener('submit', function (event) {
 document.addEventListener('click', function (event) {
   const target = event.target && event.target.closest ? event.target : null;
   if (!target) return;
+  if (app._obSaving && target.closest('.onboarding')) return;
 
   // Шаг онбординга: выбор намерения (data-intent) → шаг 2.
   const intent = target.closest('[data-intent]');
@@ -133,7 +134,32 @@ document.addEventListener('click', function (event) {
 // Онбординг: Enter в полях ввода → следующий шаг; Escape → назад/закрыть.
 document.addEventListener('keydown', function (event) {
   if (!document.querySelector('.onboarding')) return;
+  if (event.isComposing || event.defaultPrevented || app._obSaving) return;
   const input = event.target;
+  if (input?.id === 'ob-city' && input.getAttribute('aria-expanded') === 'true') {
+    const options = [...document.querySelectorAll('[data-city-pick]')];
+    if (['ArrowDown', 'ArrowUp'].includes(event.key) && options.length) {
+      event.preventDefault();
+      app._obCityIndex = ((app._obCityIndex ?? -1) + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+      options.forEach((option, i) => option.setAttribute('aria-selected', String(i === app._obCityIndex)));
+      input.setAttribute('aria-activedescendant', options[app._obCityIndex].id);
+      options[app._obCityIndex].scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if (app._obCityIndex >= 0) app._obSelectCity(app._obCityIndex);
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      app._obCityRequest++;
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      document.getElementById('ob-city-list').style.display = 'none';
+      return;
+    }
+  }
   if (event.key === 'Enter' && input && input.tagName === 'INPUT' && input.id && input.id.startsWith('ob-')) {
     event.preventDefault();
     if (typeof app._obAdvance === 'function') app._obAdvance();
@@ -146,44 +172,31 @@ document.addEventListener('keydown', function (event) {
   }
 });
 
-// Онбординг шаг 5: подсказки городов (mock) по мере ввода.
+// Onboarding date inputs share one draft; city results come from the API.
 document.addEventListener('input', function (event) {
   const input = event.target;
+  if (input?.id === 'ob-date-picker') {
+    const [year = '', month = '', day = ''] = input.value.split('-');
+    document.getElementById('ob-day').value = day;
+    document.getElementById('ob-month').value = month;
+    document.getElementById('ob-year').value = year;
+  } else if (['ob-day', 'ob-month', 'ob-year'].includes(input?.id)) {
+    const value = id => document.getElementById(id).value;
+    document.getElementById('ob-date-picker').value = `${value('ob-year')}-${value('ob-month').padStart(2, '0')}-${value('ob-day').padStart(2, '0')}`;
+  }
   if (!input || input.id !== 'ob-city') return;
-  const wrap = input.closest('.combobox');
-  const list = wrap && wrap.querySelector('#ob-city-list');
-  const status = wrap && wrap.querySelector('[data-ob-city-status]');
-  if (!wrap || !list) return;
-
-  const q = input.value.trim().toLowerCase();
-  const en = oracleLang() === 'en';
-  const suggestions = ['Казань', 'Караганда', 'Касабланка'].filter(c => !q || c.toLowerCase().includes(q));
-
-  if (status) status.hidden = true;
-  wrap.setAttribute('aria-expanded', suggestions.length ? 'true' : 'false');
-  list.style.display = suggestions.length ? '' : 'none';
-  list.innerHTML = suggestions.map(c => `
-    <li class="combobox__option" role="option" data-city-pick="${esc(c)}" aria-selected="false">
-      <span class="combobox__city">${esc(c)}</span>
-    </li>`).join('');
-  if (app.onboardingData) app.onboardingData.city = input.value.trim();
+  app._obSearchCity(input);
 });
 
 // Онбординг шаг 5: выбор города из подсказок.
 document.addEventListener('click', function (event) {
+  if (event.target?.closest?.('[data-ob-city-retry], [data-ob-city-search]')) {
+    app._obSearchCity(document.getElementById('ob-city'));
+    return;
+  }
   const option = event.target && event.target.closest ? event.target.closest('[data-city-pick]') : null;
   if (!option) return;
-  const input = document.getElementById('ob-city');
-  if (!input) return;
-  input.value = option.dataset.cityPick;
-  if (app.onboardingData) app.onboardingData.city = option.dataset.cityPick;
-  // Фокус — обратно в поле: Enter продолжает онбординг, скринридер
-  // остаётся в контексте combobox.
-  input.focus();
-  const wrap = input.closest('.combobox');
-  const list = wrap && wrap.querySelector('#ob-city-list');
-  if (wrap) wrap.setAttribute('aria-expanded', 'false');
-  if (list) list.style.display = 'none';
+  app._obSelectCity(Number(option.dataset.cityPick));
   haptic('light');
 });
 

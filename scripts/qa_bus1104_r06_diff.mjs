@@ -67,7 +67,17 @@ function miniServer() {
     const file = path.join(MINIAPP, p);
     fs.readFile(file, (err, data) => {
       if (err) {
-        if (p.startsWith('/api/')) { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: true })); return; }
+        if (p.startsWith('/api/')) {
+          // /api/agents в миниаппе принимается как массив (05-app.js:652 this.agents = await api(...)),
+          // `{ok:true}` даёт TypeError .find is not a function. Прочие /api/* — заглушки-объекты.
+          const body = p === '/api/agents'
+            ? [{ code: 'oracle', name: 'Лилит', accent: '#e8c56b' },
+               { code: 'astro', name: 'Урания', accent: '#8cc8ff' },
+               { code: 'tarot', name: 'Мадам Ленорман', accent: '#e7a8d8' },
+               { code: 'chiromant', name: 'Мира', accent: '#6fd6b0', avatar: '/static/img/agents/chiromant.jpg' }]
+            : { ok: true };
+          res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); return;
+        }
         res.writeHead(404); res.end('nf'); return;
       }
       res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });

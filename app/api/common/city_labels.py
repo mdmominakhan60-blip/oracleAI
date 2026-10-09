@@ -1,0 +1,25 @@
+"""Display metadata for the existing, coordinate-backed city dictionary."""
+
+COUNTRIES_BY_ZONE = {
+    "Europe/Moscow": "Россия", "Asia/Novosibirsk": "Россия",
+    "Asia/Yekaterinburg": "Россия", "Europe/Samara": "Россия",
+    "Asia/Omsk": "Россия", "Asia/Krasnoyarsk": "Россия",
+    "Europe/Volgograd": "Россия", "Europe/Saratov": "Россия",
+    "Asia/Vladivostok": "Россия", "Asia/Irkutsk": "Россия",
+    "Europe/Kaliningrad": "Россия", "Europe/Minsk": "Беларусь",
+    "Europe/Kyiv": "Украина", "Asia/Almaty": "Казахстан",
+    "Asia/Tashkent": "Узбекистан", "Asia/Bishkek": "Кыргызстан",
+    "Asia/Dushanbe": "Таджикистан", "Asia/Baku": "Азербайджан",
+    "Asia/Yerevan": "Армения", "Asia/Tbilisi": "Грузия",
+    "Europe/Chisinau": "Молдова", "Europe/Riga": "Латвия",
+    "Europe/Vilnius": "Литва", "Europe/Tallinn": "Эстония",
+    "Europe/Warsaw": "Польша", "Europe/Berlin": "Германия",
+    "Europe/Prague": "Чехия", "Europe/London": "Великобритания",
+    "Europe/Paris": "Франция", "Europe/Rome": "Италия",
+    "Europe/Madrid": "Испания", "Europe/Lisbon": "Португалия",
+    "Europe/Istanbul": "Турция", "Asia/Jerusalem": "Израиль",
+    "Asia/Dubai": "ОАЭ", "America/New_York": "США",
+    "America/Los_Angeles": "США", "America/Chicago": "США",
+    "America/Toronto": "Канада", "Asia/Bangkok": "Таиланд",
+    "Asia/Shanghai": "Китай", "Asia/Tokyo": "Япония",
+}

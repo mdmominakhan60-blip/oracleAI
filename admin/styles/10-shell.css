@@ -27,7 +27,7 @@
 }
 .nav-item i { font-style: normal; font-size: 15px; width: 18px; text-align: center; }
 .nav-item:hover { background: var(--panel); color: var(--ink); }
-.nav-item.active { background: var(--gold-dim); color: var(--gold); }
+.nav-item.active { background: var(--panel); color: var(--ink); border-left: 3px solid var(--gold); }
 .sidebar-foot { margin-top: auto; padding: 12px 8px 0; border-top: 1px solid var(--line);
                 font-size: 12px; color: var(--muted); }
 .who { margin-bottom: 6px; }
