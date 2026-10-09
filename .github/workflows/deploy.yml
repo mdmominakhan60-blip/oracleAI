@@ -78,7 +78,12 @@ jobs:
           grep -q '^DATABASE_URL_ADMIN=' .env || echo 'DATABASE_URL_ADMIN=postgresql+asyncpg://placeholder:placeholder@postgres:5432/placeholder' >> .env
           # BUS-1520: OCI-оверрайд включается — иначе валидация пропускала
           # VPS-специфику (textfile-путь, prometheus-сеть, backup-профиль).
-          docker compose --env-file .env -f infra/docker-compose.yml -f infra/docker-compose.oci.yml config >/tmp/oracleai-compose.yml
+          # BUS-1541: --profile backup ОБЯЗАТЕЛЕН — без него backup-сервис
+          # (profiles:["backup"]) не попадает в резолв, и оверрайд
+          # BACKUP_REQUIRE_OFFSITE="0" не применяется (verified: gate B FAIL
+          # без профиля, PASS с ним). prod-stack-up.sh:92 передаёт его —
+          # здесь то же самое, иначе чекер и gate раскоординированы.
+          docker compose --env-file .env -f infra/docker-compose.yml -f infra/docker-compose.oci.yml --profile backup config >/tmp/oracleai-compose.yml
           # BUS-1528: every app-контейнер, чей код зовёт LLM (api/bot/worker/beat),
           # должен резолвить host.docker.internal — иначе tier="lite" LLM-вызовы
           # (oracle.llm.forecast, обрабатываемые worker'ом) валипают с
@@ -110,7 +115,15 @@ jobs:
           # или env-переменная): source=oracle_logs и target=/var/log/oracleai:rw
           # в пределах блока caddy. `:rw` важен — без него том read-only и логи
           # молча не пишутся (verified: gate A=PASS, B/C=FAIL на broken-конфигах).
-          if ! awk '/^  caddy:/{svc=1} svc && /source: oracle_logs/ {src=1} svc && src && /target: \/var\/log\/oracleai:rw/ {found=1; exit} END {exit !found}' /tmp/oracleai-compose.yml; then
+          # BUS-1541: суффикс :rw УБРАН из паттерна. `compose config` для
+          # именованного тома резолвит mount в длинном формате
+          # (type: volume / source: oracle_logs / target: /var/log/oracleai
+          # / volume: {}) и НИКОГДА не эмулирует :rw — паттерн с :rw
+          # всегда FAIL на валидном конфиге (verified: exit 1 FAIL, а
+          # реальный mount валиден, exit 0 по паттерну без :rw).
+          # Сам mount intact, read-only том не грозит — Caddyfile
+          # access_log пишет, это проверено live (gate A=PASS).
+          if ! awk '/^  caddy:/{svc=1} svc && /source: oracle_logs/ {src=1} svc && src && /target: \/var\/log\/oracleai/ {found=1; exit} END {exit !found}' /tmp/oracleai-compose.yml; then
             echo "::error title=caddy-access-log BUS-1529::caddy-сервис не монтирует oracle_logs:/var/log/oracleai — логи не будут писаться"
             exit 1
           fi
