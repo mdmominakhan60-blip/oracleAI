@@ -88,7 +88,7 @@ echo "$(date -u +%FT%TZ) prod-stack: поднимаю compose-проект '$PRO
 # После основного подъёма tunnel-оверлей поднимать заново осознанно:
 #   docker compose -p infra -f docker-compose.yml -f docker-compose.tunnel.yml up -d
 docker compose -p "$PROJECT" \
-  -f "${COMPOSE_ARGS[@]}" \
+  "${COMPOSE_ARGS[@]}" \
   --env-file "$ENV_FILE" \
   --profile backup \
   up -d --no-build --remove-orphans
