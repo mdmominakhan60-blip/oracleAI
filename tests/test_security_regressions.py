@@ -14,6 +14,9 @@ from app.config import settings
 from app.core import tool_registry as skills
 from app.repo import dialog, users
 
+# Реалистичный по форме ключ: префикс + смешанные base62-символы.
+_REAL_KEY_SUFFIX = "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8s9T0u1V2w3X4y5Z6"
+
 
 def _signed_init_data(*, include_auth_date: bool = True) -> str:
     fields = {"user": json.dumps({"id": 1001}, separators=(",", ":"))}
@@ -109,6 +112,9 @@ def test_production_config_accepts_safe_runtime_configuration(monkeypatch):
         "POSTGRES_PASSWORD": "a-long-random-production-secret",
         "REDIS_URL": "redis://redis:6379/0",
         "CELERY_ENABLED": "1",
+        # BUS-1545: production требует рабочий LLM-ключ (иначе шлюз
+        # отдаёт GET /v1/models = 0 моделей, product-цепочка мертва).
+        "ANTHROPIC_API_KEY": "sk-ant-at03-r000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
     }.items():
         monkeypatch.setenv(name, value)
     monkeypatch.setattr(settings, "dev_mode", False)
@@ -158,6 +164,79 @@ def test_production_config_fails_closed(monkeypatch):
     # Локальный .env может задавать APP_ENV=dev/test и выключить проверку.
     monkeypatch.delenv("APP_ENV", raising=False)
     with pytest.raises(RuntimeError, match="BOT_TOKEN"):
+        _validate_production_config()
+
+
+@pytest.mark.parametrize("token", ["123456:ABC...", "000000:AAAA", "your-token-here",
+                                   "1234567890:short", "", "   "])
+def test_placeholder_bot_token_detected(monkeypatch, token):
+    from app.api.main import _is_placeholder_bot_token
+
+    assert _is_placeholder_bot_token(token) is True
+
+
+def test_real_bot_token_not_flagged_as_placeholder():
+    from app.api.main import _is_placeholder_bot_token
+
+    # <цифровой bot_id>:<43+ base64url> — реальный формат Telegram-токена.
+    real = "765432109:" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8S9t0Uv"
+    assert _is_placeholder_bot_token(real) is False
+
+
+@pytest.mark.parametrize("secret,expected", [
+    ("", True), ("   ", True), ("placeholder", True), ("changeme", True),
+    ("your-key-here", True), ("000000000", True), ("123456", True),
+    ("aaaaaa", True), ("------", True),
+    # Реальные ключи: цифры внутри ключа — не признак заглушки.
+    ("sk-proj-" + "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8s9T0u1V2w3X4y5Z6" + "1234567890", False),
+    ("sk-ant-" + _REAL_KEY_SUFFIX, False),
+    ("omniroute-local", False),
+])
+def test_placeholder_secret_detection(secret, expected):
+    from app.api.main import _is_placeholder_secret
+
+    assert _is_placeholder_secret(secret) is expected
+
+
+def test_production_config_still_fail_closed_when_dev_mode_on(monkeypatch):
+    """BUS-1545: DEV_MODE=1 при APP_ENV=production не должен отключать проверку.
+
+    Прежняя реализация выходила по `if settings.dev_mode: return` — запрещённая
+    комбинация APP_ENV=production + DEV_MODE=1 проходила молча и отключала
+    проверку подписи Telegram на проде.
+    """
+    from app.api.main import _validate_production_config
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://o:s@postgres:5432/o")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "a-long-random-production-secret")
+    monkeypatch.setenv("REDIS_URL", "redis://redis:6379/0")
+    monkeypatch.setenv("CELERY_ENABLED", "1")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-" + _REAL_KEY_SUFFIX)
+    monkeypatch.setattr(settings, "dev_mode", True)
+    monkeypatch.setattr(settings, "bot_token", "765432109:A1b2C3d4E5f6G7h8I9j0K")
+    monkeypatch.setattr(settings, "admin_id", 1001)
+    monkeypatch.setattr(settings, "webapp_url", "https://oracle.example")
+    monkeypatch.setattr(settings, "release_id", "2026.10.10-test")
+    with pytest.raises(RuntimeError, match="DEV_MODE"):
+        _validate_production_config()
+
+
+def test_production_config_rejects_placeholder_bot_token(monkeypatch):
+    from app.api.main import _validate_production_config
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://o:s@postgres:5432/o")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "a-long-random-production-secret")
+    monkeypatch.setenv("REDIS_URL", "redis://redis:6379/0")
+    monkeypatch.setenv("CELERY_ENABLED", "1")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-" + _REAL_KEY_SUFFIX)
+    monkeypatch.setattr(settings, "dev_mode", False)
+    monkeypatch.setattr(settings, "admin_id", 1001)
+    monkeypatch.setattr(settings, "webapp_url", "https://oracle.example")
+    monkeypatch.setattr(settings, "release_id", "2026.10.10-test")
+    monkeypatch.setattr(settings, "bot_token", "123456:ABC...")
+    with pytest.raises(RuntimeError, match="placeholder"):
         _validate_production_config()
 
 
