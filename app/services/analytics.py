@@ -330,12 +330,19 @@ async def rollup(db, day: str | None = None) -> dict:
     return await repo.rollup_day(db, day)
 
 
-async def backfill(db, days: int = 7) -> list[dict]:
-    """Backfill daily_stats for the last N missing days."""
-    today = date.today()
+async def backfill(db, days: int = 7,
+                   end: str | date | None = None) -> list[dict]:
+    """Backfill daily_stats for the last N missing days.
+
+    `end` — последний день окна, по умолчанию сегодня; сама граница не
+    считается (день ещё не закрыт), окно — [end-days, end-1]. Параметр нужен,
+    когда бэкфиллят прошлые даты: без него окно всегда приколото к сегодня.
+    """
+    end_date = date.today() if end is None else (
+        end if isinstance(end, date) else date.fromisoformat(str(end)))
     results = []
     for i in range(1, days + 1):
-        day = (today - timedelta(days=i)).isoformat()
+        day = (end_date - timedelta(days=i)).isoformat()
         results.append(await repo.rollup_day(db, day))
     return results
 

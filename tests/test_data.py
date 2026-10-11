@@ -220,9 +220,16 @@ async def test_rollup_day_writes_daily_stats(db):
 
 async def test_rollup_backfill_fills_gaps(db):
     """BUS-1324: backfill fills missing days in daily_stats."""
+    from datetime import date, timedelta
+
     from app.services import analytics as analytics_svc
 
-    days = ["2026-09-08", "2026-09-09", "2026-09-10"]
+    # Даты генерируем от сегодня, а не шьём абсолютные: раньше в тесте стояли
+    # 2026-09-08..10, и он зеленел ровно пока окно backfill их накрывало,
+    # а затем упал с active == 0 (BUS-1618). Окно задано в прошлом явным
+    # end=, так что проверяется и сама возможность бэкфиллить старые даты.
+    end = date.today() - timedelta(days=9)
+    days = [(end - timedelta(days=i)).isoformat() for i in range(3, 0, -1)]
     for day in days:
         await db.executemany(
             "INSERT INTO events(tg_id, name, day, created_at) VALUES(?,?,?,?)",
@@ -230,10 +237,9 @@ async def test_rollup_backfill_fills_gaps(db):
         )
     await db.commit()
 
-    results = await analytics_svc.backfill(db, days=3)
-    assert len(results) == 3
-    for day, result in zip(reversed(days), results):
-        assert result["active"] == 3
+    results = await analytics_svc.backfill(db, days=3, end=end.isoformat())
+    assert [r["active"] for r in results] == [3, 3, 3]
+    for day in days:
         row = await db.execute(
             "SELECT 1 FROM daily_stats WHERE day=:day",
             {"day": day})
