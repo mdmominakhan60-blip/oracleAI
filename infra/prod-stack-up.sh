@@ -27,6 +27,25 @@ set -euo pipefail
 
 INFRA_DIR="$(cd "$(dirname "$0")" && pwd)"
 ENV_FILE="$INFRA_DIR/../.env"
+# BUS-1615: `docker compose` авто-ищет .env РЯДОМ С COMPOSE-ФАЙЛОМ (infra/),
+# а infra/docker-compose.yml:20 объявляет env_file: ../.env (корень репо).
+# Флаг --env-file это обходил, но только внутри prod-stack-up.sh и deploy.yml,
+# поэтому любая ручная проверка `cd infra && docker compose ... config -q`
+# падала с «required variable APP_ENV is missing» — при живой .env в корне.
+# Инцидент 2026-10-11: стек работал, но не резолвилась ни одна compose-команда
+# из infra/, включая restore-postgres.sh и verify-deploy.sh. Симлинк
+# infra/.env -> ../.env закрывает канон: .env остаётся один в корне (gitignored),
+# симлинк тоже gitignored (.gitignore:1). Создаётся идемпотентно, чтобы после
+# клона на VPS команды из infra/ работали без ручных шагов.
+ENV_LINK="$INFRA_DIR/.env"
+if [[ -L "$ENV_LINK" ]]; then
+  : # уже симлинк — не трогаем
+elif [[ -e "$ENV_LINK" ]]; then
+  echo "$(date -u +%FT%TZ) prod-stack: ВНИМАНИЕ infra/.env — регулярный файл, не симлинк. Compose найдёт его первым; следите, что значения не разошлись с корневым .env" >&2
+else
+  ln -s ../.env "$ENV_LINK" && \
+    echo "$(date -u +%FT%TZ) prod-stack: создан симлинк infra/.env -> ../.env (BUS-1615)"
+fi
 # BUS-1534: OCI-оверрайд (VPS-специфика) подключается явно. Без него
 # node-exporter монтирует ПК-путь /home/softis/.../textfile, которого на
 # VPS нет — бэкап-метрики BUS-833 не скрейпятся, алерты мертвы. Без него
@@ -88,7 +107,7 @@ echo "$(date -u +%FT%TZ) prod-stack: поднимаю compose-проект '$PRO
 # После основного подъёма tunnel-оверлей поднимать заново осознанно:
 #   docker compose -p infra -f docker-compose.yml -f docker-compose.tunnel.yml up -d
 docker compose -p "$PROJECT" \
-  -f "${COMPOSE_ARGS[@]}" \
+  "${COMPOSE_ARGS[@]}" \
   --env-file "$ENV_FILE" \
   --profile backup \
   up -d --no-build --remove-orphans

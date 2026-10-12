@@ -65,6 +65,20 @@ chmod 600 .env
 
 Конфигурация читается dataclass-настройками в `app/config.py`; неизвестные или небезопасные значения не следует «исправлять» прямо в контейнере.[2]
 
+### Где compose ищет `.env` (BUS-1615)
+
+`infra/docker-compose.yml:20` объявляет `env_file: ../.env` — единственный env-файл лежит в корне репо. Но `docker compose` автоматически подхватывает `.env` только из своего project directory (текущий `infra/`), поэтому любая команда вида `cd infra && docker compose ... config -q` падала с `required variable APP_ENV is missing`, хотя `.env` в корне существует и заполнен. Стек при этом оставался живым: `infra/prod-stack-up.sh` и `.github/workflows/deploy.yml` передавали `--env-file` явно.
+
+Поэтому `infra/.env` — симлинк на `../.env` (оба пути в `.gitignore:1`). Он создаётся автоматически в `infra/prod-stack-up.sh` при автозапуске стека, и идемпотентен. Проверка канона:
+
+```bash
+cd infra
+docker compose -p infra -f docker-compose.yml -f docker-compose.oci.yml config -q   # ожидается код 0
+docker exec infra-api-1 printenv CUSTOM_LLM_BASE_URL
+```
+
+Симлинк валиден только если цель читается; битый симлинк (целевой `.env` нет) даёт тот же класс ошибок, что и отсутствие файла.
+
 ## Первый релиз
 
 1. На сервере получите репозиторий из проверенного remote и перейдите на нужный commit/тег.

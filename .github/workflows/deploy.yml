@@ -217,7 +217,7 @@ jobs:
             echo "Deployment failed; attempting rollback to ${PREVIOUS_SHA:-none}" >&2
             if [ -n "$PREVIOUS_SHA" ]; then
               git checkout --detach "$PREVIOUS_SHA" || true
-              docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" up -d --build --remove-orphans || true
+              docker compose --env-file .env "${COMPOSE_ARGS[@]}" up -d --build --remove-orphans || true
             fi
           }
           trap rollback ERR
@@ -238,24 +238,24 @@ jobs:
             exit 1
           }
 
-          docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" config >/tmp/oracleai-compose-resolved.yml
-          docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" pull --ignore-pull-failures
-          docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" up -d --build --remove-orphans
+          docker compose --env-file .env "${COMPOSE_ARGS[@]}" config >/tmp/oracleai-compose-resolved.yml
+          docker compose --env-file .env "${COMPOSE_ARGS[@]}" pull --ignore-pull-failures
+          docker compose --env-file .env "${COMPOSE_ARGS[@]}" up -d --build --remove-orphans
 
           for attempt in $(seq 1 36); do
-            if docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" exec -T api curl -fsS http://127.0.0.1:8080/api/health >/tmp/oracleai-health.json; then
+            if docker compose --env-file .env "${COMPOSE_ARGS[@]}" exec -T api curl -fsS http://127.0.0.1:8080/api/health >/tmp/oracleai-health.json; then
               break
             fi
             if [ "$attempt" -eq 36 ]; then
-              docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" ps
-              docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" logs --no-color --tail=120 api migrate worker beat caddy
+              docker compose --env-file .env "${COMPOSE_ARGS[@]}" ps
+              docker compose --env-file .env "${COMPOSE_ARGS[@]}" logs --no-color --tail=120 api migrate worker beat caddy
               exit 1
             fi
             sleep 5
           done
 
           grep -q '"ok"[[:space:]]*:[[:space:]]*true' /tmp/oracleai-health.json
-          docker compose --env-file .env -f "${COMPOSE_ARGS[@]}" ps
+          docker compose --env-file .env "${COMPOSE_ARGS[@]}" ps
           docker image prune -f
           trap - ERR
           echo "Deployment ${DEPLOY_SHA} is healthy"

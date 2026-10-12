@@ -118,18 +118,114 @@ async def _v2_enabled(db=None) -> bool:
         return False
 
 
+def _is_placeholder_bot_token(token: str) -> bool:
+    """True, если токен выглядит как шаблон/заглушка (BUS-1545).
+
+    Реальный Telegram-токен имеет формат ``<цифровой bot_id>:<43+ base64url>``.
+    Шаблоны вроде ``123456:ABC…``, ``000000000:…``, ``your-token-here`` —
+    не рабочие. Фикстуры вида ``test-token`` (без двоеточия, без запрещённых
+    слов) пропускаются — они используются только в тестах, не в production.
+    """
+    if not token or not token.strip():
+        return True
+    lowered = token.strip().lower()
+    if any(m in lowered for m in ("your", "placeholder", "example", "changeme",
+                                  "xxxx", "dummy", "sample-token")):
+        return True
+    if ":" in lowered:
+        bot_id, _, _rest = lowered.partition(":")
+        # цифровой bot_id корректного формата; шаблонные bot_id вроде
+        # 123456 / 000000000 / test не являются рабочими.
+        if not bot_id.isdigit() or bot_id in {
+                "123456", "0", "00", "000", "0000", "00000", "000000",
+                "0000000", "00000000", "000000000", "1234567890"}:
+            return True
+        if len(bot_id) < 5 or len(_rest) < 30:
+            return True
+    return False
+
+
+def _llm_credentials_present() -> bool:
+    """True, если в окружении есть хотя бы один рабочий LLM-ключ (BUS-1545)."""
+    keys = [
+        os.getenv("ANTHROPIC_API_KEY", "").strip(),
+        os.getenv("OPENAI_API_KEY", "").strip(),
+        os.getenv("CUSTOM_LLM_API_KEY", "").strip(),
+        os.getenv("GEMINI_API_KEY", "").strip(),
+        os.getenv("GOOGLE_API_KEY", "").strip(),
+    ]
+    return any(k and not _is_placeholder_secret(k) for k in keys)
+
+
+_PLACEHOLDER_MARKERS = (
+    "placeholder", "changeme", "change_me", "change-me", "your-", "your_",
+    "your key", "your key here", "example", "dummy", "sample-token", "xxxx",
+    "test-key", "insert", "todo", "enter-your",
+)
+_SECRET_PREFIXES = ("sk-ant-", "sk-proj-", "sk-or-", "sk-")
+
+
+def _is_placeholder_secret(value: str) -> bool:
+    """True, если секрет — заглушка (BUS-1545).
+
+    Маркеры-слова проверяем как подстроки, но НЕ голые цифры: реальный ключ
+    вида ``sk-proj-…123456…`` содержит ``123456`` случайно и не является
+    заглушкой. У префиксов ``sk-*`` короткий хвост (<20) или чистые цифры —
+    затычка. Нестандартные ключи (локальный шлюз вроде ``omniroute-local``)
+    проверяем только по слабой энтропии — 1–2 различных символа либо цифры.
+    """
+    lowered = value.strip().lower()
+    if not lowered:
+        return True
+    if any(marker in lowered for marker in _PLACEHOLDER_MARKERS):
+        return True
+    core = lowered
+    matched_prefix = ""
+    for prefix in _SECRET_PREFIXES:
+        if core.startswith(prefix):
+            core = core[len(prefix):]
+            matched_prefix = prefix
+            break
+    if matched_prefix:
+        # У известных префиксов (sk-*) короткий «хвост» — затычка:
+        # настоящий ключ OpenAI/Anthropic не короче 20 символов после префикса.
+        if not core or len(core) < 20 or core.isdigit():
+            return True
+    else:
+        # Нестандартный ключ (локальный шлюз, self-hosted) проверяем только
+        # по слабой энтропии: одинаковые либо чисто цифровые значения.
+        if core.isdigit() or (len(core) >= 6 and len(set(core)) <= 2):
+            return True
+    return False
+
+
 def _validate_production_config() -> None:
-    """Fail closed before serving an unauthenticated or misdirected app."""
+    """Fail closed before serving an unauthenticated or misdirected app.
+
+    BUS-1545: оба прод-контейнера слетели в APP_ENV=dev, и проверка молча
+    пропускалась, пока BOT_TOKEN оставался placeholder'ом, а LLM-ключей не было.
+    Поэтому пропускаем проверку только для честной локальной разработки
+    (DEV_MODE=1 при APP_ENV в dev/test); при DEV_MODE=0 — боевой режим —
+    проверка выполняется при любом APP_ENV.
+    """
     app_env = os.getenv("APP_ENV", "").lower()
-    if app_env in {"dev", "test"}:
+    if settings.dev_mode and app_env not in {"production", "prod"}:
         return
     missing = []
-    if app_env != "production":
-        missing.append("APP_ENV должен быть production")
     if settings.dev_mode:
-        missing.append("DEV_MODE должен быть выключен")
+        missing.append(
+            "DEV_MODE должен быть выключен в production (APP_ENV=production "
+            "при DEV_MODE=1 обходит подпись Telegram — BUS-1545)")
+    if app_env not in {"production", "prod"}:
+        missing.append("APP_ENV должен быть production (на проде APP_ENV=dev "
+                       "обходит fail-closed проверку — BUS-1545)")
     if not settings.bot_token:
         missing.append("BOT_TOKEN")
+    elif _is_placeholder_bot_token(settings.bot_token):
+        missing.append(
+            "BOT_TOKEN — placeholder (BUS-1545: бот падает на delete_webhook "
+            "каждые ~8 с, scheduler не стартует). Замени на реальный токен."
+        )
     if not settings.admin_id:
         missing.append("ADMIN_ID")
     if not settings.webapp_url:
@@ -150,6 +246,14 @@ def _validate_production_config() -> None:
         missing.append("POSTGRES_PASSWORD должен быть задан и не быть шаблонным")
     if os.getenv("CELERY_ENABLED", "0") == "1" and not os.getenv("REDIS_URL", "").strip():
         missing.append("REDIS_URL при CELERY_ENABLED=1")
+    # BUS-1545: без LLM-ключей шлюз 20128 возвращает GET /v1/models = 0
+    # моделей, ingestion-таблицы не растут, product-цепочка мертва.
+    # Проверяем в production fail-closed: пустой/placeholder ключ — блокер.
+    if not _llm_credentials_present():
+        missing.append(
+            "LLM-credentials (ANTHROPIC_API_KEY/OPENAI_API_KEY/CUSTOM_LLM_API_KEY/"
+            "GEMINI_API_KEY) — все пусты или placeholders (BUS-1545)"
+        )
     if not settings.release_id or settings.release_id == "local":
         missing.append("RELEASE_ID")
     # FE-002: hashed Mini App bundle is the only production path. A missing or

@@ -177,8 +177,16 @@ async def main() -> None:
         asyncio.create_task(scheduler.run(bot, db), name="scheduler"),
         asyncio.create_task(broadcast_loop(bot, db), name="broadcasts"),
     ]
+    # BUS-1545: при старте бот не должен падать из-за неактуального токена.
+    # delete_webhook бросает TelegramUnauthorizedError, если BOT_TOKEN —
+    # placeholder/отозванный; без try/except процесс «Оракул остановлен»
+    # каждые ~8 с, scheduler (единственный исполнитель ingestion/deliveries)
+    # не стартует. Логируем и продолжаем — поллинг сам упадёт с понятной ошибкой.
     try:
         await bot.delete_webhook(drop_pending_updates=True)
+    except Exception as e:
+        log.warning("не удалось сбросить вебхук (токен мог быть неактуален): %s", e)
+    try:
         await dp.start_polling(bot)
     finally:
         for task in tasks:
