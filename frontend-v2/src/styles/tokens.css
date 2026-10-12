@@ -1,0 +1,120 @@
+/* ============================================================================
+   OracleAI V2 — дизайн-токены.
+
+   ЕДИНСТВЕННЫЙ источник цветовых значений в приложении. Значения взяты из
+   docs/product-v2/DESIGN_SYSTEM.md §2, который наследует канон
+   docs/design/REDESIGN_R03_DESIGN_SYSTEM.md §2.1 (контраст проверен WCAG 2.2 AA).
+
+   Запрещено: новые hex вне этого файла, ручное копирование градиентов,
+   «временные» цветовые полосы, пятая непрерывная анимация цвета.
+   ============================================================================ */
+
+:root {
+  /* ── Семантический слой (R03 §2.1) ─────────────────────────────────────── */
+  --color-bg: #0B0D18;
+  --color-surface: #141827;
+  --color-surface-raised: #1C2233;
+  --color-surface-overlay: #242C3F;
+  --color-text-primary: #F4F2ED;
+  --color-text-secondary: #B7BDCB;
+  --color-text-muted: #9AA4B8;
+  --color-accent: #E9C982;
+  --color-accent-hover: #F1D99F;
+  --color-on-accent: #1C1820;
+  --color-border: #384256;
+  --color-border-control: #717B96;
+  --color-success: #97D8BD;
+  --color-error: #F1A4AA;
+  --color-info: #ABC9EF;
+
+  /* ── Производные слои: заданы один раз, компоненты не изобретают свои rgba ── */
+  --focus-ring: 0 0 0 3px rgba(233, 201, 130, 0.35);
+  --hover-bg: rgba(233, 201, 130, 0.08);
+  --hover-border: rgba(233, 201, 130, 0.35);
+  --shadow-overlay: 0 18px 50px -18px rgba(0, 0, 0, 0.85);
+  --grad-primary: linear-gradient(180deg, var(--color-accent-hover), var(--color-accent));
+  --focus-outline: 2px solid var(--color-accent);
+
+  /* ── Отступы: шкала 4px (R03 §2.2) ─────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* ── Радиусы (R03 §2.2) ────────────────────────────────────────────────── */
+  --radius-control: 12px;
+  --radius-card: 16px;
+  --radius-sheet: 24px;
+  --touch-target: 44px;
+
+  /* ── Типографика ───────────────────────────────────────────────────────── */
+  --font-family-display: 'Manrope', 'Cinzel', Georgia, serif;
+  --font-family-body: 'Manrope', 'Plus Jakarta Sans', Arial, sans-serif;
+  --font-size-h1: 32px;
+  --font-size-h2: 24px;
+  --font-size-h3: 20px;
+  --font-size-h4: 18px;
+  --font-size-h5: 16px;
+  --font-size-body: 14px;
+  --font-size-body-lg: 16px;
+  --font-size-caption: 12px;
+  --font-size-label: 11px;
+  --font-size-button: 13px;
+  --line-height-display: 1.08;
+  --line-height-body: 1.55;
+  --tracking-display: -0.01em;
+  --tracking-label: 0.08em;
+
+  /* ── Motion (R03 §6.1) ─────────────────────────────────────────────────── */
+  --motion-quick: 140ms;
+  --motion-base: 220ms;
+  --motion-slow: 480ms;
+  --motion-ritual: cubic-bezier(0.22, 0.9, 0.24, 1);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ── Таро: тайминги перенесены из старого фронта (REUSE_MAP §2) ────────── */
+  --tarot-lift: 130ms;   /* приподнимание карты перед переворотом */
+  --tarot-flip: 550ms;   /* rotateY(180deg) */
+  --tarot-deal-step: 80ms; /* стаггер раздачи */
+  --tarot-breathe: 1800ms; /* «дыхание» следующей карты */
+
+  /* ── Safe-area: 43 прямых env() в старом коде → токены ─────────────────── */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --nav-h: 66px;
+
+  /* ── Z-index: в старом коде разбросаны литералами (−2…400) ─────────────── */
+  --z-base: 1;
+  --z-nav: 100;
+  --z-sheet: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+
+  /* ── Breakpoints ───────────────────────────────────────────────────────── */
+  --bp-mobile: 359px;
+  --bp-phablet: 480px;
+  --bp-tablet: 768px;
+  --bp-desktop: 1024px;
+
+  /* ── Веса шрифта ───────────────────────────────────────────────────────── */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+}
+
+/* Единый авторитетный блок: отключает фоновые движения.
+   Покрывает все 9 движений реестра R03 §3.1 (starDrift, gPulse, nebulaDrift,
+   meteorFall, twinkle, cstBlink, lilBreathe, кросс-фейд состояний, метеоры). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

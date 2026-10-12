@@ -64,6 +64,59 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 MINIAPP_DIR = ROOT / "miniapp"
 ADMIN_DIR = ROOT / "admin"
 
+# --- Переключение Mini App: legacy ↔ V2 -------------------------------------
+# V2 собирается Vite в frontend-v2/dist и публикуется в miniapp/dist
+# (scripts/publish_prod.mjs). Флаг читается из СУЩЕСТВУЮЩЕЙ таблицы
+# feature_flags через content.is_on — тот же механизм, что у остальных фич
+# проекта, с детерминированным rollout и default=False.
+# Локальный оверрайд для тестов: MINIAPP_V2=1 (без БД), либо флаг в таблице.
+V2_FLAG = "miniapp_v2"
+
+
+def _v2_env_override() -> bool | None:
+    """Оверрайд флага из окружения: локальный прогон без БД.
+
+    Возвращает None, если переменная не задана — тогда решает feature_flags.
+    Значения трактуются строго, чтобы «» или мусор не включали V2 молча.
+    """
+    raw = os.getenv("MINIAPP_V2", "").strip().lower()
+    if not raw:
+        return None            # не задано → решает feature_flags
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    return None                # мусор → не включаем и не выключаем молча
+
+
+async def _v2_enabled(db=None) -> bool:
+    """Включён ли новый интерфейс. По умолчанию выключен.
+
+    Флаг читается из общей таблицы feature_flags, НО напрямую, а не через
+    content.is_on: is_on при tg_id=None трактует любой роллаут как
+    «включено для всех» (`if pct >= 100 or tg_id is None: return True`), а
+    роуты `/` и `/survey` анонимны — пользователя ещё не знаем. Оператор,
+    выставивший is_on=1 при rollout_pct=10, случайно открыл бы V2 на 100%.
+    Поэтому неполный роллаут здесь означает «выключено», а включение только
+    при rollout_pct=100.
+    """
+    override = _v2_env_override()
+    if override is not None:
+        return override
+    if db is None:
+        return False
+    try:
+        from ..services.repo_gateway import content as content_repo
+        flag = await content_repo.flag_row(db, V2_FLAG)
+        if not flag or not flag["is_on"]:
+            return False
+        pct = flag["rollout_pct"]
+        pct = pct if pct is not None else 100
+        return pct >= 100
+    except Exception:  # pragma: no cover - флаг не читается → остаёмся на legacy
+        log.exception("не удалось прочитать флаг %s", V2_FLAG)
+        return False
+
 
 def _validate_production_config() -> None:
     """Fail closed before serving an unauthenticated or misdirected app."""
@@ -342,21 +395,76 @@ def _miniapp_index_body() -> str:
                 "frontend bundle before releasing."
             ) from exc
         return body
+    return _apply_bundle(body, js, css)
+
+
+def _apply_bundle(body: str, js: str, css: str) -> str:
+    """Подменяет исходные ссылки в HTML на собранный хешированный бандл."""
     body = re.sub(r'/static/styles\.css\?v=\d+', f'/static/dist/{css}', body)
     body = re.sub(r'\n<script src="/static/js/[^"?]+\?v=\d+"></script>', '', body)
     return body.replace('</body>', f'<script src="/static/dist/{js}"></script>\n</body>')
 
 
+async def _miniapp_v2_body() -> str:
+    """HTML нового интерфейса (V2, Vite) по его манифесту в miniapp/dist.
+
+    Публикация (frontend-v2/scripts/publish_prod.mjs) кладёт в miniapp/dist
+    бандл V2 и marker-файл v2.json с именами его артефактов. Marker нужен,
+    потому что общий manifest.json в этом каталоге принадлежит legacy-сборке
+    (scripts/build_frontend.mjs): различать два бандла по имени было бы хрупко,
+    а marker однозначен.
+    """
+    dist = MINIAPP_DIR / "dist"
+    marker = dist / "v2.json"
+    if not marker.is_file():
+        raise RuntimeError(
+            "V2 is enabled, but miniapp/dist/v2.json is missing. Publish V2 with "
+            "frontend-v2/scripts/publish_prod.mjs before switching the flag on."
+        )
+    try:
+        v2 = json.loads(marker.read_text(encoding="utf-8"))
+        js, css = v2["js"], v2["css"]
+    except (OSError, KeyError, TypeError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"miniapp/dist/v2.json is invalid: {exc}") from exc
+
+    # Marker ссылается на артефакты: если их нет (незавершённая публикация,
+    # чужой маркер), отдать HTML с битыми ссылками хуже, чем отказать.
+    missing = [name for name in (js, css) if not isinstance(name, str) or not (dist / name).is_file()]
+    if missing:
+        raise RuntimeError(
+            f"V2 is enabled, but its assets are missing: {', '.join(str(n) for n in missing)}. "
+            "Re-run frontend-v2/scripts/publish_prod.mjs."
+        )
+
+    template = dist / "v2index.html"
+    if template.is_file():
+        return _apply_bundle(template.read_text(encoding="utf-8"), js, css)
+
+    # Шаблона нет — собираем оболочку сами. Так отсутствие шаблона не приведёт
+    # к отдаче legacy под именем V2 (молчаливый перекос режимов).
+    body = (
+        "<!doctype html><html lang='ru'><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1, viewport-fit=cover'>"
+        "<title>OracleAI</title>"
+        f"<link rel='stylesheet' href='/static/dist/{css}'>"
+        "</head><body><div id='root'></div>"
+        f"<script src='/static/dist/{js}'></script></body></html>"
+    )
+    return body
+
+
 @app.get("/", include_in_schema=False)
-async def index():
+async def index(request: Request, db=Depends(get_db)):
     path = MINIAPP_DIR / "index.html"
     if not path.is_file():
         return JSONResponse({"detail": "не найдено"}, status_code=404)
+    if await _v2_enabled(db):
+        return HTMLResponse(await _miniapp_v2_body())
     return HTMLResponse(_miniapp_index_body())
 
 
 @app.get("/survey", include_in_schema=False)
-async def survey_index():
+async def survey_index(request: Request, db=Depends(get_db)):
     """Вход day7/day10-опроса: web_app-кнопка из бота ведёт на /survey.
 
     Отдельной страницы нет — отдаём SPA, boot-хук сам откроет форму по
@@ -366,6 +474,8 @@ async def survey_index():
     path = MINIAPP_DIR / "index.html"
     if not path.is_file():
         return JSONResponse({"detail": "не найдено"}, status_code=404)
+    if await _v2_enabled(db):
+        return HTMLResponse(await _miniapp_v2_body())
     return HTMLResponse(_miniapp_index_body())
 
 

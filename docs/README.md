@@ -5,7 +5,7 @@
 | Field | Definition |
 |---|---|
 | **Purpose** | Provide one navigable map of current product, engineering, operations, domain and release documentation. |
-| **Source of truth** | This map points to the canonical document for each subsystem; implementation truth remains in the referenced code and tests. |
+| **Source of truth** | This map points to the canonical document for each subsystem; implementation truth remains in the referenced code and tests. For the **interface** the source of truth is [`product-v2/`](product-v2/PRODUCT_BRIEF.md) — the pre-V2 documents below describe the legacy `miniapp/` client and remain valid for backend, domain and operations. |
 | **Scope** | Current contracts, operating procedures, feature and domain references. |
 | **Do not change** | Do not create a second backlog, audit, status or architecture source of truth. Do not promote evidence or research notes into current behavior without code validation. |
 | **Key files** | `README.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/AI_SYSTEM.md`, `docs/RELEASE/CURRENT_STATUS.md`. |
@@ -15,6 +15,8 @@
 
 | Topic | Canonical document | When to read it | Related code |
 |---|---|---|---|
+| **Current UI direction** | **[`product-v2/PRODUCT_BRIEF.md`](product-v2/PRODUCT_BRIEF.md)** | **Any new interface work. OracleAI V2 (`frontend-v2/`) is the active direction: one Personal AI Oracle with tabs Home / Oracle / People / Me. The legacy `miniapp/` client stays only for rollback.** | **`frontend-v2/`, `app/api/`** |
+| V2 runbook | [`product-v2/MIGRATION_PLAN.md`](product-v2/MIGRATION_PLAN.md) | Build V2, switch interface (flag), roll back to legacy, see what is DONE/PARTIAL/BLOCKED. | `frontend-v2/`, `app/api/main.py` |
 | Product | [`PRODUCT.md`](PRODUCT.md) | Understand the audience, promise, boundaries and enabled surfaces. | `miniapp/`, `app/bot/`, `app/api/routers/` |
 | Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Change data flow, modules, storage, agents or client loading order. | `app/`, `miniapp/`, `infra/` |
 | AI system | [`AI_SYSTEM.md`](AI_SYSTEM.md) | Change agents, skills, tools, context, memory, safety or provider behavior. | `app/core/agents/`, `app/core/tool_registry.py`, `app/core/llm.py` |

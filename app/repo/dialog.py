@@ -243,6 +243,82 @@ async def thread_messages(db, thread_id: int, limit: int = 100,
     return rows
 
 
+async def unified_history(db, tg_id: int, limit: int = 50,
+                          before_id: int | None = None,
+                          before_created_at: str | None = None) -> dict:
+    """Единая лента диалога с Оракулом: объединяет сообщения из всех поддерживаемых
+    доменов (oracle, astro, tarot, chiromant) с детерминированной сортировкой по
+    (created_at, id) и стабильной составной keyset-пагинацией. Исключает архивные треды (archived=1).
+
+    Keyset-курсор строго соответствует кортежу сортировки (created_at DESC, id DESC).
+    Если передан только before_id, сервер вычисляет его created_at для сохранения
+    монотонности выборки при несовпадении порядка ID и времени.
+    """
+    safe_limit = max(1, min(limit, 100))
+    where = [
+        "m.tg_id = :tg_id",
+        "(t.id IS NULL OR t.archived = 0)",
+        "m.agent IN ('oracle', 'astro', 'tarot', 'chiromant')",
+    ]
+    params: dict = {"tg_id": tg_id, "limit": safe_limit + 1}
+
+    # Обратная совместимость: если передан before_id без before_created_at,
+    # находим точный created_at этого сообщения для корректного составного сравнения.
+    if before_id is not None and before_created_at is None:
+        cur_anchor = await db.execute(
+            "SELECT created_at FROM messages WHERE id=:before_id AND tg_id=:tg_id",
+            {"before_id": int(before_id), "tg_id": tg_id},
+        )
+        row_anchor = await cur_anchor.fetchone()
+        if row_anchor and row_anchor["created_at"]:
+            before_created_at = row_anchor["created_at"]
+
+    if before_id is not None and before_created_at is not None:
+        # Составное keyset условие: строго предшествующие по времени ИЛИ с тем же временем, но меньшим id
+        where.append(
+            "(m.created_at < :before_created_at OR (m.created_at = :before_created_at AND m.id < :before_id))"
+        )
+        params["before_id"] = int(before_id)
+        params["before_created_at"] = str(before_created_at)
+    elif before_id is not None:
+        # Редкий fallback: id не найден в базе, фильтруем по id
+        where.append("m.id < :before_id")
+        params["before_id"] = int(before_id)
+
+    clause = " AND ".join(where)
+    query = f"""
+    SELECT m.id, m.thread_id, m.agent, m.role, m.text, m.created_at
+    FROM messages m
+    LEFT JOIN threads t ON t.id = m.thread_id
+    WHERE {clause}
+    ORDER BY m.created_at DESC, m.id DESC
+    LIMIT :limit
+    """
+    cur = await db.execute(query, params)
+    rows = [dict(r) for r in await cur.fetchall()]
+    has_more = len(rows) > safe_limit
+    if has_more:
+        rows = rows[:safe_limit]
+
+    # В DESC-выборке rows[0] — самое недавнее сообщение, rows[-1] — самое давнее
+    oldest_id = rows[-1]["id"] if rows else None
+    oldest_created_at = rows[-1]["created_at"] if rows else None
+    newest_id = rows[0]["id"] if rows else None
+    newest_created_at = rows[0]["created_at"] if rows else None
+
+    # Разворачиваем в прямой хронологический порядок для рендера ленты снизу вверх
+    rows.reverse()
+    return {
+        "messages": rows,
+        "has_more": has_more,
+        "oldest_id": oldest_id,
+        "oldest_created_at": oldest_created_at,
+        "newest_id": newest_id,
+        "newest_created_at": newest_created_at,
+        "missing": [],
+    }
+
+
 async def questions_used_today(db, user) -> int:
     cur = await db.execute(
         "SELECT COUNT(*) c FROM messages WHERE tg_id=:tg_id AND is_question=1 AND created_at>=:since",

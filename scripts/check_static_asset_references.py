@@ -86,7 +86,7 @@ def main() -> int:
     args = parser.parse_args()
     root = args.root.resolve()
     errors: list[str] = []
-    for directory in (root / "miniapp", root / "admin", root / "app"):
+    for directory in (root / "miniapp", root / "admin", root / "app", root / "frontend-v2"):
         if not directory.is_dir():
             continue
         for path in directory.rglob("*"):

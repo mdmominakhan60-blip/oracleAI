@@ -24,6 +24,24 @@ async def chat_history_default(user=Depends(confirmed_age_user), db=Depends(get_
     return {"messages": messages}
 
 
+@router.get("/chat/history/unified", dependencies=[Depends(rate_limit("read"))])
+@router.get("/chat/unified", dependencies=[Depends(rate_limit("read"))])
+async def chat_history_unified(
+    limit: int = Query(default=50, ge=1, le=100),
+    before_id: int | None = Query(default=None, ge=1),
+    before_created_at: str | None = Query(default=None),
+    user=Depends(confirmed_age_user),
+    db=Depends(get_db),
+):
+    """Единая лента диалога с Оракулом: объединяет сообщения из всех 4 доменов
+    (oracle, astro, tarot, chiromant) с детерминированной сортировкой по
+    (created_at, id) и стабильной составной keyset-пагинацией. Исключает архивные треды.
+    """
+    return await dialog.unified_history(
+        db, user["tg_id"], limit=limit, before_id=before_id, before_created_at=before_created_at
+    )
+
+
 @router.get("/chat/{agent}")
 async def chat_history(agent: str, user=Depends(confirmed_age_user), db=Depends(get_db)):
     if agent not in agents.codes():
