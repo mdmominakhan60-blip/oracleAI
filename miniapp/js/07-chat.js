@@ -441,7 +441,7 @@ const chatAgentField = (agent, field) => (chatLang() === 'en' ? CHAT_AGENT_EN[ag
         <div class="chat-head">
           <button class="back" data-act="back" aria-label="${esc(chatT('back'))}" title="${esc(chatT('toGuides'))}">‹</button>
           <div class="agent-avatar" style="${this.agentThemeStyle(a, a.code)}"><img class="agent-face" src="${esc(portrait)}" alt="" width="36" height="36"></div>
-          <span class="cname">${esc(displayName || (chatLang() === 'en' ? 'Guide' : 'Проводник'))}</span>
+          <h1 class="cname">${esc(displayName || (chatLang() === 'en' ? 'Guide' : 'Проводник'))}</h1>
           <button type="button" class="chat-thread-toggle chat-space-picker" data-act="sessions" aria-expanded="false" aria-controls="sess-panel" aria-label="${esc(chatT('myChatsAria'))}">
             <span>${chatLang() === 'en' ? 'History' : 'История'}</span>
           </button>

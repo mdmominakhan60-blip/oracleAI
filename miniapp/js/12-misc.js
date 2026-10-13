@@ -65,7 +65,7 @@
       <div class="profile-empty">
         <div class="profile-empty-title">${profileT('buildChartTitle')}</div>
         <div class="profile-empty-copy">${profileT('buildChartCopy')}</div>
-        <div class="seg-progress profile-empty-steps" aria-label="${profileFormat('stepOf', { n: 1, m: 3 })}"><span class="is-on">${profileT('date')}</span><i></i><span>${profileT('time').toLowerCase()}</span><i></i><span>${profileT('city').toLowerCase()}</span></div>
+        <div class="seg-progress profile-empty-steps" role="group" aria-label="${profileFormat('stepOf', { n: 1, m: 3 })}"><span class="is-on">${profileT('date')}</span><i></i><span>${profileT('time').toLowerCase()}</span><i></i><span>${profileT('city').toLowerCase()}</span></div>
         <button class="btn btn-primary" style="width:100%;margin-top:14px" data-act="chat" data-chat="astro">${profileT('openMyChart')}</button>
       </div>`;
     main.innerHTML = `

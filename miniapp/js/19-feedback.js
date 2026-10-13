@@ -202,7 +202,7 @@
     return `
       <div class="fb-header">
         <h3 class="fb-title">${esc(fb('head'))}</h3>
-        <div class="seg-progress fb-progress" aria-label="${esc(fbFormat('ariaStepName', { n: i + 1, m: FB_QUESTIONS.length }))}">
+        <div class="seg-progress fb-progress" role="group" aria-label="${esc(fbFormat('ariaStepName', { n: i + 1, m: FB_QUESTIONS.length }))}">
           ${FB_QUESTIONS.map((_, k) => `<i${k <= i ? ' class="is-on"' : ''}></i>`).join('')}
         </div>
       </div>
