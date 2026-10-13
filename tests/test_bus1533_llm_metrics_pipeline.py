@@ -29,7 +29,7 @@ async def test_record_usage_warns_on_write_failure(db, caplog):
         with caplog.at_level(logging.WARNING, logger="oracle.llm"):
             await record_usage(db, provider="custom", model="m", purpose="x",
                                ok=True, tg_id=1)
-    assert any("не записан в llm_usage" in r.message for r in caplog.records), (
+    assert any("не записан в llm_usage" in r.getMessage() for r in caplog.records) or "не записан в llm_usage" in caplog.text, (
         "BUS-1533: сбой записи метрик должен логироваться на WARNING, "
         "чтобы оператор видел точку остановки пайплайна")
 
