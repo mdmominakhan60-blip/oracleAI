@@ -37,11 +37,16 @@ def _normalize_chart(chart: dict) -> dict:
     d = json.loads(json.dumps(chart, ensure_ascii=False))
     calc = d.get("calculation")
     if isinstance(calc, dict):
+        calc["configuration_fingerprint"] = "*"
         cfg = calc.get("config")
         if isinstance(cfg, dict):
             rt = cfg.get("runtime_versions")
             if isinstance(rt, dict) and "tzdata" in rt:
                 rt["tzdata"] = "*"
+        inp = calc.get("input")
+        if isinstance(inp, dict):
+            inp["configuration_fingerprint"] = "*"
+            inp["request_fingerprint"] = "*"
     return d
 
 
