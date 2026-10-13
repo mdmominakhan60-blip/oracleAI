@@ -13,7 +13,7 @@ make up
 curl http://localhost:8080/api/health
 ```
 
-Use `APP_ENV=dev DEV_MODE=1` only on a loopback development server. The `dev_user` query parameter bypasses Telegram signature verification and must never be exposed in production. See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for deployment and [`docs/OPERATIONS.md`](docs/OPERATIONS.md) for recovery and incident work.
+Use `APP_ENV=dev DEV_MODE=1` only on a loopback development server. The `dev_user` query parameter bypasses Telegram signature verification and must never be exposed in production. Product v2 specifications are in [`docs/product-v2/`](docs/product-v2/README.md).
 
 ## Stack and boundaries
 
@@ -41,7 +41,10 @@ python3 -m compileall -q app scripts tests
 
 Tests require a PostgreSQL server and `DATABASE_URL`; the SQLite dev/test fallback no longer exists.
 
-## Documentation
+## Product Specifications
 
-Start with the [documentation map](docs/README.md). It identifies one current source of truth for product, architecture, AI, UI, API, security, operations, testing, domain features and release status. 
-The repository is currently **BLOCKED** for public launch until the external gates in [`docs/RELEASE/CURRENT_STATUS.md`](docs/RELEASE/CURRENT_STATUS.md) are completed.
+The current product v2 specifications are under [`docs/product-v2/`](docs/product-v2/README.md). Other project documentation was intentionally cleared and will be rewritten as needed.
+
+## Orientation
+
+Start with [`ORIENTATION.md`](ORIENTATION.md) — a non-programmer map of the entire project: what exists, where it lives, how it works, and where to look for anything.

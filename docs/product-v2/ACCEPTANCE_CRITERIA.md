@@ -136,5 +136,5 @@
 
 - Снимок экрана без данных из реального API.
 - «Тесты зелёные» без вывода команды.
-- Локальный успех как доказательство production-готовности (`docs/RELEASE/CURRENT_STATUS.md` прямо фиксирует PRODUCTION = NOT CERTIFIED).
-- Старые отметки в `PRODUCTION_GAUNTLET.md` / `PRODUCTION_FINAL_REVIEW.md` — они описывают удалённый SQLite и датированы 2026-08-27.
+- Локальный успех как доказательство production-готовности (production = NOT CERTIFIED без внешних проверок).
+- Старые отметки production-гейтов описывают удалённый SQLite; не учитывать их в v2.

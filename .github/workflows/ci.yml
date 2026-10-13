@@ -109,10 +109,6 @@ jobs:
         run: python scripts/check_repository_hygiene.py
       - name: Architecture lint (canonical implementations only)
         run: python scripts/check_architecture.py
-      - name: SQL shim inventory (DB-001 checklist stays fresh)
-        run: |
-          python scripts/sql_shim_inventory.py > /dev/null
-          git --no-pager diff --exit-code docs/SQL_SHIM_INVENTORY.md || (echo "::error::SQL_SHIM_INVENTORY.md is stale — run scripts/sql_shim_inventory.py and commit."; exit 1)
       - name: P0-004 backup/restore infrastructure gate
         run: |
           python scripts/check_p004_infrastructure.py
@@ -153,11 +149,6 @@ jobs:
           mkdir -p artifacts
           python scripts/generate_eval_set.py
           python scripts/evaluate_llm.py --cases data/llm_eval/golden_cases.jsonl --responses data/llm_eval/sample_responses.jsonl --out artifacts/llm-eval-report.json --min-score 0.75
-      - name: SQL shim inventory report (TEST-001 artifact)
-        run: |
-          mkdir -p artifacts
-          python scripts/sql_shim_inventory.py
-          cp docs/SQL_SHIM_INVENTORY.md artifacts/SQL_SHIM_INVENTORY.md
       - name: Migration-focused tests
         run: python -m pytest tests/test_data.py -q -p no:cacheprovider --timeout=120
       - name: Full tests

@@ -55,10 +55,10 @@ jobs:
           fi
           echo "deploy_enabled=false" >> "$GITHUB_OUTPUT"
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            echo "::error title=VPS deploy secrets missing::Not configured in repo secrets:$missing — see docs/DEPLOYMENT.md"
+            echo "::error title=VPS deploy secrets missing::Not configured in repo secrets:$missing"
             exit 1
           fi
-          echo "::notice title=Auto-deploy skipped::VPS deploy secrets not configured ($missing); auto-deploy after CI stays off until they are set (docs/DEPLOYMENT.md)"
+          echo "::notice title=Auto-deploy skipped::VPS deploy secrets not configured ($missing); auto-deploy after CI stays off until they are set"
 
       - name: Validate Compose definition
         if: steps.gate.outputs.deploy_enabled == 'true'
@@ -125,17 +125,6 @@ jobs:
           # access_log пишет, это проверено live (gate A=PASS).
           if ! awk '/^  caddy:/{svc=1} svc && /source: oracle_logs/ {src=1} svc && src && /target: \/var\/log\/oracleai/ {found=1; exit} END {exit !found}' /tmp/oracleai-compose.yml; then
             echo "::error title=caddy-access-log BUS-1529::caddy-сервис не монтирует oracle_logs:/var/log/oracleai — логи не будут писаться"
-            exit 1
-          fi
-          # BUS-1529: канонический публичный хост и поведение access_log должны быть
-          # задокументированы в DEPLOYMENT.md, иначе следующий инцидент с URL/Caddy
-          # будет непонятен. Проверяем оба facta.
-          if ! grep -qE 'app\.primebond\.bond' docs/DEPLOYMENT.md; then
-            echo "::error title=caddy-access-log BUS-1529::в DEPLOYMENT.md нет канонического хоста app.primebond.bond"
-            exit 1
-          fi
-          if ! grep -qE 'caddy-access\.log' docs/DEPLOYMENT.md; then
-            echo "::error title=caddy-access-log BUS-1529::в DEPLOYMENT.md нет документирования caddy-access.log"
             exit 1
           fi
           rm -f .env

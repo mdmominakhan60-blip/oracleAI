@@ -451,7 +451,7 @@ ALTER TABLE memories ADD COLUMN IF NOT EXISTS event_id BIGINT;
 
 | Риск | Влияние | Митигация | Статус |
 |---|---|---|---|
-| **AGPL у kerykeion 5.12.9 и pyswisseph** | Публичный коммерческий релиз под вопросом | Не переписывать расчёты (не решает лицензию); решение владельца: соблюдать AGPL или купить Swiss Ephemeris Professional | **Внешний блокер** — `docs/CHART_ENGINE_LICENSING.md` |
+| **AGPL у kerykeion 5.12.9 и pyswisseph** | Публичный коммерческий релиз под вопросом | Не переписывать расчёты (не решает лицензию); решение владельца: соблюдать AGPL или купить Swiss Ephemeris Professional | **Внешний блокер** — лицензионное решение по движку |
 | Возрастная политика 16+ | В школе | Migration `0006_drop_age_columns` удалила `age_confirmed`/`age_proof_hash`; `confirmed_age_user` теперь алиас `current_user` (`deps.py:161-167`) | **Рекомендация: добавить явное подтверждение 16+ в онбординг** |
 | Стоимость AI | Снятие лимита | `_WorkflowBudget` + `llm_max_cost_usd=0.25` + `product_cost` + `entitlements.can_use` | Реализовано |
 | p95 задержки 62с | UX | `runtime_guard` wall-clock; офлайн-фолбэк; решение BUS-227 вынесло SLO в post-MVP | **Открыто** |

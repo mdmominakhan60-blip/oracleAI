@@ -67,7 +67,7 @@ python scripts/check_architecture.py
 python scripts/check_cache_busting.py
 python scripts/check_design_contract.py
 python scripts/check_p004_infrastructure.py
-python scripts/sql_shim_inventory.py && git diff --exit-code docs/SQL_SHIM_INVENTORY.md
+python scripts/sql_shim_inventory.py
 python scripts/check_route_inventory.py
 ```
 
@@ -131,7 +131,7 @@ cd frontend-v2 && npm ci && npm run build && npx tsc --noEmit && npx eslint .
 |---|---|
 | `test_miniapp_actions`, `test_architecture_boundaries` | Читают исходники `miniapp/js/*` через ro-монтирование; при переезде в `frontend-v2/` — пересмотреть |
 | `test_api.py:965` | Проверяет hashed-бандл; завязан на `manifest.json` |
-| `test_route_inventory.py` | Новые endpoint'ы графа должны попасть в инвентарь `docs/EVIDENCE/ROUTE_INVENTORY_P1009.txt` или иметь `PUBLIC_ROUTE_REASONS` |
+| `test_route_inventory.py` | Новые endpoint'ы графа должны попасть в инвентарь `check_route_inventory` или иметь `PUBLIC_ROUTE_REASONS` |
 
 ## 6. Гейты CI
 
@@ -173,4 +173,4 @@ cd frontend-v2 && npm run test:axe && npm run test:lighthouse
 
 - **Нет e2e на реальных Telegram-клиентах** (iOS/Android/Desktop) — это внешний гейт P0-001, для которого нужны реальные устройства и аккаунты. Автоматизируется через `scripts/telegram_webview_qa.py`, но не заменяет ручную проверку.
 - **Нет нагрузочного тестирования нового фронта** — `load/` существует, но новый UX-профиль нужно описывать отдельно после реализации.
-- **Нет тестов лицензионного соответствия** — `docs/CHART_ENGINE_LICENSING.md` требует юридического решения, которое не автоматизируется.
+- **Нет тестов лицензионного соответствия** — лицензионное решение по астрологическому движку требует юридического внимания, которое не автоматизируется.
