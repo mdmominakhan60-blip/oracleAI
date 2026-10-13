@@ -27,14 +27,6 @@ def _close(a, b, rel=1e-4):
     if isinstance(a, list) and isinstance(b, list):
         if len(a) != len(b):
             return False
-        # Если элементы — словари с ключами (например aspects или planets), сортируем по стабильному ключу
-        if a and isinstance(a[0], dict) and isinstance(b[0], dict):
-            def key_fn(x):
-                return json.dumps(x, sort_keys=True, ensure_ascii=False)
-
-            a_sorted = sorted(a, key=key_fn)
-            b_sorted = sorted(b, key=key_fn)
-            return all(_close(x, y, rel) for x, y in zip(a_sorted, b_sorted))
         return all(_close(x, y, rel) for x, y in zip(a, b))
     if isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool) and not isinstance(b, bool):
         return abs(a - b) <= rel * max(abs(a), abs(b), 1.0)
