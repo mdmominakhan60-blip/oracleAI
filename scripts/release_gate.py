@@ -31,16 +31,12 @@ _LOG_MAX_FILE_SIZE = 64 * 1024 * 1024
 _LOG_SCAN_EXCLUDED_DIRS = {".git", ".venv", "node_modules", ".codegraph", "artifacts"}
 
 REQUIRED_DOCS = (
-    ROOT / "docs" / "PRODUCT.md",
-    ROOT / "docs" / "SECURITY.md",
-    ROOT / "docs" / "DEPLOYMENT.md",
-    ROOT / "docs" / "LLM_EVALUATION.md",
-    ROOT / "docs" / "RELEASE/LAUNCH_GOVERNANCE.md",
-    ROOT / "docs" / "RELEASE/PRODUCTION_READINESS.md",
-    ROOT / "docs" / "RELEASE/CURRENT_STATUS.md",
-    ROOT / "docs" / "PRODUCTION_GAUNTLET.md",
-    ROOT / "docs" / "PRODUCTION_FINAL_REVIEW.md",
-    ROOT / "docs" / "UI_PIXEL_AUDIT.md",
+    ROOT / "ORIENTATION.md",
+    ROOT / "docs" / "product-v2" / "README.md",
+    ROOT / "docs" / "product-v2" / "ARCHITECTURE.md",
+    ROOT / "docs" / "product-v2" / "DESIGN_SYSTEM.md",
+    ROOT / "docs" / "product-v2" / "ACCEPTANCE_CRITERIA.md",
+    ROOT / "docs" / "product-v2" / "TEST_PLAN.md",
 )
 
 
