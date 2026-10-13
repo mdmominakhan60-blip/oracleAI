@@ -1,6 +1,0 @@
-  → S1 invoice: PASS (10/10 проверок)
-  → S2 payment: PASS (7/7 проверок)
-  → S3 duplicate webhook: PASS (6/6 проверок)
-  → S4 refund/chargeback: PASS (7/7 проверок)
-  → S5 error paths: PASS (8/8 проверок)
-  → Reconciliation: PASS (4/4 проверок)

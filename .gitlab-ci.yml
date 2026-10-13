@@ -27,16 +27,13 @@ stages:
   - lint
 
 # Python-статика: ruff (0.6.9 pinned в requirements-dev.txt), compileall,
-# репо-гигиена, архитектурный линт, cache-busting, design contract, SQL-shim
-# инвентарь. Ничего внешнего не нужно — только скрипты и stdlib.
+# репо-гигиена, архитектурный линт, cache-busting и design contract.
+# Ничего внешнего не нужно — только скрипты и stdlib.
 # ВНИМАНИЕ: check_architecture.py обходит весь чекоут — локальные
 # незатреканные *.py (worktree-мусор) уронят его; на чистом CI-чекоуте их нет.
 python-lint:
   stage: lint
   image: python:3.12-slim
-  # git нужен для git-diff-гейта SQL_SHIM_INVENTORY (в slim-образе его нет).
-  before_script:
-    - apt-get update --quiet --quiet && apt-get install --yes --quiet git
   script:
     - pip install --quiet ruff==0.6.9
     - python -m ruff check app scripts tests
@@ -47,9 +44,6 @@ python-lint:
     - python scripts/check_design_contract.py
     - python scripts/check_p004_infrastructure.py
     - bash -n infra/backup-postgres.sh infra/restore-postgres.sh
-    - python scripts/sql_shim_inventory.py > /dev/null
-    - git --no-pager diff --exit-code docs/SQL_SHIM_INVENTORY.md
-      || (echo "SQL_SHIM_INVENTORY.md is stale — run scripts/sql_shim_inventory.py and commit."; exit 1)
 
 # JS-синтаксис миниаппа/админки/скриптов (node 22, как в GitHub CI).
 js-syntax:

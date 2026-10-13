@@ -310,8 +310,7 @@ def _warn_fallback_recipient() -> None:
     _fallback_notice_shown = True
     log.warning(
         "платёжные алерты уйдут на ADMIN_ID (владельца); "
-        "задайте PAYMENT_ALERT_CHAT_ID — chat_id сотрудника/группы "
-        "(docs/ADR/ADR-0005-payment-alert-recipients.md)")
+        "задайте PAYMENT_ALERT_CHAT_ID — chat_id сотрудника/группы")
 
 
 async def run(bot, db, *, now: datetime | None = None) -> dict:

@@ -16,7 +16,10 @@ ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
 
 DATA_DIR = Path(os.getenv("DATA_DIR") or (ROOT / "data"))
-DATA_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass
 
 
 def _int(name: str, default: int, *, minimum: int | None = None) -> int:

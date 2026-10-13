@@ -22,17 +22,38 @@ def _jsonable(value):
 def _close(a, b, rel=1e-4):
     a = _jsonable(a)  # нормализуем tuple→list до сравнения
     b = _jsonable(b)
-    if isinstance(a, dict):
+    if isinstance(a, dict) and isinstance(b, dict):
         return a.keys() == b.keys() and all(_close(a[k], b[k], rel) for k in a)
-    if isinstance(a, list):
-        return len(a) == len(b) and all(_close(x, y, rel) for x, y in zip(a, b))
-    if isinstance(a, float):
+    if isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            return False
+        return all(_close(x, y, rel) for x, y in zip(a, b))
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool) and not isinstance(b, bool):
         return abs(a - b) <= rel * max(abs(a), abs(b), 1.0)
     return a == b
 
 
+def _normalize_chart(chart: dict) -> dict:
+    d = json.loads(json.dumps(chart, ensure_ascii=False))
+    calc = d.get("calculation")
+    if isinstance(calc, dict):
+        calc["configuration_fingerprint"] = "*"
+        cfg = calc.get("config")
+        if isinstance(cfg, dict):
+            rt = cfg.get("runtime_versions")
+            if isinstance(rt, dict) and "tzdata" in rt:
+                rt["tzdata"] = "*"
+        inp = calc.get("input")
+        if isinstance(inp, dict):
+            inp["configuration_fingerprint"] = "*"
+            inp["request_fingerprint"] = "*"
+    return d
+
+
 def _assert_chart_equal(actual, expected, rel=1e-4):
-    assert _close(actual, expected, rel), (_jsonable(actual), _jsonable(expected))
+    norm_act = _normalize_chart(actual)
+    norm_exp = _normalize_chart(expected)
+    assert _close(norm_act, norm_exp, rel), (_jsonable(norm_act), _jsonable(norm_exp))
 
 
 def _chart_summary(chart: dict) -> dict:

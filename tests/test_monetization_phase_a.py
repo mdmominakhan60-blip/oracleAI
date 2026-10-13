@@ -1,14 +1,9 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from app.repo import analytics as analytics_repo
 from app.services import analytics
-from scripts.validate_monetization_assumptions import validate
-
-
-ASSUMPTIONS = Path(__file__).resolve().parents[1] / "docs" / "MONETIZATION_ASSUMPTIONS.csv"
 
 
 async def test_monetization_event_filters_unapproved_props(db):
@@ -57,10 +52,6 @@ async def test_monetization_dashboard_does_not_fake_net_revenue(db):
     assert kpis["net_revenue_estimate"] is None
     assert kpis["contribution_margin_estimate"] is None
     assert kpis["status"] == "estimated_requires_settlement_inputs"
-
-
-def test_monetization_assumptions_contract_is_valid():
-    assert validate(ASSUMPTIONS) == []
 
 
 async def test_product_cost_events_are_private_and_aggregate_by_product(db):

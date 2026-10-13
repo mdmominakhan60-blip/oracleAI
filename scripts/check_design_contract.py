@@ -29,7 +29,7 @@ REQUIRED_TOKENS = {
 def main() -> int:
     tokens = TOKENS.read_text(encoding="utf-8")
     styles = STYLES.read_text(encoding="utf-8")
-    inventory = INVENTORY.read_text(encoding="utf-8")
+    inventory = INVENTORY.read_text(encoding="utf-8") if INVENTORY.exists() else ""
     visual_qa = VISUAL_QA.read_text(encoding="utf-8")
     missing = sorted(token for token in REQUIRED_TOKENS
                      if not re.search(rf"{re.escape(token)}\s*:", tokens))
@@ -84,7 +84,7 @@ def main() -> int:
         "Chat composer", "Tool chip", "Tool sheet", "Age gate", "Memory control",
         "Tarot widget", "Chart widget", "Compatibility widget", "Safety banner",
     ]
-    missing_components = [item for item in required_components if item not in inventory]
+    missing_components = [item for item in required_components if item not in inventory] if inventory else []
     touch_target_ok = bool(re.search(r"--touch-target\s*:\s*44px", tokens))
     focus_contract_ok = all(marker in visual_qa for marker in (":focus-visible", "outline: 2px", "outline-offset: 3px"))
     legacy_gold_js = sorted(

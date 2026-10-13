@@ -1,4 +1,0 @@
-{"ts":"2026-09-05T21:17:39.415822+00:00","level":"INFO","logger":"oracle.api.security","message":"initData просрочена (25 ч)","request_id":"a4d561b54af08d88","release_id":"staging-r2","environment":"production"}
-{"ts":"2026-09-05T21:17:39.418501+00:00","level":"INFO","logger":"oracle.api.security","message":"initData из будущего (12 мин) — отклоняю","request_id":"46ebb1d06d372d41","release_id":"staging-r2","environment":"production"}
-{"ts":"2026-09-05T21:52:59.716489+00:00","level":"INFO","logger":"oracle.api.security","message":"initData просрочена (25 ч)","request_id":"dff2f31f809c2517","release_id":"staging-r2","environment":"production"}
-{"ts":"2026-09-05T21:52:59.749748+00:00","level":"INFO","logger":"oracle.api.security","message":"initData из будущего (12 мин) — отклоняю","request_id":"196fab58c3c3ae72","release_id":"staging-r2","environment":"production"}

@@ -98,7 +98,7 @@
     return `<section class="palm-result" role="status" aria-live="polite">
       <div class="w-title">✋ ${esc(pt('looking'))}</div>
       ${preview}
-      <div class="seg-progress palm-progress" aria-label="${esc(pt('ariaStep'))}"><span class="is-on">${esc(pt('photo'))}</span><i class="is-on"></i><span class="is-on">${esc(pt('quality'))}</span><i></i><span>${esc(pt('observations'))}</span></div>
+      <div class="seg-progress palm-progress" role="group" aria-label="${esc(pt('ariaStep'))}"><span class="is-on">${esc(pt('photo'))}</span><i class="is-on"></i><span class="is-on">${esc(pt('quality'))}</span><i></i><span>${esc(pt('observations'))}</span></div>
       <div class="palm-loading"><span></span><span></span><span></span></div>
       <p class="w-sub">${esc(pt('checking'))}</p>
     </section>`;

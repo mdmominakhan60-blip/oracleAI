@@ -291,12 +291,11 @@ async def test_openai_like_budget_exhaust_returns_partial(monkeypatch):
     tools = [{"name": "get_chart", "description": "Карта",
               "input_schema": {"type": "object", "properties": {}}}]
 
-    text = await llm._run_openai_like(
-        "custom", "Ты — Лилит", [{"role": "user", "content": "Привет"}],
-        tools, lambda *_: "", "main", 500, llm._Meter(), max_iters=5, budget=budget,
-    )
-
-    assert "Лилит уже начала ответ" in text
+    with pytest.raises(RuntimeError, match="LLM workflow budget exceeded"):
+        await llm._run_openai_like(
+            "custom", "Ты — Лилит", [{"role": "user", "content": "Привет"}],
+            tools, lambda *_: "", "main", 500, llm._Meter(), max_iters=5, budget=budget,
+        )
 
 
 async def test_gpt5_vision_uses_completion_token_budget(monkeypatch):
