@@ -166,7 +166,8 @@ class TestProdGrantCheck:
             # prod_grant_check читает settings.database_url → подменяем на
             # прямое подключение к oracle как владелец (TRUNCATE есть).
             from unittest.mock import AsyncMock
-            db = await _connect_direct(admin.replace("/postgres", "/oracle"))
+            target_dsn = os.getenv("TEST_DATABASE_URL") or admin.replace("/postgres", "/oracle")
+            db = await _connect_direct(target_dsn)
             try:
                 with patch("app.data.session.connect",
                           AsyncMock(return_value=db)) as _:

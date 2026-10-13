@@ -41,8 +41,22 @@ def _close(a, b, rel=1e-4):
     return a == b
 
 
+def _normalize_chart(chart: dict) -> dict:
+    d = json.loads(json.dumps(chart, ensure_ascii=False))
+    calc = d.get("calculation")
+    if isinstance(calc, dict):
+        cfg = calc.get("config")
+        if isinstance(cfg, dict):
+            rt = cfg.get("runtime_versions")
+            if isinstance(rt, dict) and "tzdata" in rt:
+                rt["tzdata"] = "*"
+    return d
+
+
 def _assert_chart_equal(actual, expected, rel=1e-4):
-    assert _close(actual, expected, rel), (_jsonable(actual), _jsonable(expected))
+    norm_act = _normalize_chart(actual)
+    norm_exp = _normalize_chart(expected)
+    assert _close(norm_act, norm_exp, rel), (_jsonable(norm_act), _jsonable(norm_exp))
 
 
 def _chart_summary(chart: dict) -> dict:

@@ -35,9 +35,10 @@ async def _expired_user(db, tg_id: int, *, days_ago: int = 7,
     return await users.get(db, tg_id)
 
 
-async def _fresh_batch(db, month: str = "2026-09", count: int = 5) -> str:
-    """Своя партия на тест: pool глобален, месяц фиксированный."""
-    batch = f"winback_{month}"
+async def _fresh_batch(db, month: str | None = None, count: int = 5) -> str:
+    """Своя партия на тест: pool глобален, месяц совпадает с текущим."""
+    m = month or datetime.now(timezone.utc).strftime("%Y-%m")
+    batch = f"winback_{m}"
     codes = await growth.create_codes(db, count, kind="plan_days", days=7,
                                       plan_code="trial", batch=batch,
                                       max_uses=1, valid_days=14)
